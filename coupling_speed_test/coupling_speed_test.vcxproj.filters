@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source">
+      <UniqueIdentifier>{fd665346-6312-437e-a2a5-535a2649581d}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="main.cu">
+      <Filter>Source</Filter>
+    </CudaCompile>
+    <CudaCompile Include="coupling.cu">
+      <Filter>Source</Filter>
+    </CudaCompile>
+    <CudaCompile Include="network_factory.cu">
+      <Filter>Source</Filter>
+    </CudaCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="coupling.cuh">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="defines.cuh">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="network_factory.cuh">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="graphics.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="morphology.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="graphics.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="morphology.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Shaders\frag.glsl">
+      <Filter>Source</Filter>
+    </None>
+    <None Include="Shaders\vert.glsl">
+      <Filter>Source</Filter>
+    </None>
+  </ItemGroup>
+</Project>
