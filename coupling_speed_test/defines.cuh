@@ -1,3 +1,4 @@
+#define _USE_MATH_DEFINES
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include <thrust/device_vector.h>
@@ -42,7 +43,7 @@ constexpr static const Float gl = 0.3; constexpr static const Float el = -50;   
 constexpr static const Float Tmax = 1.0;                                                             // Max neurotransmitter output
 constexpr static const Float Vt = -20.0; constexpr static const Float Kp = 3.0;                      // Neurotransmitter potential and scalar 
 constexpr const static Float Ar = 5.0; constexpr const static Float Ad = 0.18;                       // alpha and beta for GABA gating variable
-constexpr static const Float g_coupling = 0.01; constexpr static const Float e_coupling_gaba = -70.0; // Coupling conductance and potential for GABA
+constexpr static const Float g_coupling = 0.05; constexpr static const Float e_coupling_gaba = -70.0; // Coupling conductance and potential for GABA
 constexpr static const Float coupling_threshold = -50;                                               // Threshold for GABA coupling
 constexpr static const Float appcur = 8;                                                            // Base current to apply when we only apply a constant current. 
 

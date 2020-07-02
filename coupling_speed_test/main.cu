@@ -243,7 +243,8 @@ AdjacencyList __GenerateConnectivity(int const N, int const Ncouple, Float*& Tco
 	AdjacencyList list;
 	{
 		thrust::host_vector<int> h_coupling, h_coupling_inds;
-		NetworkFactory::BrainConnectivity(h_coupling, h_coupling_inds, N, "test_connectivity_2M.h5");
+//		NetworkFactory::BrainConnectivity(h_coupling, h_coupling_inds, N, "test_connectivity_2M.h5");
+		NetworkFactory::LocalConnectivity(h_coupling, h_coupling_inds, N, Ncouple, 0.01, 2, Morphology::get_positions());
 		list.indices = h_coupling;
 		list.offset_in_indices = h_coupling_inds;
 	}
@@ -513,18 +514,24 @@ void sanmodel_benchmark(int const N = 1, int const Ncouple = 0, int const samp_f
 		std::normal_distribution<> voltage_dist(-80, 20);
 		for (auto& val : cpu_arr)
 			val = voltage_dist(gen);
+		for (int i = 10; i < N; ++i)
+			cpu_arr[i] = -100;
 		cudaMemcpy(sim_vars_cpu[AN_PARAMS_V], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
 		// Set Ca 
 		std::uniform_real_distribution<> Ca_dist(0.1, 0.5);
 		for (auto& val : cpu_arr)
 			val = Ca_dist(gen);
+		for (int i = 10; i < N; ++i)
+			cpu_arr[i] = 0;
 		cudaMemcpy(sim_vars_cpu[AN_PARAMS_CA], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
 		// Set potasium gating variable 
 		std::uniform_real_distribution<> nK_dist(0.0, 0.5);
 		for (auto& val : cpu_arr)
 			val = nK_dist(gen);
+		for (int i = 10; i < N; ++i)
+			cpu_arr[i] = 0;
 		cudaMemcpy(sim_vars_cpu[AN_PARAMS_NK], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
 		// GABA gating variable
@@ -653,6 +660,6 @@ int main()
 {
 //	UniformTest();
 //	HH_benchmark(1024, 1e2, 1000, 10);
-	sanmodel_benchmark(2e6, 10, 20000, 10, 1e5);
+	sanmodel_benchmark(1e4, 10, 20000, 10, 1e4);
 	Graphics::terminate_graphics();
 }
