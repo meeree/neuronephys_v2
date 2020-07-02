@@ -1,5 +1,6 @@
 #include "network_factory.cuh"
 #include <unordered_set>
+#include <ANN/ANN.h>
 
 namespace NetworkFactory
 {
@@ -74,6 +75,78 @@ namespace NetworkFactory
 					*it++ = col_idx[to_idx] / sparsity;
 			h_coupling_inds[from_idx + 1] = it - h_coupling.begin();
 		}
+	}
+
+	void LocalConnectivity(thrust::host_vector<int>& h_coupling, thrust::host_vector<int>& h_coupling_inds, int const N, int const N_conns,
+		float stddev, float const search_scalar, float const* positions)
+	{
+		// Convert stddev from percent to world space.
+		// Region is assumed to be from [-1,-1,-1] to [1,1,1]
+        stddev *= 2;
+
+        std::cout << "Generating local atomic coupling..." << std::endl;
+        std::vector<int> ball(N); 
+        std::vector<double> ball_dists(N);
+        ANNpoint query_pt{ annAllocPt(3) };
+        ANNpointArray p_vec{ annAllocPts(N, 3) };
+        float const* pos_it = positions;
+        for (int i = 0; i < N; ++i)
+            for (int dim = 0; dim < 3; ++dim)
+                p_vec[i][dim] = *pos_it++;
+
+        ANNkd_tree* kd_tree{ new ANNkd_tree(p_vec, N, 3) };
+		std::random_device rd;
+		std::mt19937 gen(rd());
+
+        std::cout << "Generating connections... " << std::endl;
+        h_coupling.reserve(N * N_conns);
+        h_coupling_inds.resize(N + 1, 0);
+        pos_it = positions;
+        double const stddev_sqr{ stddev * stddev };
+        double const variance_sqr{ stddev_sqr * stddev_sqr };
+        double const normal_dist_scalar{ 1.0 / sqrt(2.0*M_PI*variance_sqr) };
+        std::uniform_real_distribution<double> unit_dist(0.0, 1.0);
+        int ball_sz_sum{ 0 };
+        for (int from_idx = 0; from_idx < N; ++from_idx)
+        {
+            if (from_idx % 1000 == 0)
+            {
+                std::cout << from_idx / (float)N * 100 << "%\r";
+                std::cout.flush();
+            }	
+
+            for (int dim = 0; dim < 3; ++dim)
+                query_pt[dim] = *pos_it++;
+
+            int ball_sz{ kd_tree->annkFRSearch(query_pt, search_scalar*stddev*stddev, N_conns, ball.data(), ball_dists.data()) };
+            ball_sz_sum += ball_sz;
+            int N_generated{ 0 };
+
+            for (int i = 1; i < ball_sz; ++i)
+            {
+                // Calculate normal distribution weight
+                double weight{ -(ball_dists[i] - stddev_sqr)*(ball_dists[i] - stddev_sqr) / (2 * variance_sqr) };
+                weight = normal_dist_scalar * expf(weight);
+                double const sample{ unit_dist(gen) };
+                if (sample < weight)
+                {
+                    h_coupling.push_back(ball[i]);
+                    ++N_generated;
+                    if (N_generated >= N_conns) // Clamp number of connections to N_conns.
+                        break; 
+                }
+            }
+            h_coupling_inds[from_idx + 1] = h_coupling_inds[from_idx] + N_generated;
+        }
+        delete kd_tree;
+        annClose();
+        std::cout << "100%\r" << std::endl;
+
+        // TODO: DETERMINE IF WE SHOULD ALSO HAVE LONG CONNECTIONS ??
+
+        h_coupling.shrink_to_fit(); // Shrink capacity
+        std::cout << "Average number of connections: " << h_coupling.size() / (float)N << std::endl;
+        std::cout << "Average ball size: " << ball_sz_sum / (float)N << std::endl;
 	}
 
 	CuSparseAdjacencyMatrix DownstreamToUpstreamSpMatrix(cusparseHandle_t& handle, AdjacencyList& list)
