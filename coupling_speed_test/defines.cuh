@@ -17,17 +17,17 @@ typedef double Float;
 #else
 typedef float Float;
 #endif // USE_DOUBLE_PRECISION
-
+//SIM: Hodgkin Huxley
 #define SIM_PARAMS_V 0
 #define SIM_PARAMS_M 1
 #define SIM_PARAMS_N 2
 #define SIM_PARAMS_H 3
 #define SIM_PARAMS_Y 4
 #define SIM_PARAMS_OUTPUT 5
-#define SIM_PARAMS_TIN 6
-#define SIM_PARAMS_TCOUNT 7
+#define SIM_PARAMS_TIN 6//input synaptic neurotransmitter
+#define SIM_PARAMS_TCOUNT 7//count of presynaptic neurons
 #define SIM_PARAMS_APPCUR 8
-#define NUM_SIM_PARAMS 9
+#define NUM_SIM_PARAMS 9//Dimension of state space
 
 // TODO : SET NUMBER OF THREADS DYNAMICALLY BASED ON CARD USED
 #define NTHREADS 64 
@@ -47,7 +47,7 @@ constexpr static const Float coupling_threshold = -50;                          
 constexpr static const Float appcur = 8;                                                            // Base current to apply when we only apply a constant current. 
 
 
-// PARAMETERS FOR AN MODEL
+// PARAMETERS FOR AN MODEL (AN: Averaged neuron)
 #define AN_PARAMS_V 0
 #define AN_PARAMS_NK 1 
 #define AN_PARAMS_CA 2

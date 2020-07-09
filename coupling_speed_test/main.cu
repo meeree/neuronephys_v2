@@ -154,7 +154,7 @@ __global__ void RK4_hh(Float** sim_vars, const int N, const float timestep)
 }
 
 __device__ void dxdt_anmodel(const int idx,
-	Float const V, Float const nK, Float const Ca, Float const Y, Float const Tinavg,
+	Float const V, Float const nK, Float const Ca, Float const Y, Float const Tinavg,//Tinavg: neurotransmitter input
 	Float* dvdt, Float* dnKdt, Float* dCadt, Float* dYdt)
 {
 	// Calculate intermediate quantities
@@ -539,7 +539,7 @@ void sanmodel_benchmark(int const N = 1, int const Ncouple = 0, int const samp_f
 	// Copy pointers from CPU to GPU 
 	sim_vars = sim_vars_cpu;
 
-	// Generate coupling
+	// Generate coupling //TODO: Add additional coupling
 	AtomicCoupling coupling(N, an_coupling_threshold);
 	AdjacencyList list{ __GenerateConnectivity(N, Ncouple, sim_vars_cpu[AN_PARAMS_TCOUNT]) };
 
@@ -625,7 +625,6 @@ void HH_benchmark(int const N = 1, int const Ncouple = 0, int const samp_freq = 
 
 	// Generate coupling
 	AtomicCoupling coupling(N, an_coupling_threshold);
-	AdjacencyList list{ __GenerateConnectivity(N, Ncouple, sim_vars_cpu[SIM_PARAMS_TCOUNT]) };
 
 	// Get pointers to data we want to write output for
 	std::vector<Float*> sample_ptrs{
