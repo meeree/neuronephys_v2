@@ -62,7 +62,7 @@ struct
 {
     GLuint vao;
     GLint width, height;
-	std::string title;
+    std::string title;
     GLuint shaderProgram, tex_shaderProgram;
     GLuint texture;
     GLFWwindow* window;
@@ -156,7 +156,7 @@ void startup (GLfloat const& width, GLfloat const& height, const char* title="Un
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-	g_attrs.title = title;
+    g_attrs.title = title;
     g_attrs.window = glfwCreateWindow(g_attrs.width, g_attrs.height, title, nullptr, nullptr);
     if(!g_attrs.window) {
         std::cerr<<"failed to initialize window"<<std::endl;
@@ -238,7 +238,7 @@ bool render (float const* voltages, void const* slice, int const slice_width, in
     // Render texture
     if(slice)
     {
-		g_attrs.slice_index %= slice_width;
+        g_attrs.slice_index %= slice_width;
         glDisableVertexAttribArray(g_attrs.voltage_loc);
 
         // Disable voltage attribute and enable tex_coords attribute
@@ -294,26 +294,26 @@ void keyCallback(GLFWwindow* window, int key, int, int action, int)
         else // enable cursor
             glfwSetInputMode(g_attrs.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         g_attrs.pause = !g_attrs.pause; // Toggle pause
-		if (!g_attrs.pause)
-		{
-			set_window_title(g_attrs.title.c_str());
-			g_attrs.replay = false;
-		}
-		else
-		{
-			set_window_title((g_attrs.title + " ( PAUSED ) ").c_str());
-		}
+        if (!g_attrs.pause)
+        {
+            set_window_title(g_attrs.title.c_str());
+            g_attrs.replay = false;
+        }
+        else
+        {
+            set_window_title((g_attrs.title + " ( PAUSED ) ").c_str());
+        }
     }
     else if (key == GLFW_KEY_R && action == GLFW_PRESS)
         g_attrs.rotate = !g_attrs.rotate; // Toggle rotation
-	else if (g_attrs.pause && key == GLFW_KEY_T && action == GLFW_PRESS) // Can only replay when paused! 
-	{
+    else if (g_attrs.pause && key == GLFW_KEY_T && action == GLFW_PRESS) // Can only replay when paused! 
+    {
         g_attrs.replay = !g_attrs.replay; // Toggle replay
-		if(g_attrs.replay)
-			set_window_title((g_attrs.title + " ( PAUSED ) ( REPLAY MODE ) -0").c_str());
-		else
-			set_window_title((g_attrs.title + " ( PAUSED ) ").c_str());
-	}
+        if(g_attrs.replay)
+            set_window_title((g_attrs.title + " ( PAUSED ) ( REPLAY MODE ) -0").c_str());
+        else
+            set_window_title((g_attrs.title + " ( PAUSED ) ").c_str());
+    }
   
     else if (g_attrs.replay)
     {
@@ -322,7 +322,7 @@ void keyCallback(GLFWwindow* window, int key, int, int action, int)
         else if (key == GLFW_KEY_DOWN && (action == GLFW_REPEAT || action == GLFW_PRESS))
             g_attrs.replay_buffer.move_N_frames(-1); // Rewind replay one frame
 
-		set_window_title((g_attrs.title + " ( PAUSED ) ( REPLAY MODE ) -" + std::to_string(g_attrs.replay_buffer.frame_rewind_idx)).c_str());
+        set_window_title((g_attrs.title + " ( PAUSED ) ( REPLAY MODE ) -" + std::to_string(g_attrs.replay_buffer.frame_rewind_idx)).c_str());
     }
 
     else if (key == GLFW_KEY_RIGHT && (action == GLFW_REPEAT || action == GLFW_PRESS))

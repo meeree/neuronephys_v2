@@ -1,0 +1,13 @@
+
+*.exe
+*.iobj
+*.ipdb
+.vs/coupling_speed_test/v16/.suo
+.vs/coupling_speed_test/v16/.suo
+*.h5
+*.raw
+*.tlog
+*.log
+coupling_speed_test/x64/Release/coupling_speed_test.vcxproj.FileListAbsolute.txt
+.vs/coupling_speed_test/v16/Browse.VC.opendb
+coupling_speed_test/x64/Release/vc142.pdb

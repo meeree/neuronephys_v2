@@ -24,7 +24,7 @@ namespace Morphology
 
 std::pair<bool,std::array<float,3>> gen_sphere(int const N)
 {
-	std::array<float, 3> scaling_rate = { 2.0f,2.0f,2.0f };
+    std::array<float, 3> scaling_rate = { 2.0f,2.0f,2.0f };
     unsigned const seed = chrono::system_clock::now().time_since_epoch().count();
     default_random_engine gen(seed);
     uniform_real_distribution<float> dist(0, 2 * M_PI);
@@ -40,7 +40,7 @@ std::pair<bool,std::array<float,3>> gen_sphere(int const N)
 std::pair<bool, std::array<float, 3>> load_cubic_brain_2(int const N, const std::string coupling_file_name)
 {
     vector<float> coords[3];
-	std::array<float, 3> scaling_rate = { 2.0f,2.0f,2.0f };
+    std::array<float, 3> scaling_rate = { 2.0f,2.0f,2.0f };
     static const char* coord_ids[3]{ "/x", "/y", "/z" };
     static H5std_string const fl_name = "../" + coupling_file_name;
     int numpnts;
@@ -70,12 +70,12 @@ std::pair<bool, std::array<float, 3>> load_cubic_brain_2(int const N, const std:
             if (coords[i][c] > wmax[i])
                 wmax[i] = coords[i][c];
         }
-		scaling_rate[i] = 2.0f / (wmax[i] - wmin[i]);
+        scaling_rate[i] = 2.0f / (wmax[i] - wmin[i]);
     }
     if (N > numpnts)
     {
         cerr << "Not enough points in file " << fl_name << ". Have N = " << N << endl;
-		return std::make_pair(false, scaling_rate);
+        return std::make_pair(false, scaling_rate);
     }
     int sparsity{ numpnts / N };
     for (int i = 0; i < N; ++i)
@@ -87,13 +87,13 @@ std::pair<bool, std::array<float, 3>> load_cubic_brain_2(int const N, const std:
         p.y = 2.0f * (p.y - wmin[1]) / (wmax[1] - wmin[1]) - 1.0f;
         p.z = 2.0f * (p.z - wmin[2]) / (wmax[2] - wmin[2]) - 1.0f;
     }
-	return std::make_pair(true, scaling_rate);
+    return std::make_pair(true, scaling_rate);
 }
 
 std::pair<bool,std::array<float,3>> load_cubic_scn(int const N)
 {
     vector<float> coords[3];
-	std::array<float, 3> scaling_rate = { 2.0f,2.0f,2.0f };
+    std::array<float, 3> scaling_rate = { 2.0f,2.0f,2.0f };
     static const char* coord_ids[3]{ "/x", "/y", "/z" };
     static H5std_string const fl_name = "../scn_atlas.h5";
     int numpnts;
@@ -123,7 +123,7 @@ std::pair<bool,std::array<float,3>> load_cubic_scn(int const N)
             if (coords[i][c] > wmax[i])
                 wmax[i] = coords[i][c];
         }
-		scaling_rate[i] = 2.0f / (wmax[i] - wmin[i]);
+        scaling_rate[i] = 2.0f / (wmax[i] - wmin[i]);
     }
     if (N > numpnts)
     {
@@ -149,13 +149,13 @@ std::pair<bool, std::array<float,3>>initialize_positions(MorphologyType const ty
     g_morph.wmin = { -1, -1, -1 };
     g_morph.wmax = { 1, 1, 1 };
     g_morph.positions.resize(N);
-	std::array<float, 3> scaling_rate = { 2.0f,2.0f,2.0f };
+    std::array<float, 3> scaling_rate = { 2.0f,2.0f,2.0f };
     switch (type)
     {
     case eBrain2: return load_cubic_brain_2(N,coupling_filename);
     case eSphere: return gen_sphere(N); 
     case eSCN: return load_cubic_scn(N);
-	default: cerr << "Unknown MorphologyType: " << type << endl; return std::make_pair(false,scaling_rate);
+    default: cerr << "Unknown MorphologyType: " << type << endl; return std::make_pair(false,scaling_rate);
     }
 }
 

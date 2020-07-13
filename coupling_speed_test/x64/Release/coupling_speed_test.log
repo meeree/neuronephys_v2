@@ -1,1 +1,152 @@
-﻿  coupling_speed_test.vcxproj -> C:\repository\neuronephys_v2\x64\Release\coupling_speed_test.exe
+﻿  Compiling CUDA source file coupling.cu...
+  Compiling CUDA source file network_factory.cu...
+  Compiling CUDA source file main.cu...
+  
+  
+  C:\repository\neuronephys_v2\coupling_speed_test>"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\bin\nvcc.exe" -gencode=arch=compute_35,code=\"sm_35,compute_35\" --use-local-env -ccbin "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.22.27905\bin\HostX86\x64" -x cu  -Iexternal_libs\glm\include -Iexternal_libs\GLFW\include -Iexternal_libs\GLEW\include -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\include" -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\include"     --keep-dir x64\Release -maxrregcount=0  --machine 64 --compile -cudart static --expt-extended-lambda    -DWIN32 -DWIN64 -DNDEBUG -D_CONSOLE -D_MBCS -Xcompiler "/EHsc /W3 /nologo /O2 /Fdx64\Release\vc142.pdb /FS /Zi  /MD " -o x64\Release\coupling.cu.obj "C:\repository\neuronephys_v2\coupling_speed_test\coupling.cu" 
+  C:\repository\neuronephys_v2\coupling_speed_test>"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\bin\nvcc.exe" -gencode=arch=compute_35,code=\"sm_35,compute_35\" --use-local-env -ccbin "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.22.27905\bin\HostX86\x64" -x cu  -Iexternal_libs\glm\include -Iexternal_libs\GLFW\include -Iexternal_libs\GLEW\include -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\include" -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\include"     --keep-dir x64\Release -maxrregcount=0  --machine 64 --compile -cudart static --expt-extended-lambda    -DWIN32 -DWIN64 -DNDEBUG -D_CONSOLE -D_MBCS -Xcompiler "/EHsc /W3 /nologo /O2 /Fdx64\Release\vc142.pdb /FS /Zi  /MD " -o x64\Release\network_factory.cu.obj "C:\repository\neuronephys_v2\coupling_speed_test\network_factory.cu" 
+  
+  C:\repository\neuronephys_v2\coupling_speed_test>"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\bin\nvcc.exe" -gencode=arch=compute_35,code=\"sm_35,compute_35\" --use-local-env -ccbin "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.22.27905\bin\HostX86\x64" -x cu  -Iexternal_libs\glm\include -Iexternal_libs\GLFW\include -Iexternal_libs\GLEW\include -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\include" -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\include"     --keep-dir x64\Release -maxrregcount=0  --machine 64 --compile -cudart static --expt-extended-lambda    -DWIN32 -DWIN64 -DNDEBUG -D_CONSOLE -D_MBCS -Xcompiler "/EHsc /W3 /nologo /O2 /Fdx64\Release\vc142.pdb /FS /Zi  /MD " -o x64\Release\main.cu.obj "C:\repository\neuronephys_v2\coupling_speed_test\main.cu" 
+C:/repository/neuronephys_v2/coupling_speed_test/coupling.cu(32): warning : inline qualifier ignored for "__global__" function
+  
+C:/repository/neuronephys_v2/coupling_speed_test/main.cu(663): warning : multicharacter character literal (potential portability problem)
+  
+C:/repository/neuronephys_v2/coupling_speed_test/main.cu(663): warning : multicharacter character literal (potential portability problem)
+  
+  network_factory.cu
+C:/repository/neuronephys_v2/coupling_speed_test/main.cu(663): warning : multicharacter character literal (potential portability problem)
+  
+C:/repository/neuronephys_v2/coupling_speed_test/main.cu(663): warning : multicharacter character literal (potential portability problem)
+  
+C:/repository/neuronephys_v2/coupling_speed_test/coupling.cu(32): warning : inline qualifier ignored for "__global__" function
+  
+  main.cu
+  coupling.cu
+C:/repository/neuronephys_v2/coupling_speed_test/network_factory.cu(75): warning C4244: '=': conversion from '__int64' to '_Ty', possible loss of data
+          with
+          [
+              _Ty=int
+          ]
+C:/repository/neuronephys_v2/coupling_speed_test/main.cu(522): warning C4101: 'e': unreferenced local variable
+C:/repository/neuronephys_v2/coupling_speed_test/main.cu(940): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+C:/repository/neuronephys_v2/coupling_speed_test/main.cu(940): warning C4244: 'argument': conversion from 'double' to 'const int', possible loss of data
+C:/repository/neuronephys_v2/coupling_speed_test/main.cu(555): warning C4244: 'initializing': conversion from 'Float' to 'int', possible loss of data
+  C:/repository/neuronephys_v2/coupling_speed_test/main.cu(747): note: see reference to function template instantiation 'void _RunAndPrintSimulation<void(__cdecl *)(Float **,int,float)>(const int,const int,std::ostream &,const int,thrust::device_vector<double *,thrust::device_allocator<double *>> &,SimFunc,AtomicCoupling &,AdjacencyList &,Float *,Float *,Float *,const std::vector<double *,std::allocator<T>> &,float *,const int)' being compiled
+          with
+          [
+              SimFunc=void (__cdecl *)(Float **,int,float),
+              T=double *
+          ]
+C:/repository/neuronephys_v2/coupling_speed_test/main.cu(555): warning C4244: 'initializing': conversion from 'Float' to 'const int', possible loss of data
+C:/repository/neuronephys_v2/coupling_speed_test/main.cu(586): warning C4244: '=': conversion from 'Float' to 'float', possible loss of data
+C:/repository/neuronephys_v2/coupling_speed_test/main.cu(599): warning C4305: 'argument': truncation from 'const Float' to 'float'
+C:/repository/neuronephys_v2/coupling_speed_test/main.cu(621): warning C4244: 'initializing': conversion from 'Float' to 'int', possible loss of data
+  C:/repository/neuronephys_v2/coupling_speed_test/main.cu(843): note: see reference to function template instantiation 'void _RunAndPrintSimulation_ie<void(__cdecl *)(Float **,int,float)>(const int,const int,std::ostream &,const int,thrust::device_vector<double *,thrust::device_allocator<double *>> &,SimFunc,AtomicCoupling &,AdjacencyList &,AtomicCoupling &,AdjacencyList &,Float *,Float *,Float *,Float *,Float *,const std::vector<double *,std::allocator<T>> &,float *,const int)' being compiled
+          with
+          [
+              SimFunc=void (__cdecl *)(Float **,int,float),
+              T=double *
+          ]
+C:/repository/neuronephys_v2/coupling_speed_test/main.cu(621): warning C4244: 'initializing': conversion from 'Float' to 'const int', possible loss of data
+C:/repository/neuronephys_v2/coupling_speed_test/main.cu(652): warning C4244: '=': conversion from 'Float' to 'float', possible loss of data
+C:/repository/neuronephys_v2/coupling_speed_test/main.cu(666): warning C4305: 'argument': truncation from 'const Float' to 'float'
+C:/repository/neuronephys_v2/coupling_speed_test/coupling.cu(125): warning C4244: 'initializing': conversion from '__int64' to 'int', possible loss of data
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\include\thrust/system/cuda/detail/reduce.h(940): warning C4244: 'argument': conversion from 'Size' to 'int', possible loss of data
+          with
+          [
+              Size=__int64
+          ]
+  C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\include\thrust/system/cuda/detail/reduce.h(1018): note: see reference to function template instantiation 'T thrust::cuda_cub::detail::reduce_n_impl<thrust::cuda_cub::tag,InputIt,Size,T,BinaryOp>(thrust::cuda_cub::execution_policy<thrust::cuda_cub::tag> &,InputIt,Size,T,BinaryOp)' being compiled
+          with
+          [
+              T=size_type,
+              InputIt=flag_iterator_t,
+              Size=__int64,
+              BinaryOp=thrust::plus<__int64>
+          ]
+  C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\include\thrust/system/cuda/detail/count.h(55): note: see reference to function template instantiation 'T thrust::cuda_cub::reduce_n<thrust::cuda_cub::tag,flag_iterator_t,__int64,size_type,thrust::plus<T>>(thrust::cuda_cub::execution_policy<thrust::cuda_cub::tag> &,InputIt,Size,T,BinaryOp)' being compiled
+          with
+          [
+              T=size_type,
+              InputIt=flag_iterator_t,
+              Size=__int64,
+              BinaryOp=thrust::plus<__int64>
+          ]
+  C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\include\thrust/system/cuda/detail/count.h(71): note: see reference to function template instantiation '__int64 thrust::cuda_cub::count_if<thrust::cuda_cub::tag,InputIt,thrust::detail::equal_to_value<int>>(thrust::cuda_cub::execution_policy<thrust::cuda_cub::tag> &,InputIt,InputIt,UnaryPred)' being compiled
+          with
+          [
+              InputIt=thrust::detail::normal_iterator<thrust::device_ptr<int>>,
+              UnaryPred=thrust::detail::equal_to_value<int>
+          ]
+  C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\include\thrust/detail/count.inl(40): note: see reference to function template instantiation '__int64 thrust::cuda_cub::count<thrust::cuda_cub::tag,InputIterator,EqualityComparable>(thrust::cuda_cub::execution_policy<thrust::cuda_cub::tag> &,InputIt,InputIt,const Value &)' being compiled
+          with
+          [
+              InputIterator=thrust::detail::normal_iterator<thrust::device_ptr<int>>,
+              EqualityComparable=int,
+              InputIt=thrust::detail::normal_iterator<thrust::device_ptr<int>>,
+              Value=int
+          ]
+  C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\include\thrust/detail/count.inl(65): note: see reference to function template instantiation '__int64 thrust::count<DerivedPolicy,InputIterator,EqualityComparable>(const thrust::detail::execution_policy_base<DerivedPolicy> &,InputIterator,InputIterator,const EqualityComparable &)' being compiled
+          with
+          [
+              DerivedPolicy=thrust::cuda_cub::tag,
+              InputIterator=thrust::detail::normal_iterator<thrust::device_ptr<int>>,
+              EqualityComparable=int
+          ]
+  C:/repository/neuronephys_v2/coupling_speed_test/coupling.cu(125): note: see reference to function template instantiation '__int64 thrust::count<thrust::detail::normal_iterator<thrust::device_ptr<T>>,int>(InputIterator,InputIterator,const EqualityComparable &)' being compiled
+          with
+          [
+              T=int,
+              InputIterator=thrust::detail::normal_iterator<thrust::device_ptr<int>>,
+              EqualityComparable=int
+          ]
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.1\include\thrust/system/cuda/detail/reduce.h(969): warning C4244: 'argument': conversion from 'Size' to 'int', possible loss of data
+          with
+          [
+              Size=__int64
+          ]
+  graphics.cpp
+C:\repository\neuronephys_v2\coupling_speed_test\graphics.cpp(121,81): warning C4267:  'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\repository\neuronephys_v2\coupling_speed_test\graphics.cpp(148,21): warning C4244:  '=': conversion from 'const GLfloat' to 'GLint', possible loss of data
+C:\repository\neuronephys_v2\coupling_speed_test\graphics.cpp(149,22): warning C4244:  '=': conversion from 'const GLfloat' to 'GLint', possible loss of data
+C:\repository\neuronephys_v2\coupling_speed_test\graphics.cpp(200,31): warning C4244:  'argument': conversion from 'float' to 'GLint', possible loss of data
+  morphology.cpp
+C:\repository\neuronephys_v2\coupling_speed_test\graphics.cpp(236,53): warning C4267:  'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\repository\neuronephys_v2\coupling_speed_test\morphology.cpp(28,79): warning C4244:  'initializing': conversion from '_Rep' to 'unsigned int', possible loss of data
+C:\repository\neuronephys_v2\coupling_speed_test\morphology.cpp(28,79): warning C4244:         with
+C:\repository\neuronephys_v2\coupling_speed_test\morphology.cpp(28,79): warning C4244:         [
+C:\repository\neuronephys_v2\coupling_speed_test\morphology.cpp(28,79): warning C4244:             _Rep=std::chrono::system_clock::rep
+C:\repository\neuronephys_v2\coupling_speed_test\morphology.cpp(28,79): warning C4244:         ]
+C:\repository\neuronephys_v2\coupling_speed_test\morphology.cpp(28,25): warning C4244:  'initializing': conversion from '_Rep' to 'const unsigned int', possible loss of data
+C:\repository\neuronephys_v2\coupling_speed_test\morphology.cpp(28,25): warning C4244:         with
+C:\repository\neuronephys_v2\coupling_speed_test\morphology.cpp(28,25): warning C4244:         [
+C:\repository\neuronephys_v2\coupling_speed_test\morphology.cpp(28,25): warning C4244:             _Rep=std::chrono::system_clock::rep
+C:\repository\neuronephys_v2\coupling_speed_test\morphology.cpp(28,25): warning C4244:         ]
+C:\repository\neuronephys_v2\coupling_speed_test\morphology.cpp(30,55): warning C4305:  'argument': truncation from 'double' to '_Ty'
+C:\repository\neuronephys_v2\coupling_speed_test\morphology.cpp(30,55): warning C4305:         with
+C:\repository\neuronephys_v2\coupling_speed_test\morphology.cpp(30,55): warning C4305:         [
+C:\repository\neuronephys_v2\coupling_speed_test\morphology.cpp(30,55): warning C4305:             _Ty=float
+C:\repository\neuronephys_v2\coupling_speed_test\morphology.cpp(30,55): warning C4305:         ]
+     Creating library C:\repository\neuronephys_v2\x64\Release\coupling_speed_test.lib and object C:\repository\neuronephys_v2\x64\Release\coupling_speed_test.exp
+LINK : warning LNK4098: defaultlib 'MSVCRTD' conflicts with use of other libs; use /NODEFAULTLIB:library
+  Generating code
+  0 of 478 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    0 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+glfw3.lib(context.obj) : warning LNK4099: PDB 'glfw.pdb' was not found with 'glfw3.lib(context.obj)' or at 'C:\repository\neuronephys_v2\x64\Release\glfw.pdb'; linking object as if no debug info
+glfw3.lib(init.obj) : warning LNK4099: PDB 'glfw.pdb' was not found with 'glfw3.lib(init.obj)' or at 'C:\repository\neuronephys_v2\x64\Release\glfw.pdb'; linking object as if no debug info
+glfw3.lib(input.obj) : warning LNK4099: PDB 'glfw.pdb' was not found with 'glfw3.lib(input.obj)' or at 'C:\repository\neuronephys_v2\x64\Release\glfw.pdb'; linking object as if no debug info
+glfw3.lib(monitor.obj) : warning LNK4099: PDB 'glfw.pdb' was not found with 'glfw3.lib(monitor.obj)' or at 'C:\repository\neuronephys_v2\x64\Release\glfw.pdb'; linking object as if no debug info
+glfw3.lib(vulkan.obj) : warning LNK4099: PDB 'glfw.pdb' was not found with 'glfw3.lib(vulkan.obj)' or at 'C:\repository\neuronephys_v2\x64\Release\glfw.pdb'; linking object as if no debug info
+glfw3.lib(window.obj) : warning LNK4099: PDB 'glfw.pdb' was not found with 'glfw3.lib(window.obj)' or at 'C:\repository\neuronephys_v2\x64\Release\glfw.pdb'; linking object as if no debug info
+glfw3.lib(win32_init.obj) : warning LNK4099: PDB 'glfw.pdb' was not found with 'glfw3.lib(win32_init.obj)' or at 'C:\repository\neuronephys_v2\x64\Release\glfw.pdb'; linking object as if no debug info
+glfw3.lib(win32_joystick.obj) : warning LNK4099: PDB 'glfw.pdb' was not found with 'glfw3.lib(win32_joystick.obj)' or at 'C:\repository\neuronephys_v2\x64\Release\glfw.pdb'; linking object as if no debug info
+glfw3.lib(win32_monitor.obj) : warning LNK4099: PDB 'glfw.pdb' was not found with 'glfw3.lib(win32_monitor.obj)' or at 'C:\repository\neuronephys_v2\x64\Release\glfw.pdb'; linking object as if no debug info
+glfw3.lib(win32_time.obj) : warning LNK4099: PDB 'glfw.pdb' was not found with 'glfw3.lib(win32_time.obj)' or at 'C:\repository\neuronephys_v2\x64\Release\glfw.pdb'; linking object as if no debug info
+glfw3.lib(win32_thread.obj) : warning LNK4099: PDB 'glfw.pdb' was not found with 'glfw3.lib(win32_thread.obj)' or at 'C:\repository\neuronephys_v2\x64\Release\glfw.pdb'; linking object as if no debug info
+glfw3.lib(win32_window.obj) : warning LNK4099: PDB 'glfw.pdb' was not found with 'glfw3.lib(win32_window.obj)' or at 'C:\repository\neuronephys_v2\x64\Release\glfw.pdb'; linking object as if no debug info
+glfw3.lib(wgl_context.obj) : warning LNK4099: PDB 'glfw.pdb' was not found with 'glfw3.lib(wgl_context.obj)' or at 'C:\repository\neuronephys_v2\x64\Release\glfw.pdb'; linking object as if no debug info
+glfw3.lib(egl_context.obj) : warning LNK4099: PDB 'glfw.pdb' was not found with 'glfw3.lib(egl_context.obj)' or at 'C:\repository\neuronephys_v2\x64\Release\glfw.pdb'; linking object as if no debug info
+glfw3.lib(osmesa_context.obj) : warning LNK4099: PDB 'glfw.pdb' was not found with 'glfw3.lib(osmesa_context.obj)' or at 'C:\repository\neuronephys_v2\x64\Release\glfw.pdb'; linking object as if no debug info
+  coupling_speed_test.vcxproj -> C:\repository\neuronephys_v2\x64\Release\coupling_speed_test.exe
