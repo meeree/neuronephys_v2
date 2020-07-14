@@ -112,7 +112,7 @@ namespace an_params {
 #define NUM_AN_IE_VAR 11 //Dimension of state space
 namespace an_ie_params {
     constexpr static const Float rk4_dt = 0.05;
-    constexpr static const Float an_Vt = -35; constexpr static const Float an_Kp = 3.6;
+    constexpr static const Float an_Vt = 20; constexpr static const Float an_Kp = 2;
     constexpr static const Float an_coupling_threshold = -60;
     constexpr static const Float Tmax = 1.0;
     constexpr static const Float C = 1;

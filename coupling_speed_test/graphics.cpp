@@ -411,7 +411,7 @@ int setup(float*& voltages, float const* positions, size_t N, size_t render_N)
     glEnable(GL_DEPTH_TEST); glDepthFunc(GL_LESS);
 
     voltages = g_attrs.voltages.data();
-    glPointSize(3);
+    glPointSize(2);
     return 0;
 }
 

@@ -256,8 +256,8 @@ __device__ void dxdt_an_ie_model(const int idx,
 
     // Calculate gating variable derivatives
     *dnKdt = 4 * (alpha_n * (1 - nK) - beta_n * nK);
-    *dYedt = hh_params::Ar * e_Tinavg * (1 - Ye) - hh_params::Ad * Ye;//TODO: Set right value (tauAMPA?)
-    *dYidt = hh_params::Ar * i_Tinavg * (1 - Yi) - hh_params::Ad * Yi; //TODO: Set right value (tauGABA?)
+    *dYedt = 3.48 * e_Tinavg - Ye / tauAMPA;
+    *dYidt = i_Tinavg - Yi / tauGABA;
 
     // Calculate Ca2+ derivative 
     Float ICa = gCa * mCa_inf * mCa_inf * (V - vCa);
@@ -327,8 +327,7 @@ __global__ void RK4_an_ie_model(Float** sim_vars, const int N, const float times
         *Yi_ptr = Yi + timestep * (dYidt1 + dYidt2 * 2 + dYidt3 * 2 + dYidt4) / 6;
 
         // Calculate amount of neurotransmitter outputted AFTER update
-        sim_vars[AN_IE_VAR_EOUTPUT][idx] = Tmax / (1.0 + exp(-(*V_ptr - an_Vt) / hh_params::Kp));//TODO: Check choice of parameters
-        sim_vars[AN_IE_VAR_IOUTPUT][idx] = Tmax / (1.0 + exp(-(*V_ptr - an_Vt) / hh_params::Kp));
+        sim_vars[AN_IE_VAR_IOUTPUT][idx] = sim_vars[AN_IE_VAR_EOUTPUT][idx] = Tmax / (1.0 + exp(-(*V_ptr - an_Vt) / an_Kp));
     }
 }
 
@@ -737,7 +736,7 @@ void sanmodel_benchmark(int const N = 1, int const Ncouple = 0, int const samp_f
 void sanmodel_inhexc_benchmark(int const N = 1, int const Ncouple = 0, int const samp_freq = 1000, int const samp_len = 10, int render_N = -1)
 {
     // Set up graphics and morphology
-    Morphology::initialize_positions(MorphologyType::eBrain2, N, "cortex_connectivity_1M_1k_inh.h5");
+    Morphology::initialize_positions(MorphologyType::eBrain2, N, "cortex_connectivity_250k_1k_inh.h5");
     float* graphics_voltage_handle;
     Graphics::setup(graphics_voltage_handle, Morphology::get_positions(), N, render_N);
 
@@ -792,8 +791,8 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const Ncouple = 0, int const
     // Generate coupling //TODO: Add additional coupling
     AtomicCoupling e_coupling(N, an_ie_params::an_coupling_threshold);
     AtomicCoupling i_coupling(N, an_ie_params::an_coupling_threshold);
-    AdjacencyList e_list{ __GenerateConnectivity(N, Ncouple, sim_vars_cpu[AN_PARAMS_TCOUNT],"cortex_connectivity_1M_1k_exc.h5") };
-    AdjacencyList i_list{ __GenerateConnectivity(N, Ncouple, sim_vars_cpu[AN_PARAMS_TCOUNT],"cortex_connectivity_1M_1k_inh.h5") };
+    AdjacencyList e_list{ __GenerateConnectivity(N, Ncouple, sim_vars_cpu[AN_PARAMS_TCOUNT],"cortex_connectivity_250k_1k_exc.h5") };
+    AdjacencyList i_list{ __GenerateConnectivity(N, Ncouple, sim_vars_cpu[AN_PARAMS_TCOUNT],"cortex_connectivity_250k_1k_inh.h5") };
 
     // Get pointers to data we want to write output for
     std::vector<Float*> sample_ptrs{
@@ -909,6 +908,6 @@ int main()
 {
     //    UniformTest();
     //    HH_benchmark(1024, 1e2, 1000, 10);
-    sanmodel_inhexc_benchmark(1e6, 10, 20000, 10, 1e5);
+    sanmodel_inhexc_benchmark(250e3, 10, 2000, 10, 1e5);
     Graphics::terminate_graphics();
 }
