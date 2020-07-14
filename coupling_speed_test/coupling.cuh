@@ -19,7 +19,7 @@ private:
 	Float const coup_threshold;
 
 public:
-	AtomicCoupling(int const N_, Float const coup_threshold_=coupling_threshold);
+	AtomicCoupling(int const N_, Float const coup_threshold_=hh_params::coupling_threshold);
 
 	//! Perform atomic coupling given connectivity provided as an AdjacenyList.
 	/*!
@@ -63,7 +63,7 @@ private:
 	Float const coup_threshold;
 
 public:
-	MatrixCoupling(int const N_, Float const coup_threshold_ = coupling_threshold);
+	MatrixCoupling(int const N_, Float const coup_threshold_ = hh_params::coupling_threshold);
 
 	//! (SPARSE VERSION) Perform sparse coupling given connectivity provided as an AdjacenyMatrix using cuSparse.
 	/*!

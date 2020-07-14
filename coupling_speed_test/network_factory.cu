@@ -1,3 +1,4 @@
+#define _USE_MATH_DEFINES
 #include "network_factory.cuh"
 #include <unordered_set>
 #include <ANN/ANN.h>
@@ -61,7 +62,7 @@ namespace NetworkFactory
 		}
 		numpnts -= 1; // row_ptr has one extra element.
 		if (N > numpnts)
-			throw std::runtime_error("Not enough points in file " + fl_name  + ". Have N = " + std::to_string(N));
+			throw std::runtime_error("Not enough points in file " + fl_name  + ". Have N = " + std::to_string(N) + " and " + std::to_string(numpnts) + " points available.");
 
 		int sparsity{ numpnts / N };
 		h_coupling.resize(numconns);

@@ -47,9 +47,11 @@ inline __global__ void signal_spikes_kernel(int const num_firing,
 
 struct CheckFiringOperator
 {
+    Float coup_threshold;
+    CheckFiringOperator(Float coup_threshold_) : coup_threshold{ coup_threshold_ } {}
 	__host__ __device__ int operator()(Float const signal) const
 	{
-		return signal > coupling_threshold ? 1 : 0;
+		return signal > coup_threshold ? 1 : 0;
 	}
 };
 
@@ -60,7 +62,7 @@ int AtomicCoupling::operator()(AdjacencyList const& connectivity, Float* voltage
 		thrust::fill_n(thrust::device_ptr<Float>(spikes), N, 0);
 
 	// Determine which neurons are firing by checking against threshold and that they weren't previously firing.
-	thrust::transform(thrust::device_ptr<Float>(voltages), thrust::device_ptr<Float>(voltages + N), is_firing.begin(), CheckFiringOperator());
+	thrust::transform(thrust::device_ptr<Float>(voltages), thrust::device_ptr<Float>(voltages + N), is_firing.begin(), CheckFiringOperator(coup_threshold));
 
 	// See second example here: https://thrust.github.io/doc/classthrust_1_1counting__iterator.html
 	auto const end_it = thrust::copy_if(thrust::make_counting_iterator(0),
@@ -119,7 +121,7 @@ int MatrixCoupling::operator()(CuSparseAdjacencyMatrix const& connectivity, Floa
 		thrust::fill_n(thrust::device_ptr<Float>(spikes), N, 0);
 
 	// Determine which neurons are firing by checking against threshold and that they weren't previously firing.
-	thrust::transform(thrust::device_ptr<Float>(voltages), thrust::device_ptr<Float>(voltages + N), is_firing.begin(), CheckFiringOperator());
+	thrust::transform(thrust::device_ptr<Float>(voltages), thrust::device_ptr<Float>(voltages + N), is_firing.begin(), CheckFiringOperator(coup_threshold));
 
 	// Determine number of firing neurons 
 	int num_firing = thrust::count(is_firing.begin(), is_firing.end(), 1);
