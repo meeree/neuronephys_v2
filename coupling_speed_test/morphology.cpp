@@ -74,7 +74,7 @@ std::pair<bool, std::array<float, 3>> load_cubic_brain_2(int const N, const std:
     }
     if (N > numpnts)
     {
-        cerr << "Not enough points in file " << fl_name << ". Have N = " << N << endl;
+        cerr << "Not enough points in file " << fl_name << ". Have N = " << N << " and " << numpnts << " points available." << endl;
 		return std::make_pair(false, scaling_rate);
     }
     int sparsity{ numpnts / N };
@@ -127,7 +127,7 @@ std::pair<bool,std::array<float,3>> load_cubic_scn(int const N)
     }
     if (N > numpnts)
     {
-        cerr << "Not enough points in file " << fl_name << ". Have N = " << N << endl;
+        cerr << "Not enough points in file " << fl_name << ". Have N = " << N << " and " << numpnts << " points available." << endl;
         return std::make_pair(false,scaling_rate);
     }
     int sparsity{ numpnts / N };
