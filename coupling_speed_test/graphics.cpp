@@ -81,6 +81,10 @@ struct
 
     GLuint pos_buff, voltage_buff, tex_coord_buff;
 
+    int raw_video_frame_idx = 0;
+    int max_raw_video_size_gb = 5;
+    int mov_video_idx = 0;
+
     // Application-specific stuff
     vector<GLfloat> voltages;
     vector<glm::vec3> points;
@@ -415,15 +419,36 @@ int setup(float*& voltages, float const* positions, size_t N, size_t render_N)
     return 0;
 }
 
-void write_frame (FILE* out, uint8_t* data)
+void set_max_raw_video_size(int const size_in_gb)
+{
+    g_attrs.max_raw_video_size_gb = size_in_gb;
+}
+
+void write_frame(FILE* out, uint8_t* data)
 {
     int w{ (int)g_attrs.width }, h{ (int)g_attrs.height };
     glReadPixels(0, 0, w, h, GL_RGB, GL_UNSIGNED_BYTE, data);
     // invert along y-axis
-    for (int y = 0; y < h/2; ++y)
+    for (int y = 0; y < h / 2; ++y)
         for (int x = 0; x < w; ++x)
             for (int chan = 0; chan < 3; ++chan)
                 std::swap(data[3 * (y*w + x) + chan], data[3 * ((h - 1 - y)*w + x) + chan]);
+
+    // Calculate size of file after it will be written to.
+    g_attrs.raw_video_frame_idx += 1;
+    size_t sz_in_bytes = w * h * 3 * sizeof(uint8_t) * g_attrs.raw_video_frame_idx;
+    int const sz_in_gb = (int)(sz_in_bytes / 1e9);
+    std::cout << sz_in_gb << ',' << sz_in_bytes << std::endl;
+    if (sz_in_gb >= g_attrs.max_raw_video_size_gb)
+    {
+        // Convert file to mov using batch file script.
+        system(("convert.bat " + std::to_string(g_attrs.mov_video_idx)).c_str());
+        g_attrs.mov_video_idx += 1;
+
+        // Go back to start of raw data file. 
+        fseek(out, 0, SEEK_SET);
+        g_attrs.raw_video_frame_idx = 0;
+    }
 
     fwrite(data, sizeof(uint8_t), w*h*3, out);
 }
