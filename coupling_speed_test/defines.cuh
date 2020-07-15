@@ -142,6 +142,6 @@ namespace an_ie_params {
     constexpr static const Float gKCa = 0.7506;
     constexpr static const Float gAMPA = 0.513425;
     constexpr static const Float gNMDA = 0.00434132;
-    constexpr static const Float gGABA = 0.00252916;//TODO: Change to non-averaged value
+    constexpr static const Float gGABA = 0.0252916;//TODO: Change to non-averaged value
     constexpr static const Float tauCa = 739.09;
 };
