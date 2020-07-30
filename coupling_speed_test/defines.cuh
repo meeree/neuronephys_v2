@@ -141,7 +141,9 @@ namespace an_ie_params {
     constexpr static const Float gCa = 0.1624;
     constexpr static const Float gKCa = 0.7506;
     constexpr static const Float gAMPA = 0.513425;
-    constexpr static const Float gNMDA = 0.00434132;
-    constexpr static const Float gGABA = 0.0252916;//TODO: Change to non-averaged value
+    constexpr static const Float gNMDA = 0.0434132;
+    constexpr static const Float gGABA = 0.252916;//TODO: Change to non-averaged value
     constexpr static const Float tauCa = 739.09;
+    constexpr static const Float white_noise_mean = 5.0f;
+    constexpr static const Float white_noise_intensity = 4.0f; // Controls stddev of white noise.
 };

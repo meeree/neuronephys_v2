@@ -2,6 +2,26 @@
 #include "graphics.h"
 #include "morphology.h"
 
+// we need these includes for CUDA's random number stuff
+#include <curand.h>
+#include <curand_kernel.h>
+
+__global__ void init_random(unsigned int seed, int const N, curandState_t* states) 
+{
+    for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < N; idx += gridDim.x * blockDim.x)
+    {
+        curand_init(seed, idx, 0, &states[idx]);
+    }
+}
+
+__global__ void get_random_test(curandState_t* states, int const N, int* numbers)
+{
+    for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < N; idx += gridDim.x * blockDim.x)
+    {
+        numbers[idx] = curand(&states[idx]) % 100;
+    }
+}
+
 void UniformTest()
 {
     int N = 10;
@@ -243,6 +263,7 @@ __global__ void RK4_anmodel(Float** sim_vars, const int N, const float timestep)
 __device__ void dxdt_an_ie_model(const int idx,
     Float const V, Float const nK, Float const Ca, Float const Ye, Float const Yi,
     Float const e_Tinavg, Float const i_Tinavg,//e/i_Tinavg: excitatory/inhibitory neurotransmitter input
+    Float const white_noise,
     Float* dvdt, Float* dnKdt, Float* dCadt, Float* dYedt, Float* dYidt)
 {
     using namespace an_ie_params;
@@ -264,7 +285,9 @@ __device__ void dxdt_an_ie_model(const int idx,
     *dCadt = -alphaCa * (10 * A * ICa) - Ca / tauCa;
 
     // Calculate voltage derivative
-    *dvdt = -gK * pow(nK, 4) * (V - vK)
+    *dvdt = 
+        white_noise
+        -gK * pow(nK, 4) * (V - vK)
         - ICa
         - gKCa * mKCa_inf * (V - vK)
         - gNaP * mNaP_inf * mNaP_inf * mNaP_inf * (V - vNa)
@@ -274,7 +297,7 @@ __device__ void dxdt_an_ie_model(const int idx,
 
     *dvdt /= C;
 }
-__global__ void RK4_an_ie_model(Float** sim_vars, const int N, const float timestep)
+__global__ void RK4_an_ie_model(Float** sim_vars, const int N, const float timestep, curandState_t* random_states)
 {
     using namespace an_ie_params;
     Float dvdt1, dnKdt1, dCadt1, dYedt1, dYidt1;
@@ -301,22 +324,25 @@ __global__ void RK4_an_ie_model(Float** sim_vars, const int N, const float times
         Float const Ye = *Ye_ptr;
         Float const Yi = *Yi_ptr;
 
+        // Add random white noise to V.
+        Float white_noise = white_noise_intensity * curand_normal(random_states + idx) + white_noise_mean;
+
         // k1 = f(X)
-        dxdt_an_ie_model(idx, V, nK, Ca, Ye, Yi, e_Tinavg, i_Tinavg, &dvdt1, &dnKdt1, &dCadt1, &dYedt1, &dYidt1);
+        dxdt_an_ie_model(idx, V, nK, Ca, Ye, Yi, e_Tinavg, i_Tinavg, white_noise, &dvdt1, &dnKdt1, &dCadt1, &dYedt1, &dYidt1);
 
         // k2 = f(X + dt/2 * k1)
         dxdt_an_ie_model(idx,
-            V + dvdt1 * timestep / 2, nK + dnKdt1 * timestep / 2, Ca + dCadt1 * timestep / 2, Ye + dYedt1 * timestep / 2, Yi + dYidt1 * timestep / 2,
+            V + dvdt1 * timestep / 2, nK + dnKdt1 * timestep / 2, Ca + dCadt1 * timestep / 2, Ye + dYedt1 * timestep / 2, Yi + dYidt1 * timestep / 2, white_noise, 
             e_Tinavg, i_Tinavg, &dvdt2, &dnKdt2, &dCadt2, &dYedt2, &dYidt2);
 
         // k3 = f(X + dt/2 * k2)
         dxdt_an_ie_model(idx,
-            V + dvdt2 * timestep / 2, nK + dnKdt2 * timestep / 2, Ca + dCadt2 * timestep / 2, Ye + dYedt2 * timestep / 2, Yi + dYidt2 * timestep / 2,
+            V + dvdt2 * timestep / 2, nK + dnKdt2 * timestep / 2, Ca + dCadt2 * timestep / 2, Ye + dYedt2 * timestep / 2, Yi + dYidt2 * timestep / 2,  white_noise, 
             e_Tinavg, i_Tinavg, &dvdt3, &dnKdt3, &dCadt3, &dYedt3, &dYidt3);
 
         // k4 = f(X + dt * k3)
         dxdt_an_ie_model(idx,
-            V + dvdt3 * timestep, nK + dnKdt3 * timestep, Ca + dCadt3 * timestep, Ye + dYedt3 * timestep, Yi + dYidt3 * timestep / 2,
+            V + dvdt3 * timestep, nK + dnKdt3 * timestep, Ca + dCadt3 * timestep, Ye + dYedt3 * timestep, Yi + dYidt3 * timestep / 2, white_noise, 
             e_Tinavg, i_Tinavg, &dvdt4, &dnKdt4, &dCadt4, &dYedt4, &dYidt4);
 
         // X(t + dt) = X(t) + dt * (k1 + 2k2 + 2k3 + k4)/6
@@ -325,6 +351,47 @@ __global__ void RK4_an_ie_model(Float** sim_vars, const int N, const float times
         *Ca_ptr = Ca + timestep * (dCadt1 + dCadt2 * 2 + dCadt3 * 2 + dCadt4) / 6;
         *Ye_ptr = Ye + timestep * (dYedt1 + dYedt2 * 2 + dYedt3 * 2 + dYedt4) / 6;
         *Yi_ptr = Yi + timestep * (dYidt1 + dYidt2 * 2 + dYidt3 * 2 + dYidt4) / 6;
+
+        // Calculate amount of neurotransmitter outputted AFTER update
+        sim_vars[AN_IE_VAR_IOUTPUT][idx] = sim_vars[AN_IE_VAR_EOUTPUT][idx] = Tmax / (1.0 + exp(-(*V_ptr - an_Vt) / an_Kp));
+    }
+}
+
+__global__ void Euler_an_ie_model(Float** sim_vars, const int N, const float timestep, curandState_t* random_states)
+{
+    using namespace an_ie_params;
+    Float dvdt, dnKdt, dCadt, dYedt, dYidt;
+    for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < N; idx += gridDim.x * blockDim.x)
+    {
+        Float* V_ptr = sim_vars[AN_IE_VAR_V] + idx;
+        Float* nK_ptr = sim_vars[AN_IE_VAR_NK] + idx;
+        Float* Ca_ptr = sim_vars[AN_IE_VAR_CA] + idx;
+        Float* Ye_ptr = sim_vars[AN_IE_VAR_YE] + idx;
+        Float* Yi_ptr = sim_vars[AN_IE_VAR_YI] + idx;
+
+        // Calculate average neurotransmitter input
+        Float e_Tinavg = sim_vars[AN_IE_VAR_ECOUNT][idx];
+        e_Tinavg = e_Tinavg == 0 ? 0 : sim_vars[AN_IE_VAR_EIN][idx] / e_Tinavg;
+        Float i_Tinavg = sim_vars[AN_IE_VAR_ICOUNT][idx];
+        i_Tinavg = i_Tinavg == 0 ? 0 : sim_vars[AN_IE_VAR_IIN][idx] / i_Tinavg;
+
+        Float const V = *V_ptr;
+        Float const nK = *nK_ptr;
+        Float const Ca = *Ca_ptr;
+        Float const Ye = *Ye_ptr;
+        Float const Yi = *Yi_ptr;
+
+        // Add random white noise to V.
+        Float white_noise = white_noise_intensity * curand_normal(random_states + idx) + white_noise_mean;
+
+        dxdt_an_ie_model(idx, V, nK, Ca, Ye, Yi, e_Tinavg, i_Tinavg, white_noise, &dvdt, &dnKdt, &dCadt, &dYedt, &dYidt);
+        
+        // X(t + dt) = X(t) + dt * dxdt
+        *V_ptr = V + timestep * dvdt;
+        *nK_ptr = nK + timestep * dnKdt;
+        *Ca_ptr = Ca + timestep * dCadt;
+        *Ye_ptr = Ye + timestep * dYedt;
+        *Yi_ptr = Yi + timestep * dYidt;
 
         // Calculate amount of neurotransmitter outputted AFTER update
         sim_vars[AN_IE_VAR_IOUTPUT][idx] = sim_vars[AN_IE_VAR_EOUTPUT][idx] = Tmax / (1.0 + exp(-(*V_ptr - an_Vt) / an_Kp));
@@ -587,6 +654,7 @@ void _RunAndPrintSimulation_ie(int const samp_freq, int const samp_len, std::ost
     AtomicCoupling& i_coupling, AdjacencyList& i_list,
     Float* V_ptr, Float* e_spikes, Float* e_neuron_outputs,
     Float* i_spikes, Float* i_neuron_outputs,
+    thrust::device_vector<curandState_t>& random_states,
     std::vector<Float*> const& sample_ptrs,
     float* graphics_voltages_handle = nullptr, int const render_N = -1)
 {
@@ -634,7 +702,7 @@ void _RunAndPrintSimulation_ie(int const samp_freq, int const samp_len, std::ost
         int i_num_firing = i_coupling(i_list, V_ptr, i_spikes, i_neuron_outputs);
 
         // Update ODE 
-        sim_func << <NBLOCKS, NTHREADS >> > (thrust::raw_pointer_cast(sim_vars.data()), N, an_ie_params::rk4_dt);
+        sim_func << <NBLOCKS, NTHREADS >> > (thrust::raw_pointer_cast(sim_vars.data()), N, an_ie_params::rk4_dt, thrust::raw_pointer_cast(random_states.data()));
     }
     fout << SampleValsToStr(0, sample_ptrs) << SampleValsToStr(1, sample_ptrs) << SampleValsToStr(2, sample_ptrs) << std::endl;
 
@@ -736,7 +804,7 @@ void sanmodel_benchmark(int const N = 1, int const Ncouple = 0, int const samp_f
 void sanmodel_inhexc_benchmark(int const N = 1, int const Ncouple = 0, int const samp_freq = 1000, int const samp_len = 10, int render_N = -1)
 {
     // Set up graphics and morphology
-    Morphology::initialize_positions(MorphologyType::eBrain2, N, "cortex_connectivity_250k_1k_inh.h5");
+    Morphology::initialize_positions(MorphologyType::eBrain2, N, "cortex_connectivity_1m_1k_inh.h5");
     float* graphics_voltage_handle;
     Graphics::setup(graphics_voltage_handle, Morphology::get_positions(), N, render_N);
 
@@ -788,11 +856,15 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const Ncouple = 0, int const
     // Copy pointers from CPU to GPU 
     sim_vars = sim_vars_cpu;
 
+    // Random seeds setup. We get a "state" per neuron which we you can think of as the random seed.
+    thrust::device_vector<curandState_t> random_states(N);
+    init_random << <NBLOCKS, NTHREADS >> > (0, N, thrust::raw_pointer_cast(random_states.data()));
+
     // Generate coupling //TODO: Add additional coupling
     AtomicCoupling e_coupling(N, an_ie_params::an_coupling_threshold);
     AtomicCoupling i_coupling(N, an_ie_params::an_coupling_threshold);
-    AdjacencyList e_list{ __GenerateConnectivity(N, Ncouple, sim_vars_cpu[AN_PARAMS_TCOUNT],"cortex_connectivity_250k_1k_exc.h5") };
-    AdjacencyList i_list{ __GenerateConnectivity(N, Ncouple, sim_vars_cpu[AN_PARAMS_TCOUNT],"cortex_connectivity_250k_1k_inh.h5") };
+    AdjacencyList e_list{ __GenerateConnectivity(N, Ncouple, sim_vars_cpu[AN_IE_VAR_ECOUNT],"cortex_connectivity_1m_1k_exc.h5") };
+    AdjacencyList i_list{ __GenerateConnectivity(N, Ncouple, sim_vars_cpu[AN_IE_VAR_ICOUNT],"cortex_connectivity_1m_1k_inh.h5") };
 
     // Get pointers to data we want to write output for
     std::vector<Float*> sample_ptrs{
@@ -813,10 +885,11 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const Ncouple = 0, int const
     Float* i_neuron_outputs{ sim_vars_cpu[AN_IE_VAR_IOUTPUT] };
     _RunAndPrintSimulation_ie(samp_freq, samp_len, fout,
         N, sim_vars,
-        RK4_an_ie_model, e_coupling, e_list, i_coupling, i_list,
+        Euler_an_ie_model, e_coupling, e_list, i_coupling, i_list,
         sim_vars_cpu[AN_IE_VAR_V],
         sim_vars_cpu[AN_IE_VAR_EIN], sim_vars_cpu[AN_IE_VAR_EOUTPUT],
         sim_vars_cpu[AN_IE_VAR_IIN], sim_vars_cpu[AN_IE_VAR_IOUTPUT],
+        random_states,
         sample_ptrs,
         graphics_voltage_handle,
         render_N);
@@ -908,6 +981,6 @@ int main()
 {
     //    UniformTest();
     //    HH_benchmark(1024, 1e2, 1000, 10);
-    sanmodel_inhexc_benchmark(250e3, 10, 2000, 10, 1e5);
+    sanmodel_inhexc_benchmark(1e6, 10, 20000, 10, 2e5);
     Graphics::terminate_graphics();
 }

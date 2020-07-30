@@ -82,7 +82,7 @@ struct
     GLuint pos_buff, voltage_buff, tex_coord_buff;
 
     int raw_video_frame_idx = 0;
-    int max_raw_video_size_gb = 5;
+    int max_raw_video_size_gb = 10;
     int mov_video_idx = 0;
 
     // Application-specific stuff
@@ -438,7 +438,6 @@ void write_frame(FILE* out, uint8_t* data)
     g_attrs.raw_video_frame_idx += 1;
     size_t sz_in_bytes = w * h * 3 * sizeof(uint8_t) * g_attrs.raw_video_frame_idx;
     int const sz_in_gb = (int)(sz_in_bytes / 1e9);
-    std::cout << sz_in_gb << ',' << sz_in_bytes << std::endl;
     if (sz_in_gb >= g_attrs.max_raw_video_size_gb)
     {
         // Convert file to mov using batch file script.
