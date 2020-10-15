@@ -24,7 +24,7 @@ namespace Graphics
 // Circle buffer struct used for replaying recent frames
 struct ReplayBuffer 
 {
-    std::vector<GLfloat> voltage_buff;
+    std::vector<GLfloat> color_buff;
     GLint frame_idx{ 0 }, frame_rewind_idx{ 0 };
     GLint num_frames{ 0 }, frame_size{ 0 };
     
@@ -36,19 +36,19 @@ struct ReplayBuffer
         frame_size = N;
 
         // Allocate frame_cache_count frames for replay
-        voltage_buff.resize(N * frame_cache_count);
+        color_buff.resize(3 * N * frame_cache_count);
     }
-
+/*
     void write_frame(float const* voltages)
     {
         frame_rewind_idx = frame_idx; // Set to index of previous frame
         std::copy(voltages, voltages + frame_size, voltage_buff.begin() + frame_idx * frame_size);
         frame_idx = (frame_idx + 1) % num_frames; // Circle around 
     }
-
+*/
     const GLfloat* read_frame() const
     {
-        return voltage_buff.data() + frame_rewind_idx * frame_size;
+        return color_buff.data() + frame_rewind_idx * frame_size;
     }
 
     void move_N_frames(int N) // N can be positive or negative
@@ -76,17 +76,17 @@ struct
     ReplayBuffer replay_buffer; // Used for replaying video 
 
     // Locations of stuff
-    GLint voltage_loc, pos_loc, tex_coord_loc; // attributes 
+    GLint color_loc, pos_loc, tex_coord_loc; // attributes 
     GLint p_mat_loc, v_mat_loc, m_mat_loc, sampler_loc; // uniforms
 
-    GLuint pos_buff, voltage_buff, tex_coord_buff;
+    GLuint pos_buff, color_buff, tex_coord_buff;
 
     int raw_video_frame_idx = 0;
     int max_raw_video_size_gb = 10;
     int mov_video_idx = 0;
 
     // Application-specific stuff
-    vector<GLfloat> voltages;
+    vector<glm::vec3> color;
     vector<glm::vec3> points;
     int slice_index{ 0 };
 } g_attrs;
@@ -182,26 +182,25 @@ void shutdown ()
     glDeleteVertexArrays(1, &g_attrs.vao);
     glDeleteProgram(g_attrs.shaderProgram);
 }
-
-bool render (float const* voltages, void const* slice, int const slice_width, int const slice_height, bool& pause)
-{   
-    if(glfwWindowShouldClose(g_attrs.window))
+bool render_rgb(float const* color, void const* slice, int const slice_width, int const slice_height, bool& pause)
+{
+    if (glfwWindowShouldClose(g_attrs.window))
         return false; // Done!
 
     if (g_attrs.replay)
-        voltages = g_attrs.replay_buffer.read_frame();
+        color = g_attrs.replay_buffer.read_frame();
 
-    glBindBuffer(GL_ARRAY_BUFFER, g_attrs.voltage_buff);
+    glBindBuffer(GL_ARRAY_BUFFER, g_attrs.color_buff);
     if (!g_attrs.pause || g_attrs.replay) // Only update voltages during replay or when not paused. 
     {
         glBufferData(GL_ARRAY_BUFFER,
-            g_attrs.voltages.size() * sizeof(GLfloat),
-            voltages,
+            g_attrs.color.size() * sizeof(glm::vec3),
+            color,
             GL_DYNAMIC_DRAW);
     }
 
-    GLfloat const color[4]{ 0.0f, 0.0f, 0.0f, 1.0f };
-    glClearBufferfv(GL_COLOR, 0.0f, color);
+    GLfloat const bg_color[4]{ 0.0f, 0.0f, 0.0f, 1.0f };
+    glClearBufferfv(GL_COLOR, 0.0f, bg_color);
     glClear(GL_DEPTH_BUFFER_BIT);
 
     if (pause) // if paused, allow user to rotate object around.
@@ -229,9 +228,9 @@ bool render (float const* voltages, void const* slice, int const slice_width, in
     // Bind voltage buffer and enable voltage attribute
     glEnableVertexAttribArray(g_attrs.pos_loc);
     glUseProgram(g_attrs.shaderProgram);
-    glBindBuffer(GL_ARRAY_BUFFER, g_attrs.voltage_buff);
-    glVertexAttribPointer(g_attrs.voltage_loc, 1, GL_FLOAT, GL_FALSE, sizeof(GLfloat), NULL);
-    glEnableVertexAttribArray(g_attrs.voltage_loc);
+    glBindBuffer(GL_ARRAY_BUFFER, g_attrs.color_buff);
+    glVertexAttribPointer(g_attrs.color_loc, 1, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), NULL);
+    glEnableVertexAttribArray(g_attrs.color_loc);
 
     // Render neurons
     glUniformMatrix4fv(g_attrs.p_mat_loc, 1, GL_FALSE, glm::value_ptr(g_attrs.projection));
@@ -240,14 +239,14 @@ bool render (float const* voltages, void const* slice, int const slice_width, in
     glDrawArrays(GL_POINTS, 0, g_attrs.points.size());
 
     // Render texture
-    if(slice)
+    if (slice)
     {
-		g_attrs.slice_index %= slice_width;
-        glDisableVertexAttribArray(g_attrs.voltage_loc);
+        g_attrs.slice_index %= slice_width;
+        glDisableVertexAttribArray(g_attrs.color_loc);
 
         // Disable voltage attribute and enable tex_coords attribute
         glDisableVertexAttribArray(g_attrs.pos_loc);
-        glDisableVertexAttribArray(g_attrs.voltage_loc);
+        glDisableVertexAttribArray(g_attrs.color_loc);
         glUseProgram(g_attrs.tex_shaderProgram);
 
         glActiveTexture(GL_TEXTURE0);
@@ -264,13 +263,24 @@ bool render (float const* voltages, void const* slice, int const slice_width, in
         glUniformMatrix4fv(g_attrs.p_mat_loc, 1, GL_FALSE, glm::value_ptr(g_attrs.projection));
         glUniformMatrix4fv(g_attrs.m_mat_loc, 1, GL_FALSE, glm::value_ptr(tex_model_mat));
         glUniformMatrix4fv(g_attrs.v_mat_loc, 1, GL_FALSE, glm::value_ptr(g_attrs.view));
-        glDrawArrays(GL_TRIANGLES, 0, 6); 
+        glDrawArrays(GL_TRIANGLES, 0, 6);
     }
 
     glfwPollEvents();
     glfwSwapBuffers(g_attrs.window);
     pause = g_attrs.pause;
     return true;
+}
+bool render (float const* voltages, void const* slice, int const slice_width, int const slice_height, bool& pause)
+{   
+    std::vector<float> color_transfer;
+    color_transfer.resize(3 * g_attrs.color.size());
+    for (int i = 0;i < g_attrs.color.size();i++) {
+        color_transfer[3 * i] = voltages[i];
+        color_transfer[3 * i + 1] = 0.0f;
+        color_transfer[3 * i + 2] = 0.0f;
+    }
+    return render_rgb(color_transfer.data(), slice, slice_width, slice_height, pause);
 }
 
 void keyCallback(GLFWwindow* window, int key, int, int action, int)
@@ -357,7 +367,7 @@ int setup(float*& voltages, float const* positions, size_t N, size_t render_N)
         cout << "Number of points: " << N << endl;
         cout << "Number of points for rendering: " << render_N << endl;
 
-        g_attrs.voltages.resize(g_attrs.points.size(), 0.0f);
+        g_attrs.color.resize(g_attrs.points.size(), glm::vec3{1.0f,0.0f, 0.0f });
         startup(1200, 1080, "Neurons Viz!");
      
         // Compile shaders for texture and voltages.
@@ -366,7 +376,7 @@ int setup(float*& voltages, float const* positions, size_t N, size_t render_N)
 
         // Get locations of uniforms and attributes. 
         // Note that we assume p_mat_loc, v_mat_loc and m_mat_loc are same for tex shader and normal shader
-        g_attrs.voltage_loc = glGetAttribLocation(g_attrs.shaderProgram, "voltage");
+        g_attrs.color_loc = glGetAttribLocation(g_attrs.shaderProgram, "color");
         g_attrs.pos_loc = glGetAttribLocation(g_attrs.shaderProgram, "position");
         g_attrs.p_mat_loc = glGetUniformLocation(g_attrs.shaderProgram, "pMat");
         g_attrs.v_mat_loc = glGetUniformLocation(g_attrs.shaderProgram, "vMat");
@@ -389,11 +399,11 @@ int setup(float*& voltages, float const* positions, size_t N, size_t render_N)
         glVertexAttribPointer(g_attrs.pos_loc, 3, GL_FLOAT, GL_FALSE, 0, NULL);
         glEnableVertexAttribArray(g_attrs.pos_loc);
         
-        glGenBuffers(1, &g_attrs.voltage_buff);
-        glBindBuffer(GL_ARRAY_BUFFER, g_attrs.voltage_buff);
+        glGenBuffers(1, &g_attrs.color_buff);
+        glBindBuffer(GL_ARRAY_BUFFER, g_attrs.color_buff);
         glBufferData(GL_ARRAY_BUFFER,
-                g_attrs.voltages.size() * sizeof(GLfloat),
-                g_attrs.voltages.data(),
+                g_attrs.color.size() * sizeof(glm::vec3),
+                g_attrs.color.data(),
                 GL_DYNAMIC_DRAW);
 
 
@@ -414,7 +424,7 @@ int setup(float*& voltages, float const* positions, size_t N, size_t render_N)
     glEnable (GL_BLEND); glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_DEPTH_TEST); glDepthFunc(GL_LESS);
 
-    voltages = g_attrs.voltages.data();
+    voltages = (float*)g_attrs.color.data();//WARNING! Stupid temporary workaround!
     glPointSize(2);
     return 0;
 }
@@ -456,11 +466,13 @@ void setup_replay(int frame_cache_count)
 {
     g_attrs.replay_buffer.init((int)g_attrs.points.size(), frame_cache_count);
 }
-
+/*
 void record_for_replay (float const* voltages)
 {
     g_attrs.replay_buffer.write_frame(voltages);
 }
+*/
+
 
 void terminate_graphics ()
 {

@@ -8,6 +8,7 @@ namespace Graphics
     int setup(float*& voltages, float const* positions, size_t N, size_t render_N);
 
     bool render(float const* voltages, void const* slice, int const slice_width, int const slice_height, bool& pause);
+    bool render_rgb(float const* color, void const* slice, int const slice_width, int const slice_height, bool& pause);
     void terminate_graphics();
 
     // Sets size of maximum raw video size. If we exceed this, the raw video is converted to an mp4 and overwritten. 
@@ -18,7 +19,7 @@ namespace Graphics
 
     // replay utilities. Allows user to record a replay of voltages and replay it. 
     void setup_replay(int frame_cache_count); // Allocate frame_cache_count frames to store replay. 
-    void record_for_replay(float const* voltages);
+    //void record_for_replay(float const* voltages);
 
     void set_window_title(const char* title);
 

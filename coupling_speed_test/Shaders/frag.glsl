@@ -9,14 +9,11 @@ layout (location=4) uniform mat4 mMat;
 in VS_OUT
 {   
     vec3 position;
-    float voltage;
+    vec3 color;
 } fs_in;
 
 void main(void)
 {
-    if(fs_in.voltage < 0.001)
-        discard;
-    color = mix(vec4(0.4, 0.0, 0.0, 0.8), vec4(0.0, 1.0, 0.0, 1.0), fs_in.voltage); 
-    if (fs_in.voltage > 0.95)
-        color = vec4(0.0, 0.0, 1.0, 1.0);
+    color = vec4(fs_in.color[0], fs_in.color[1], fs_in.color[2], 1.0f);
+    //color = vec4(1.0f,0.0f,0.0f, 1.0f);
 }
