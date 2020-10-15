@@ -33,7 +33,7 @@ struct ReplayBuffer
         frame_idx = 0;
         frame_rewind_idx = 0;
         num_frames = frame_cache_count;
-        frame_size = N;
+        frame_size = 3 * N;
 
         // Allocate frame_cache_count frames for replay
         color_buff.resize(3 * N * frame_cache_count);
@@ -229,7 +229,7 @@ bool render_rgb(float const* color, void const* slice, int const slice_width, in
     glEnableVertexAttribArray(g_attrs.pos_loc);
     glUseProgram(g_attrs.shaderProgram);
     glBindBuffer(GL_ARRAY_BUFFER, g_attrs.color_buff);
-    glVertexAttribPointer(g_attrs.color_loc, 1, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), NULL);
+    glVertexAttribPointer(g_attrs.color_loc, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), NULL);
     glEnableVertexAttribArray(g_attrs.color_loc);
 
     // Render neurons
