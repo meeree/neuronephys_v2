@@ -62,7 +62,7 @@ namespace hh_params {
 // an coupling parametrs are calculated so that the outputs are the same as for HH, but shifted to the correct range for an neurons.
 namespace an_params {
     constexpr static const Float an_Vt = -35; constexpr static const Float an_Kp = 3.6;
-    constexpr static const Float an_coupling_threshold = -60;
+    constexpr static const Float an_coupling_threshold = -30;
     constexpr static const Float Tmax = 1.0;
     constexpr static const Float C = 1;
     constexpr static const Float A = 0.02;
@@ -113,7 +113,7 @@ namespace an_params {
 namespace an_ie_params {
     constexpr static const Float rk4_dt = 0.05;
     constexpr static const Float an_Vt = 20; constexpr static const Float an_Kp = 2;
-    constexpr static const Float an_coupling_threshold = -60;
+    constexpr static const Float an_coupling_threshold = -30;
     constexpr static const Float Tmax = 1.0;
     constexpr static const Float C = 1;
     constexpr static const Float A = 0.02;

@@ -830,19 +830,19 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const Ncouple = 0, int const
         // Set voltages randomly
         std::random_device rd;
         std::mt19937 gen(rd());
-        std::normal_distribution<> voltage_dist(-80, 20);
+        std::normal_distribution<> voltage_dist(-80, 5);
         for (auto& val : cpu_arr)
             val = voltage_dist(gen);
         cudaMemcpy(sim_vars_cpu[AN_IE_VAR_V], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
         // Set Ca 
-        std::uniform_real_distribution<> Ca_dist(0.1, 0.5);
+        std::uniform_real_distribution<> Ca_dist(7.1, 7.2);
         for (auto& val : cpu_arr)
             val = Ca_dist(gen);
         cudaMemcpy(sim_vars_cpu[AN_IE_VAR_CA], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
         // Set potasium gating variable 
-        std::uniform_real_distribution<> nK_dist(0.0, 0.5);
+        std::uniform_real_distribution<> nK_dist(0.0, 0.1);
         for (auto& val : cpu_arr)
             val = nK_dist(gen);
         cudaMemcpy(sim_vars_cpu[AN_IE_VAR_NK], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
@@ -990,6 +990,6 @@ int main()
 {
     //    UniformTest();
     //    HH_benchmark(1024, 1e2, 1000, 10);
-    sanmodel_inhexc_benchmark(1e6, 10, 20000, 10, 2e5);
+    sanmodel_inhexc_benchmark(1e6, 10, 2000, 4, 5e4);
     Graphics::terminate_graphics();
 }
