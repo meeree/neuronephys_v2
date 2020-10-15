@@ -652,7 +652,7 @@ void _RunAndPrintSimulation_ie(int const samp_freq, int const samp_len, std::ost
     int const N, thrust::device_vector<Float*>& sim_vars,
     SimFunc sim_func, AtomicCoupling& e_coupling, AdjacencyList& e_list,
     AtomicCoupling& i_coupling, AdjacencyList& i_list,
-    Float* V_ptr, Float* e_spikes, Float* e_neuron_outputs,
+    Float* V_ptr, Float* NK_ptr, Float* CA_ptr, Float* e_spikes, Float* e_neuron_outputs,
     Float* i_spikes, Float* i_neuron_outputs,
     thrust::device_vector<curandState_t>& random_states,
     std::vector<Float*> const& sample_ptrs,
@@ -663,12 +663,14 @@ void _RunAndPrintSimulation_ie(int const samp_freq, int const samp_len, std::ost
     int const print_incs = (int)((1000.0 / samp_freq) / an_ie_params::rk4_dt + 0.5);
 
     // If graphics handle is non-null, allocate CPU mem to copy voltages to.
-    Float* cpu_voltages;
+    Float *cpu_voltages, *cpu_nk, *cpu_ca;
     uint8_t* frame_data;
     FILE* replay_out;
     if (graphics_voltages_handle)
     {
         cpu_voltages = (Float*)malloc(sizeof(Float) * N);
+        cpu_nk = (Float*)malloc(sizeof(Float) * N);
+        cpu_ca = (Float*)malloc(sizeof(Float) * N);
         frame_data = (uint8_t*)malloc(3 * sizeof(uint8_t) * Graphics::get_width() * Graphics::get_height());
         replay_out = fopen("REPLAY.raw", "wb");
     }
@@ -686,13 +688,18 @@ void _RunAndPrintSimulation_ie(int const samp_freq, int const samp_len, std::ost
             if (graphics_voltages_handle)
             {
                 cudaMemcpy(cpu_voltages, V_ptr, N * sizeof(Float), cudaMemcpyDeviceToHost);
-
+                cudaMemcpy(cpu_nk, NK_ptr, N * sizeof(Float), cudaMemcpyDeviceToHost);
+                cudaMemcpy(cpu_ca, CA_ptr, N * sizeof(Float), cudaMemcpyDeviceToHost);
                 // TODO: PUT SCALING IN SHADER IN GRAPHICS CODE
-                for (int i = 0; i < render_N; ++i)
-                    graphics_voltages_handle[i] = (cpu_voltages[i * (N / render_N)] + 90) / 110.0f;
+                for (int i = 0; i < render_N; ++i) {
+                    graphics_voltages_handle[3 * i] = (cpu_voltages[i * (N / render_N)] + 90) / 110.0f;
+                    graphics_voltages_handle[3 * i + 1] = 1.6f * cpu_nk[i * (N / render_N)];
+                    graphics_voltages_handle[3 * i + 2] = (cpu_ca[i * (N / render_N)]-7.0f)/10.0f;
+                }
+
 
                 bool pause{ false };
-                Graphics::render(graphics_voltages_handle, nullptr, 0, 0, pause);
+                Graphics::render_rgb(graphics_voltages_handle, nullptr, 0, 0, pause);
                 Graphics::write_frame(replay_out, frame_data);
             }
         }
@@ -709,6 +716,8 @@ void _RunAndPrintSimulation_ie(int const samp_freq, int const samp_len, std::ost
     if (graphics_voltages_handle)
     {
         free(cpu_voltages);
+        free(cpu_ca);
+        free(cpu_nk);
         free(frame_data);
         fclose(replay_out);
     }
@@ -886,7 +895,7 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const Ncouple = 0, int const
     _RunAndPrintSimulation_ie(samp_freq, samp_len, fout,
         N, sim_vars,
         Euler_an_ie_model, e_coupling, e_list, i_coupling, i_list,
-        sim_vars_cpu[AN_IE_VAR_V],
+        sim_vars_cpu[AN_IE_VAR_V], sim_vars_cpu[AN_IE_VAR_NK], sim_vars_cpu[AN_IE_VAR_CA],
         sim_vars_cpu[AN_IE_VAR_EIN], sim_vars_cpu[AN_IE_VAR_EOUTPUT],
         sim_vars_cpu[AN_IE_VAR_IIN], sim_vars_cpu[AN_IE_VAR_IOUTPUT],
         random_states,
