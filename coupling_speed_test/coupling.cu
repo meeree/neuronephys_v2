@@ -3,7 +3,9 @@
 cusparseMatDescr_t CuSparseAdjacencyMatrix::default_descr;
 
 AtomicCoupling::AtomicCoupling(int const N_, Float const coup_threshold_) 
-	: N(N_), is_firing(N_, 0), firing_neurons(N_, 0), coup_threshold{ coup_threshold_ } {}
+	: N(N_), is_firing(N_, 0), firing_neurons(N_, 0), coup_threshold{ coup_threshold_ }, downstream_copies(NBLOCKS * N_, 0)
+{
+}
 
 #if USE_DOUBLE_PRECISION
 inline __device__ double atomicAdd_double(double* address, double val)
@@ -40,29 +42,80 @@ inline __global__ void signal_spikes_kernel(int const num_firing,
 		int const pre_idx = firing_inds[tid];
 		int const* post = connectivity + connectivity_offsets[pre_idx];
 		Float const signal = neuron_outputs[pre_idx];
-		for (; post != connectivity + connectivity_offsets[pre_idx + 1]; ++post)
-			ATOMIC_ADD_SPECIALIZED(spikes + *post, signal);
+        for (; post != connectivity + connectivity_offsets[pre_idx + 1]; ++post)
+			atomicAdd(spikes + *post, 1);
 	}
+}
+
+inline __global__ void signal_spikes_kernel_chunked(
+    int const num_firing,  
+    int* const* conn_chunks,
+    int* const* conn_off_chunks,
+    int const* firing_inds,
+    Float* downstream_copies,
+    Float* downstream,
+    Float const* neuron_outputs)
+{
+    __shared__ unsigned int shared_downstream[N_PER_CHUNK];
+    for (int c = 0; c < NCHUNKS; ++c)
+    {
+		// Zero out shared memory
+		for (int tid = threadIdx.x; tid < N_PER_CHUNK; tid += blockDim.x)
+			shared_downstream[tid] = 0;
+
+        // Get the relevant connectivity and downstream for our chunk.
+        int const* conn = conn_chunks[c];
+        int const* conn_off = conn_off_chunks[c];
+        Float* downstream = downstream_copies + (N_PER_CHUNK * (blockIdx.x + c * gridDim.x));
+
+        for (int tid = blockIdx.x * blockDim.x + threadIdx.x; tid < num_firing; tid += gridDim.x * blockDim.x) 
+        {
+            int const pre_idx = firing_inds[tid];
+            int const* post = conn + conn_off[pre_idx];
+            Float const signal = neuron_outputs[pre_idx];
+            for (; post != conn + conn_off[pre_idx + 1]; ++post)
+            {
+                // Write to shared memory chunk.
+                atomicInc(shared_downstream + *post, UINT_MAX);
+            }
+        }
+        // Synchronize threads in block so that we can copy shared memory to global memory.
+        __syncthreads();
+        for (int tid = threadIdx.x; tid < N_PER_CHUNK; tid += blockDim.x)
+            downstream[tid] = shared_downstream[tid];
+    }
+}
+
+
+inline __global__ void merge_kernel(
+    Float* const downstream_copies,
+    Float* downstream)
+{
+    for (int c = 0; c < NCHUNKS; ++c)
+    {
+        Float* downstream_chunk = downstream + N_PER_CHUNK * c;
+        for (int tid = blockIdx.x * blockDim.x + threadIdx.x; tid < N_PER_CHUNK; tid += gridDim.x * blockDim.x)
+            for (int b = 0; b < NBLOCKS; ++b)
+                downstream_chunk[tid] += downstream_copies[N_PER_CHUNK * (b + c * gridDim.x) + tid];
+    }
 }
 
 struct CheckFiringOperator
 {
-    Float coup_threshold;
-    CheckFiringOperator(Float coup_threshold_) : coup_threshold{ coup_threshold_ } {}
-	__host__ __device__ int operator()(Float const signal) const
+	__host__ __device__ int operator()(Float const output) const
 	{
-		return signal > coup_threshold ? 1 : 0;
+		return output > 0.5 ? 1 : 0;
 	}
 };
 
 int AtomicCoupling::operator()(AdjacencyList const& connectivity, Float* voltages, Float* spikes, Float const* neuron_outputs)
 {
 	// Minor optimization: only need to zero the spike_counts if we fired previously. 
-	if (fired_previously)
+    if (fired_previously)
 		thrust::fill_n(thrust::device_ptr<Float>(spikes), N, 0);
 
 	// Determine which neurons are firing by checking against threshold and that they weren't previously firing.
-	thrust::transform(thrust::device_ptr<Float>(voltages), thrust::device_ptr<Float>(voltages + N), is_firing.begin(), CheckFiringOperator(coup_threshold));
+	thrust::transform(thrust::device_ptr<Float const>(neuron_outputs), thrust::device_ptr<Float const>(neuron_outputs + N), is_firing.begin(), CheckFiringOperator());
 
 	// See second example here: https://thrust.github.io/doc/classthrust_1_1counting__iterator.html
 	auto const end_it = thrust::copy_if(thrust::make_counting_iterator(0),
@@ -76,42 +129,97 @@ int AtomicCoupling::operator()(AdjacencyList const& connectivity, Float* voltage
 		return 0;
 
 	// Transfer neurotransmitter from neurons to post-synaptic neurons.
+    cudaEvent_t s, sp;
+    cudaEventCreate(&s);
+    cudaEventCreate(&sp);
+    cudaEventRecord(s, 0);
 	signal_spikes_kernel<<<NBLOCKS, NTHREADS>>>(
 		num_firing, thrust::raw_pointer_cast(connectivity.indices.data()), thrust::raw_pointer_cast(connectivity.offset_in_indices.data()),
 		thrust::raw_pointer_cast(firing_neurons.data()), spikes, neuron_outputs);
+    cudaEventRecord(sp, 0);
+    cudaEventSynchronize(sp);
+
+    float time;
+    cudaEventElapsedTime(&time, s, sp);
 
 	// For next time:
 	fired_previously = true;
+//	std::cout << "Num firing : " << num_firing << std::endl;
+	return num_firing;
+}
+
+int AtomicCoupling::operator()(ChunkedAdjacencyList const& connectivity, Float* voltages, Float* spikes, Float const* neuron_outputs)
+{
+	// Minor optimization: only need to zero the spike_counts if we fired previously. 
+    if (fired_previously)
+    {
+		thrust::fill_n(thrust::device_ptr<Float>(spikes), N, 0);
+        thrust::fill_n(downstream_copies.begin(), NBLOCKS * N, 0);
+    }
+
+	// Determine which neurons are firing by checking against threshold and that they weren't previously firing.
+	thrust::transform(thrust::device_ptr<Float const>(neuron_outputs), thrust::device_ptr<Float const>(neuron_outputs + N), is_firing.begin(), CheckFiringOperator());
+
+	// See second example here: https://thrust.github.io/doc/classthrust_1_1counting__iterator.html
+	auto const end_it = thrust::copy_if(thrust::make_counting_iterator(0),
+										thrust::make_counting_iterator(N), 
+										is_firing.begin(), 
+										firing_neurons.begin(), 
+										thrust::identity<int>());
+
+	int const num_firing = (int)(end_it - firing_neurons.begin());
+	if (num_firing == 0)
+		return 0;
+
+	// Transfer neurotransmitter from neurons to post-synaptic neurons.
+    cudaEvent_t s, sp;
+    cudaEventCreate(&s);
+    cudaEventCreate(&sp);
+    cudaEventRecord(s, 0);
+	signal_spikes_kernel_chunked<<<NBLOCKS, NTHREADS>>>(
+		num_firing, thrust::raw_pointer_cast(connectivity.indices_chunks.data()), thrust::raw_pointer_cast(connectivity.offset_in_indices_chunks.data()),
+		thrust::raw_pointer_cast(firing_neurons.data()), thrust::raw_pointer_cast(downstream_copies.data()), spikes, neuron_outputs);
+
+    merge_kernel << <NBLOCKS, NTHREADS >> > (thrust::raw_pointer_cast(downstream_copies.data()), spikes);
+
+    cudaEventRecord(sp, 0);
+    cudaEventSynchronize(sp);
+    float time;
+    cudaEventElapsedTime(&time, s, sp);
+	// For next time:
+	fired_previously = true;
+//	std::cout << "Num firing : " << num_firing << std::endl;
 	return num_firing;
 }
 
 MatrixCoupling::MatrixCoupling(int const N_, Float const coup_threshold_) 
 	: N(N_), is_firing(N_, 0), coup_threshold{ coup_threshold_ } {}
 
-#if USE_DOUBLE_PRECISION
-#define CUSPARSE_GEMV cusparseDcsrmv
-#else
-#define CUSPARSE_GEMV cusparseScsrmv
-#endif //USE_DOUBLE_PRECISION
+//#if USE_DOUBLE_PRECISION
+//#define CUSPARSE_GEMV cusparseDcsrmv
+//#else
+//#define CUSPARSE_GEMV cusparseScsrmv
+//#endif //USE_DOUBLE_PRECISION
 
 void CuSparseAdjacencyMatrix::gemv(Float const* x, Float* y, Float alpha, Float beta, bool transpose) const
 {
-	// Note: Transpose is flipped since the matrix is in CSC format, not CSR
-	cusparseOperation_t trans = transpose ? CUSPARSE_OPERATION_NON_TRANSPOSE : CUSPARSE_OPERATION_TRANSPOSE;
-	int const N = (int)list.offset_in_indices.size() - 1;
-	cusparseCreateMatDescr(&default_descr);
-	CUSPARSE_GEMV(context,
-		trans,
-		N, N,
-		(int)vals.size(),
-		&alpha,
-		default_descr,
-		thrust::raw_pointer_cast(vals.data()),
-		thrust::raw_pointer_cast(list.offset_in_indices.data()),
-		thrust::raw_pointer_cast(list.indices.data()),
-		x,
-		&beta,
-		y);
+	// TODO: UPDATE BECAUSE CUSPARSECSRMV IS NOT DEPRECATED.
+//	// Note: Transpose is flipped since the matrix is in CSC format, not CSR
+//	cusparseOperation_t trans = transpose ? CUSPARSE_OPERATION_NON_TRANSPOSE : CUSPARSE_OPERATION_TRANSPOSE;
+//	int const N = (int)list.offset_in_indices.size() - 1;
+//	cusparseCreateMatDescr(&default_descr);
+//	CUSPARSE_GEMV(context,
+//		trans,
+//		N, N,
+//		(int)vals.size(),
+//		&alpha,
+//		default_descr,
+//		thrust::raw_pointer_cast(vals.data()),
+//		thrust::raw_pointer_cast(list.offset_in_indices.data()),
+//		thrust::raw_pointer_cast(list.indices.data()),
+//		x,
+//		&beta,
+//		y);
 }
 
 int MatrixCoupling::operator()(CuSparseAdjacencyMatrix const& connectivity, Float* voltages, Float* spikes, Float const* neuron_outputs)
@@ -121,7 +229,7 @@ int MatrixCoupling::operator()(CuSparseAdjacencyMatrix const& connectivity, Floa
 		thrust::fill_n(thrust::device_ptr<Float>(spikes), N, 0);
 
 	// Determine which neurons are firing by checking against threshold and that they weren't previously firing.
-	thrust::transform(thrust::device_ptr<Float>(voltages), thrust::device_ptr<Float>(voltages + N), is_firing.begin(), CheckFiringOperator(coup_threshold));
+	thrust::transform(thrust::device_ptr<Float const>(neuron_outputs), thrust::device_ptr<Float const>(neuron_outputs + N), is_firing.begin(), CheckFiringOperator());
 
 	// Determine number of firing neurons 
 	int num_firing = thrust::count(is_firing.begin(), is_firing.end(), 1);

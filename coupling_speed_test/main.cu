@@ -76,8 +76,8 @@ __global__ void leapfrog(Float** sim_vars, const int N, const Float timestep)
         const Float new_H = (Ah * timestep + (1 - timestep / 2 * (Ah + Bh)) * H) / (timestep / 2 * (Ah + Bh) + 1);
         const Float new_Y = (Ar * Tin_avg * timestep + (1 - timestep / 2 * (Ar * Tin_avg + Ad)) * Y) / (timestep / 2 * (Ar * Tin_avg + Ad) + 1);
 
-        const Float G = gna * new_M*new_M*new_M*new_H + gk * (pow(new_N, 4)) + gl + new_Y;
-        const Float E = gna * new_M*new_M*new_M*new_H * ena + gk * (pow(new_N, 4)) * ek + gl * el + g_coupling * new_Y * e_coupling_gaba;
+        const Float G = gna * new_M*new_M*new_M*new_H + gk * (powf(new_N, 4)) + gl + new_Y;
+        const Float E = gna * new_M*new_M*new_M*new_H * ena + gk * (powf(new_N, 4)) * ek + gl * el + g_coupling * new_Y * e_coupling_gaba;
 
         // Copy back to sim_vars
         *V_ptr = (appcur * timestep + E * timestep + (1 - timestep / 2 * G)*V) / (1 + timestep / 2 * G);
@@ -198,7 +198,7 @@ __device__ void dxdt_anmodel(const int idx,
     *dCadt = -alphaCa * (10 * A * ICa) - Ca / tauCa;
 
     // Calculate voltage derivative
-    *dvdt = -gK * pow(nK, 4) * (V - vK)
+    *dvdt = -gK * powf(nK, 4) * (V - vK)
         - ICa
         - gKCa * mKCa_inf * (V - vK)
         - gNaP * mNaP_inf * mNaP_inf * mNaP_inf * (V - vNa)
@@ -287,7 +287,7 @@ __device__ void dxdt_an_ie_model(const int idx,
     // Calculate voltage derivative
     *dvdt = 
         white_noise
-        -gK * pow(nK, 4) * (V - vK)
+        -gK * powf(nK, 4) * (V - vK)
         - ICa
         - gKCa * mKCa_inf * (V - vK)
         - gNaP * mNaP_inf * mNaP_inf * mNaP_inf * (V - vNa)
@@ -421,6 +421,59 @@ AdjacencyList __GenerateConnectivity(int const N, int const Ncouple, Float*& Tco
             ++Tcount_cpu[ind];
         }
         cudaMemcpy(Tcount, Tcount_cpu.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    }
+    std::cout << "Setup input connectivity" << std::endl;
+    return list;
+}
+
+ChunkedAdjacencyList __GenerateConnectivityChunked(int const N, int const Ncouple, Float*& Tcount, const std::string connectivity_filename)
+{
+    // Generate coupling
+    ChunkedAdjacencyList list;
+    thrust::host_vector<Float> Tcount_cpu(N, 0);
+    {
+        thrust::host_vector<int> h_coupling, h_coupling_inds;
+        NetworkFactory::BrainConnectivity(h_coupling, h_coupling_inds, N, connectivity_filename);
+      //  NetworkFactory::LocalConnectivity(h_coupling, h_coupling_inds, N, 50, 0.05, 2, Morphology::get_positions());
+
+        // Calculate numer of upstream neurons for each neuron based on synaptic coupling
+        thrust::host_vector<int> indices_cpu(h_coupling);
+        for (auto ind : indices_cpu)
+        {
+            if (ind >= N)
+                throw std::runtime_error("ERROR in __GenerateConnectivity: Index " + std::to_string(ind) + " out of range.");
+            ++Tcount_cpu[ind];
+        }
+        cudaMemcpy(Tcount, Tcount_cpu.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+        thrust::host_vector<thrust::host_vector<int>> h_coupling_chunked(NCHUNKS), h_coupling_inds_chunked(NCHUNKS, h_coupling_inds);
+        for (int i = 1; i < N+1; ++i)
+        {
+            for(auto& inds_chunk: h_coupling_inds_chunked)
+                inds_chunk[i] = inds_chunk[i - 1];
+
+            for (int j = h_coupling_inds[i - 1]; j < h_coupling_inds[i]; ++j)
+            {
+                int const ds_idx = h_coupling[j];
+                int const ds_chunk = ds_idx / N_PER_CHUNK;
+                h_coupling_chunked[ds_chunk].push_back(ds_idx % N_PER_CHUNK);
+                h_coupling_inds_chunked[ds_chunk][i] += 1;
+            }
+        }
+
+        thrust::host_vector<int*> raw_h_coupling_chunked(NCHUNKS), raw_h_coupling_inds_chunked(NCHUNKS);
+        for (int i = 0; i < NCHUNKS; ++i)
+        {
+            int sz = h_coupling_chunked[i].size() * sizeof(int);
+            cudaMalloc(&(raw_h_coupling_chunked[i]), sz);
+            cudaMemcpy(raw_h_coupling_chunked[i], h_coupling_chunked[i].data(), sz, cudaMemcpyHostToDevice);
+
+            sz = h_coupling_inds_chunked[i].size() * sizeof(int);
+            cudaMalloc(&(raw_h_coupling_inds_chunked[i]), sz);
+            cudaMemcpy(raw_h_coupling_inds_chunked[i], h_coupling_inds_chunked[i].data(), sz, cudaMemcpyHostToDevice);
+        }
+        list.indices_chunks = raw_h_coupling_chunked;
+        list.offset_in_indices_chunks = raw_h_coupling_inds_chunked;
     }
     std::cout << "Setup input connectivity" << std::endl;
     return list;
@@ -650,7 +703,7 @@ void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostrea
 template<typename SimFunc>
 void _RunAndPrintSimulation_ie(int const samp_freq, int const samp_len, std::ostream& fout,
     int const N, thrust::device_vector<Float*>& sim_vars,
-    SimFunc sim_func, AtomicCoupling& e_coupling, AdjacencyList& e_list,
+    SimFunc sim_func, AtomicCoupling& e_coupling, ChunkedAdjacencyList& e_list,
     AtomicCoupling& i_coupling, AdjacencyList& i_list,
     Float* V_ptr, Float* e_spikes, Float* e_neuron_outputs,
     Float* i_spikes, Float* i_neuron_outputs,
@@ -680,13 +733,14 @@ void _RunAndPrintSimulation_ie(int const samp_freq, int const samp_len, std::ost
 
         if (i % print_incs == 0)
         {
-            fout << SampleValsToStr(0, sample_ptrs) << SampleValsToStr(1, sample_ptrs) << SampleValsToStr(2, sample_ptrs) << std::endl;
-
+//            fout << SampleValsToStr(0, sample_ptrs) << SampleValsToStr(1, sample_ptrs) << SampleValsToStr(2, sample_ptrs) << std::endl;
+            cudaMemcpy(cpu_voltages, V_ptr, N * sizeof(Float), cudaMemcpyDeviceToHost);
+            for(int j = 0; j < NSAMPLES_PRINT; ++j)
+                fout << cpu_voltages[j] << ',';
+            fout << std::endl;
             // Update graphics if the graphics handle is non-null
             if (graphics_voltages_handle)
             {
-                cudaMemcpy(cpu_voltages, V_ptr, N * sizeof(Float), cudaMemcpyDeviceToHost);
-
                 // TODO: PUT SCALING IN SHADER IN GRAPHICS CODE
                 for (int i = 0; i < render_N; ++i)
                     graphics_voltages_handle[i] = (cpu_voltages[i * (N / render_N)] + 90) / 110.0f;
@@ -702,7 +756,7 @@ void _RunAndPrintSimulation_ie(int const samp_freq, int const samp_len, std::ost
         int i_num_firing = i_coupling(i_list, V_ptr, i_spikes, i_neuron_outputs);
 
         // Update ODE 
-        sim_func << <NBLOCKS, NTHREADS >> > (thrust::raw_pointer_cast(sim_vars.data()), N, an_ie_params::rk4_dt, thrust::raw_pointer_cast(random_states.data()));
+        sim_func << <32, 64>> > (thrust::raw_pointer_cast(sim_vars.data()), N, an_ie_params::rk4_dt, thrust::raw_pointer_cast(random_states.data()));
     }
     fout << SampleValsToStr(0, sample_ptrs) << SampleValsToStr(1, sample_ptrs) << SampleValsToStr(2, sample_ptrs) << std::endl;
 
@@ -805,6 +859,7 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const Ncouple = 0, int const
 {
     // Set up graphics and morphology
     Morphology::initialize_positions(MorphologyType::eBrain2, N, "cortex_connectivity_1m_1k_inh.h5");
+
     float* graphics_voltage_handle;
     Graphics::setup(graphics_voltage_handle, Morphology::get_positions(), N, render_N);
 
@@ -863,7 +918,7 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const Ncouple = 0, int const
     // Generate coupling //TODO: Add additional coupling
     AtomicCoupling e_coupling(N, an_ie_params::an_coupling_threshold);
     AtomicCoupling i_coupling(N, an_ie_params::an_coupling_threshold);
-    AdjacencyList e_list{ __GenerateConnectivity(N, Ncouple, sim_vars_cpu[AN_IE_VAR_ECOUNT],"cortex_connectivity_1m_1k_exc.h5") };
+    ChunkedAdjacencyList e_list{ __GenerateConnectivityChunked(N, Ncouple, sim_vars_cpu[AN_IE_VAR_ECOUNT],"cortex_connectivity_1m_1k_exc.h5") };
     AdjacencyList i_list{ __GenerateConnectivity(N, Ncouple, sim_vars_cpu[AN_IE_VAR_ICOUNT],"cortex_connectivity_1m_1k_inh.h5") };
 
     // Get pointers to data we want to write output for
@@ -981,6 +1036,6 @@ int main()
 {
     //    UniformTest();
     //    HH_benchmark(1024, 1e2, 1000, 10);
-    sanmodel_inhexc_benchmark(1e6, 10, 20000, 10, 2e5);
+    sanmodel_inhexc_benchmark(1e6, 10, 20000, 1, 1e5);
     Graphics::terminate_graphics();
 }

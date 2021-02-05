@@ -105,7 +105,7 @@ namespace NetworkFactory
         pos_it = positions;
         double const stddev_sqr{ stddev * stddev };
         double const variance_sqr{ stddev_sqr * stddev_sqr };
-        double const normal_dist_scalar{ 1.0 / sqrt(2.0*M_PI*variance_sqr) };
+        double const normal_dist_scalar{ 1.0 / sqrt(2.0*3.1415926*variance_sqr) };
         std::uniform_real_distribution<double> unit_dist(0.0, 1.0);
         int ball_sz_sum{ 0 };
         for (int from_idx = 0; from_idx < N; ++from_idx)

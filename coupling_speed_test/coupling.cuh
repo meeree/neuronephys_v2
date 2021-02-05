@@ -8,6 +8,12 @@ struct AdjacencyList
 	thrust::device_vector<int> offset_in_indices;
 };
 
+struct ChunkedAdjacencyList
+{
+	thrust::device_vector<int*> indices_chunks;
+	thrust::device_vector<int*> offset_in_indices_chunks;
+};
+
 //!  Class that performs coupling using adjacency list telling us the downstream neurons per neuron. 
 class AtomicCoupling
 {
@@ -17,7 +23,7 @@ private:
 	thrust::device_vector<int> firing_neurons;
 	bool fired_previously = false;
 	Float const coup_threshold;
-
+    thrust::device_vector<Float> downstream_copies;
 public:
 	AtomicCoupling(int const N_, Float const coup_threshold_=hh_params::coupling_threshold);
 
@@ -30,6 +36,8 @@ public:
 	  \return Number of neurons firing 
 	*/
 	int operator()(AdjacencyList const& connectivity, Float* voltages, Float* spikes, Float const* neuron_outputs);
+
+	int operator()(ChunkedAdjacencyList const& connectivity, Float* voltages, Float* spikes, Float const* neuron_outputs);
 };
 
 // Stored in CSC format!
