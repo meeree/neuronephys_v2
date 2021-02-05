@@ -143,7 +143,7 @@ std::pair<bool,std::array<float,3>> load_cubic_scn(int const N)
     return std::make_pair(true,scaling_rate);
 }
 
-std::pair<bool, std::array<float,3>>initialize_positions(MorphologyType const type, int const N, const std::string coupling_filename)
+std::pair<bool, std::array<float,3>> initialize_positions(MorphologyType const type, int const N, const std::string coupling_filename)
 {
     // All morphologies are assumed to be within the range (-1, -1, -1) to (1, 1, 1)
     g_morph.wmin = { -1, -1, -1 };

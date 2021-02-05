@@ -1,5 +1,6 @@
 // morphology.h : Handles generation and storage of neuron positions. 
 #include <array>
+#include <string>
 #pragma once
 
 enum MorphologyType : unsigned char
