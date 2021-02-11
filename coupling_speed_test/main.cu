@@ -92,8 +92,8 @@ __global__ void leapfrog(Float** sim_vars, const int N, const Float timestep, cu
         const Float Ein_avg = Enum_in > 0 ? Ein / Enum_in : 0;
         const Float new_EY = (Ar * Ein_avg * timestep + (1 - timestep / 2 * (Ar * Ein_avg + Ad)) * EY) / (timestep / 2 * (Ar * Ein_avg + Ad) + 1);
 
-        const Float G = gna * new_M*new_M*new_M*new_H + gk * (powf(new_N, 4)) + gl + g_gaba * new_local_Y/* + g_gaba * new_IY + g_ampa * new_EY*/;
-        const Float E = gna * new_M*new_M*new_M*new_H * ena + gk * (powf(new_N, 4)) * ek + gl * el + g_gaba * new_local_Y * e_gaba/* + g_gaba * new_IY * e_gaba + g_ampa * new_EY * e_ampa*/;
+        const Float G = gna * new_M*new_M*new_M*new_H + gk * (powf(new_N, 4)) + gl + g_gaba * new_local_Y + g_gaba * new_IY + g_ampa * new_EY;
+        const Float E = gna * new_M*new_M*new_M*new_H * ena + gk * (powf(new_N, 4)) * ek + gl * el + g_gaba * new_local_Y * e_gaba + g_gaba * new_IY * e_gaba + g_ampa * new_EY * e_ampa;
 
         // Copy back to sim_vars
         *V_ptr = (appcur * timestep + E * timestep + (1 - timestep / 2 * G)*V) / (1 + timestep / 2 * G);
