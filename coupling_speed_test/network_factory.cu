@@ -105,6 +105,10 @@ namespace NetworkFactory
                 query_pt[dim] = *pos_it++;
 
 			kd_tree->annkSearch(query_pt, k, knn[n].data(), knn_dists[n].data());
+
+			for(auto& val: knn[n])
+				std::cout << val << ',';
+			std::cout << std::endl;
 		}
 		delete kd_tree;
         annClose();

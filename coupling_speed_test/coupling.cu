@@ -2,8 +2,8 @@
 
 cusparseMatDescr_t CuSparseAdjacencyMatrix::default_descr;
 
-AtomicCoupling::AtomicCoupling(int const N_, Float const coup_threshold_) 
-	: N(N_), is_firing(N_, 0), firing_neurons(N_, 0), coup_threshold{ coup_threshold_ }, downstream_copies(NBLOCKS * N_, 0)
+AtomicCoupling::AtomicCoupling(int const N_) 
+	: N(N_), is_firing(N_, 0), firing_neurons(N_, 0), downstream_copies(NBLOCKS * N_, 0)
 {
 }
 
@@ -104,11 +104,11 @@ struct CheckFiringOperator
 {
 	__host__ __device__ int operator()(Float const output) const
 	{
-		return output > 0.5 ? 1 : 0;
+		return output > 0.1 ? 1 : 0;
 	}
 };
 
-int AtomicCoupling::operator()(AdjacencyList const& connectivity, Float* voltages, Float* spikes, Float const* neuron_outputs)
+int AtomicCoupling::operator()(AdjacencyList const& connectivity, Float* spikes, Float const* neuron_outputs)
 {
 	// Minor optimization: only need to zero the spike_counts if we fired previously. 
     if (fired_previously)
@@ -148,7 +148,7 @@ int AtomicCoupling::operator()(AdjacencyList const& connectivity, Float* voltage
 	return num_firing;
 }
 
-int AtomicCoupling::operator()(ChunkedAdjacencyList const& connectivity, Float* voltages, Float* spikes, Float const* neuron_outputs)
+int AtomicCoupling::operator()(ChunkedAdjacencyList const& connectivity, Float* spikes, Float const* neuron_outputs)
 {
 	// Minor optimization: only need to zero the spike_counts if we fired previously. 
     if (fired_previously)
@@ -192,8 +192,8 @@ int AtomicCoupling::operator()(ChunkedAdjacencyList const& connectivity, Float* 
 	return num_firing;
 }
 
-MatrixCoupling::MatrixCoupling(int const N_, Float const coup_threshold_) 
-	: N(N_), is_firing(N_, 0), coup_threshold{ coup_threshold_ } {}
+MatrixCoupling::MatrixCoupling(int const N_) 
+	: N(N_), is_firing(N_, 0) {}
 
 //#if USE_DOUBLE_PRECISION
 //#define CUSPARSE_GEMV cusparseDcsrmv
@@ -222,7 +222,7 @@ void CuSparseAdjacencyMatrix::gemv(Float const* x, Float* y, Float alpha, Float 
 //		y);
 }
 
-int MatrixCoupling::operator()(CuSparseAdjacencyMatrix const& connectivity, Float* voltages, Float* spikes, Float const* neuron_outputs)
+int MatrixCoupling::operator()(CuSparseAdjacencyMatrix const& connectivity, Float* spikes, Float const* neuron_outputs)
 {
 	// Minor optimization: only need to zero the spike_counts if we fired previously. 
 	if (fired_previously)
