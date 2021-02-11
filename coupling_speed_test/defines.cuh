@@ -32,12 +32,24 @@ typedef float Float;
 #define SIM_PARAMS_M 1
 #define SIM_PARAMS_N 2
 #define SIM_PARAMS_H 3
-#define SIM_PARAMS_Y 4
-#define SIM_PARAMS_OUTPUT 5
-#define SIM_PARAMS_TIN 6//input synaptic neurotransmitter
-#define SIM_PARAMS_TCOUNT 7//count of presynaptic neurons
-#define SIM_PARAMS_APPCUR 8
-#define NUM_SIM_PARAMS 9//Dimension of state space
+#define SIM_PARAMS_LOCAL_Y 4
+#define SIM_PARAMS_IY 5
+#define SIM_PARAMS_EY 6
+
+#define SIM_PARAMS_LOCAL_OUTPUT 7
+#define SIM_PARAMS_LOCAL_IN 8//input synaptic neurotransmitter
+#define SIM_PARAMS_LOCAL_COUNT 9//count of presynaptic neurons
+
+#define SIM_PARAMS_EOUTPUT 10
+#define SIM_PARAMS_EIN 11//input synaptic neurotransmitter
+#define SIM_PARAMS_ECOUNT 12//count of presynaptic neurons
+
+#define SIM_PARAMS_IOUTPUT 13
+#define SIM_PARAMS_IIN 14//input synaptic neurotransmitter
+#define SIM_PARAMS_ICOUNT 15//count of presynaptic neurons
+
+#define SIM_PARAMS_APPCUR 16
+#define NUM_SIM_PARAMS 17//Dimension of state space
 
 // TODO : SET NUMBER OF THREADS DYNAMICALLY BASED ON CARD USED
 #define NTHREADS 64 
@@ -56,8 +68,8 @@ namespace hh_params {
     constexpr static const Float Tmax = 1.0;                                                             // Max neurotransmitter output
     constexpr static const Float Vt = -20.0; constexpr static const Float Kp = 3.0;                      // Neurotransmitter potential and scalar 
     constexpr const static Float Ar = 5.0; constexpr const static Float Ad = 0.18;                       // alpha and beta for GABA gating variable
-    constexpr static const Float g_coupling = 0.01; constexpr static const Float e_coupling_gaba = -70.0; // Coupling conductance and potential for GABA
-    constexpr static const Float coupling_threshold = -50;                                               // Threshold for GABA coupling
+    constexpr static const Float g_ampa = 0.01; constexpr static const Float e_ampa = 0.0; // Coupling conductance and potential for AMPA
+    constexpr static const Float g_gaba = 0.01; constexpr static const Float e_gaba = -70.0; // Coupling conductance and potential for GABA
     constexpr static const Float appcur = 8;                                                            // Base current to apply when we only apply a constant current. 
 }
 
@@ -79,14 +91,12 @@ namespace hh_params {
 namespace an_ie_params {
     constexpr static const Float rk4_dt = 0.04;
     constexpr static const Float an_Vt = -45; constexpr static const Float an_Kp = 1;
-    constexpr static const Float an_coupling_threshold = -60;
     constexpr static const Float Tmax = 1.0;
     constexpr static const Float C = 1;
     constexpr static const Float A = 0.02;
     constexpr static const Float vL = -60.95;
     constexpr static const Float vNa = 55;
     constexpr static const Float vK = -100;
-    constexpr static const Float tauhA = 15;
     constexpr static const Float vCa = 120;
     constexpr static const Float kD = 30;
     constexpr static const Float vAMPA = 0;
@@ -100,10 +110,7 @@ namespace an_ie_params {
     constexpr static const Float gL = 0.016307;
     constexpr static const Float gNa = 12.2438;
     constexpr static const Float gK = 19.20436;
-    constexpr static const Float gA = 1.79259;
-    constexpr static const Float gKS = 0.0350135;
     constexpr static const Float gNaP = 0.63314;
-    constexpr static const Float gAR = 0.0166454;
     constexpr static const Float gCa = 0.1624;
     constexpr static const Float gKCa = 0.7506;
     constexpr static const Float gAMPA = 0.03;

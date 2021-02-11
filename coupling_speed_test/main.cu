@@ -42,7 +42,7 @@ void UniformTest()
     }
 }
 
-__global__ void leapfrog(Float** sim_vars, const int N, const Float timestep)
+__global__ void leapfrog(Float** sim_vars, const int N, const Float timestep, curandState_t* random_states)
 {
     using namespace hh_params;
     for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < N; idx += gridDim.x * blockDim.x)
@@ -51,16 +51,25 @@ __global__ void leapfrog(Float** sim_vars, const int N, const Float timestep)
         Float* M_ptr = sim_vars[SIM_PARAMS_M] + idx;
         Float* N_ptr = sim_vars[SIM_PARAMS_N] + idx;
         Float* H_ptr = sim_vars[SIM_PARAMS_H] + idx;
-        Float* Y_ptr = sim_vars[SIM_PARAMS_Y] + idx;
-        const Float Tin = sim_vars[SIM_PARAMS_TIN][idx];
-        const Float num_in = sim_vars[SIM_PARAMS_TCOUNT][idx];
+        Float* local_Y_ptr = sim_vars[SIM_PARAMS_LOCAL_Y] + idx;
+        Float* IY_ptr = sim_vars[SIM_PARAMS_IY] + idx;
+        Float* EY_ptr = sim_vars[SIM_PARAMS_EY] + idx;
+
+        const Float local_in = sim_vars[SIM_PARAMS_LOCAL_IN][idx];
+        const Float local_num_in = sim_vars[SIM_PARAMS_LOCAL_COUNT][idx];
+        const Float Iin = sim_vars[SIM_PARAMS_IIN][idx];
+        const Float Inum_in = sim_vars[SIM_PARAMS_ICOUNT][idx];
+        const Float Ein = sim_vars[SIM_PARAMS_EIN][idx];
+        const Float Enum_in = sim_vars[SIM_PARAMS_ECOUNT][idx];
         const Float appcur = sim_vars[SIM_PARAMS_APPCUR][idx];
 
         const Float V = *V_ptr;
         const Float M = *M_ptr;
         const Float N = *N_ptr;
         const Float H = *H_ptr;
-        const Float Y = *Y_ptr;
+        const Float local_Y = *local_Y_ptr;
+        const Float IY = *IY_ptr;
+        const Float EY = *EY_ptr;
 
         const Float Am = (3.5 + 0.1 * V) / (1 - exp(-3.5 - 0.1*V));
         const Float An = (-0.5 - 0.01 * V) / (exp(-5 - 0.1 * V) - 1);
@@ -70,27 +79,37 @@ __global__ void leapfrog(Float** sim_vars, const int N, const Float timestep)
         const Float Bn = 0.125*exp(-(V + 60) / 80);
         const Float Bh = 1 / (exp(-3 - 0.1*V) + 1);
 
-        const Float Tin_avg = num_in > 0 ? Tin / num_in : 0;
         const Float new_M = (Am * timestep + (1 - timestep / 2 * (Am + Bm)) * M) / (timestep / 2 * (Am + Bm) + 1);
         const Float new_N = (An * timestep + (1 - timestep / 2 * (An + Bn)) * N) / (timestep / 2 * (An + Bn) + 1);
         const Float new_H = (Ah * timestep + (1 - timestep / 2 * (Ah + Bh)) * H) / (timestep / 2 * (Ah + Bh) + 1);
-        const Float new_Y = (Ar * Tin_avg * timestep + (1 - timestep / 2 * (Ar * Tin_avg + Ad)) * Y) / (timestep / 2 * (Ar * Tin_avg + Ad) + 1);
 
-        const Float G = gna * new_M*new_M*new_M*new_H + gk * (powf(new_N, 4)) + gl + new_Y;
-        const Float E = gna * new_M*new_M*new_M*new_H * ena + gk * (powf(new_N, 4)) * ek + gl * el + g_coupling * new_Y * e_coupling_gaba;
+        const Float local_Tin_avg = local_num_in > 0 ? local_in / local_num_in : 0;
+        const Float new_local_Y = (Ar * local_Tin_avg * timestep + (1 - timestep / 2 * (Ar * local_Tin_avg + Ad)) * local_Y) / (timestep / 2 * (Ar * local_Tin_avg + Ad) + 1);
+
+        const Float Iin_avg = Inum_in > 0 ? Iin / Inum_in : 0;
+        const Float new_IY = (Ar * Iin_avg * timestep + (1 - timestep / 2 * (Ar * Iin_avg + Ad)) * IY) / (timestep / 2 * (Ar * Iin_avg + Ad) + 1);
+
+        const Float Ein_avg = Enum_in > 0 ? Ein / Enum_in : 0;
+        const Float new_EY = (Ar * Ein_avg * timestep + (1 - timestep / 2 * (Ar * Ein_avg + Ad)) * EY) / (timestep / 2 * (Ar * Ein_avg + Ad) + 1);
+
+        const Float G = gna * new_M*new_M*new_M*new_H + gk * (powf(new_N, 4)) + gl + g_gaba * new_local_Y/* + g_gaba * new_IY + g_ampa * new_EY*/;
+        const Float E = gna * new_M*new_M*new_M*new_H * ena + gk * (powf(new_N, 4)) * ek + gl * el + g_gaba * new_local_Y * e_gaba/* + g_gaba * new_IY * e_gaba + g_ampa * new_EY * e_ampa*/;
 
         // Copy back to sim_vars
         *V_ptr = (appcur * timestep + E * timestep + (1 - timestep / 2 * G)*V) / (1 + timestep / 2 * G);
         *M_ptr = new_M;
         *N_ptr = new_N;
         *H_ptr = new_H;
-        *Y_ptr = new_Y;
+        *local_Y_ptr = new_local_Y;
+        *IY_ptr = new_IY;
+        *EY_ptr = new_EY;
 
         // Calculate amount of neurotransmitter outputted AFTER update
-        sim_vars[SIM_PARAMS_OUTPUT][idx] = Tmax / (1.0 + exp(-(*V_ptr - Vt) / Kp));
+        sim_vars[SIM_PARAMS_LOCAL_OUTPUT][idx] = sim_vars[SIM_PARAMS_IOUTPUT][idx] = sim_vars[SIM_PARAMS_EOUTPUT][idx] = Tmax / (1.0 + exp(-(*V_ptr - Vt) / Kp));
     }
 }
 
+#if 0
 __device__ void dxdt_hh(const int idx,
     Float const V, Float const M, Float const N, Float const H, Float const Y, Float const Tinavg,
     Float* dvdt, Float* dMdt, Float* dNdt, Float* dHdt, Float* dYdt)
@@ -121,7 +140,7 @@ __device__ void dxdt_hh(const int idx,
     *dvdt /= C;
 }
 
-__global__ void RK4_hh(Float** sim_vars, const int N, const float timestep)
+__global__ void RK4_hh(Float** sim_vars, const int N, const float timestep, curandState_t* random_states)
 {
     using namespace hh_params;
     Float dvdt1, dMdt1, dNdt1, dHdt1, dYdt1;
@@ -175,6 +194,7 @@ __global__ void RK4_hh(Float** sim_vars, const int N, const float timestep)
         sim_vars[SIM_PARAMS_OUTPUT][idx] = Tmax / (1.0 + exp(-(*V_ptr - Vt) / Kp));
     }
 }
+#endif
 
 __device__ void dxdt_an_ie_model(const int idx,
     Float const V, Float const nK, Float const Ca, Float const Ye, Float const Yi,
@@ -316,13 +336,16 @@ __global__ void Euler_an_ie_model(Float** sim_vars, const int N, const float tim
 }
 
 // Internal function. Sets up network connectivity.
-AdjacencyList __GenerateConnectivity(int const N, Float*& Tcount, const std::string connectivity_filename)
+AdjacencyList __GenerateConnectivity(int const N, Float*& Tcount, const std::string connectivity_filename, bool local=false)
 {
     // Generate coupling
     AdjacencyList list;
     {
         thrust::host_vector<int> h_coupling, h_coupling_inds;
-        NetworkFactory::BrainConnectivity(h_coupling, h_coupling_inds, N, connectivity_filename);
+        if(local)
+            NetworkFactory::LocalConnectivity(h_coupling, h_coupling_inds, N, 50, Morphology::get_positions());
+        else
+            NetworkFactory::BrainConnectivity(h_coupling, h_coupling_inds, N, connectivity_filename);
         list.indices = h_coupling;
         list.offset_in_indices = h_coupling_inds;
     }
@@ -343,15 +366,17 @@ AdjacencyList __GenerateConnectivity(int const N, Float*& Tcount, const std::str
     return list;
 }
 
-ChunkedAdjacencyList __GenerateConnectivityChunked(int const N, Float*& Tcount, const std::string connectivity_filename)
+ChunkedAdjacencyList __GenerateConnectivityChunked(int const N, Float*& Tcount, const std::string connectivity_filename, bool local=false)
 {
     // Generate coupling
     ChunkedAdjacencyList list;
     thrust::host_vector<Float> Tcount_cpu(N, 0);
     {
         thrust::host_vector<int> h_coupling, h_coupling_inds;
-        NetworkFactory::BrainConnectivity(h_coupling, h_coupling_inds, N, connectivity_filename);
-//        NetworkFactory::LocalConnectivity(h_coupling, h_coupling_inds, N, 50, Morphology::get_positions());
+        if(local)
+            NetworkFactory::LocalConnectivity(h_coupling, h_coupling_inds, N, 50, Morphology::get_positions());
+        else
+            NetworkFactory::BrainConnectivity(h_coupling, h_coupling_inds, N, connectivity_filename);
 
         // Calculate numer of upstream neurons for each neuron based on synaptic coupling
         thrust::host_vector<int> indices_cpu(h_coupling);
@@ -396,6 +421,29 @@ ChunkedAdjacencyList __GenerateConnectivityChunked(int const N, Float*& Tcount, 
     return list;
 }
 
+// This is simply a struct that contains all the relevant stuff for coupling. 
+// It can be called which will perform coupling and store it. 
+// Description:
+// - list Adjacency list containing connectivity.
+// - coupling Coupling class that can be called to do coupling with a variety of connectivity structs.
+// - downstream_inputs Input to downstream neurons after coupling.
+// - neuron_outputs Output of neurons.
+struct CouplingStruct 
+{
+    ChunkedAdjacencyList& list;
+    AtomicCoupling& coupling;
+    Float* downstream_inputs;
+    Float* neuron_outputs;
+    
+    // Performs coupling and stores results in downstream_inputs. 
+    // Returns number of neurons firing.
+    int operator() () 
+    {
+        return coupling(list, downstream_inputs, neuron_outputs);
+    }
+};
+
+#if 0
 std::pair<float, float> run_timing(int const N, int const Ncouple)
 {
     // Set up simulation variables. Stored in a struct of arrays.
@@ -490,7 +538,7 @@ std::pair<float, float> run_timing(int const N, int const Ncouple)
         cudaEventCreate(&start2);
         cudaEventCreate(&stop2);
         cudaEventRecord(start2, 0);
-        int num_firing = coupling(list, V_ptr, spikes, neuron_outputs);
+        int num_firing = coupling(list, spikes, neuron_outputs);
         cudaDeviceSynchronize();
         cudaEventRecord(stop2, 0);
         cudaEventSynchronize(stop2);
@@ -538,6 +586,7 @@ void run_benchmark()
     }
     out.close();
 }
+#endif
 
 std::string SampleValsToStr(int const smpl, std::vector<Float*> const& ptrs)
 {
@@ -553,12 +602,11 @@ std::string SampleValsToStr(int const smpl, std::vector<Float*> const& ptrs)
 }
 
 template<typename SimFunc>
-void _RunAndPrintSimulation_ie(int const samp_freq, int const samp_len, std::ostream& fout,
+void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostream& fout,
     int const N, thrust::device_vector<Float*>& sim_vars,
-    SimFunc sim_func, AtomicCoupling& e_coupling, ChunkedAdjacencyList& e_list,
-    AtomicCoupling& i_coupling, ChunkedAdjacencyList& i_list,
-    Float* V_ptr, Float* e_spikes, Float* e_neuron_outputs,
-    Float* i_spikes, Float* i_neuron_outputs,
+    SimFunc sim_func, 
+    std::vector<CouplingStruct>& coupling_structs,
+    Float* V_ptr,
     thrust::device_vector<curandState_t>& random_states,
     std::vector<Float*> const& sample_ptrs,
     float* graphics_voltages_handle = nullptr, int const render_N = -1)
@@ -587,6 +635,7 @@ void _RunAndPrintSimulation_ie(int const samp_freq, int const samp_len, std::ost
         {
 //            fout << SampleValsToStr(0, sample_ptrs) << SampleValsToStr(1, sample_ptrs) << SampleValsToStr(2, sample_ptrs) << std::endl;
             cudaMemcpy(cpu_voltages, V_ptr, N * sizeof(Float), cudaMemcpyDeviceToHost);
+            int knn[NSAMPLES_PRINT]{0,967185,961357,975142,526318,60760,82355,889193,282324,132016,967680,140256,655715,699914,571249,239471,901947,293158,983985,755743,961660,449918,437360,627379,29632,680144,428995,215054,920443,497422,589815,705522,987485,877772,415620,673572,642659,207738,469096,944894,346830,431706,829327,661825,856795,84950,344529,196000,637175,653581,278265,692725,384015,294834,607171,570985,798159,984694,517696,853142,801988,173291,946596,67240,433000,47727,139214,764181,869719,747938,659871,461688,626386,323483,978204,170081,33011,297149,161269,49778,833242,947781,477872,816586,459457,302955,976979,752175,281266,482258,468056,252779,481624,306572,69381,512634,878731,770683,210172,754446,245179,775737,505566,273374,631691,257039,866962,943383,781515,302851,274716,654170,774270,186777,579090,961701,248403,391131,798679,920072,836068,725939,139961,725711,68872,208176,554174,451865,850095,928513,71331,184185,206851,963520,573202,422621,276440,431509,656213,574629,348116,340017,401641,178121,472683,431773,988701,316288,448838,324110,50348,252161,900363,371728,202627,420531,707788,33432,689220,507782,377508,107303,533828,244536,708091,434632,242843,186242,802645,888756,422591,375054,708090,290710,473553,278169,742863,551584,562769,650165,154231,263174,651342,187576,328880,215595,826343,935886,183387,526888,991855,225328,323132,608489,887376,28236,269977,609839,933220,465649,601520,314942,512062,943806,715931,492248,783693,798671,215384,780301,908531,588077,863234,681511,397050,582488,533481,666441,45380,743624,43468,161719,666957,533942,709263,662386,550030,809869,91080,392005,910547,117060,673043,720240,293677,564055,589958,90427,486179,293069,426522,378106,351327,305623,885385,630214,870897,835287,422143,940460,144863,890594,751034,650683,726834,321292,559376,548866,383831,429849,979435,864547,256001,271901,80066,303600,753288,939501,496765,274702,109476,324612,446988,944277,92655,813987,745160,639754,568133,316620,921455,852744,761448,538212,889081,181322,774844,438699,882910,825952,892970,561245,303096,49105,431972,269526,570834,920537,83053,357971,548059,76702,546377,639199,48515,537343,227433,994022,256743,708243,831805,800631,186153,328407,475406,825812,483786,605903,772703,9133,627279,765917,570353,854218,969682,85903,454470,810733,798181,585285,54784,904765,5545,771511,569866,553573,194211,818803,923613,818750,931593,77719,418810,44761,877443,784262,665775,501328,638257,501456,973938,216234,367553,157029,345303,718477,918721,112831,695753,108911,259227,350743,551548,489462,523224,773820,305604,312870,818408,621835,221604,804503,983347,638845,290967,951122,187620,435227,221674,127157,532711,131785,769775,961772,423529,597319,986476,148765,251611,68233,341725,941188,397586,915420,100636,895764,953846,328385,509381,998085,448631,29592,12218,34619,702110,637220,597893,100955,834199,126684,561530,79852,394475,190459,733710,450115,465709,496841,720446,35182,469826,653679,299793,542261,434817,840478,232963,590503,49355,147137,838593,661034,417028,177005,539474,136283,590339,912605,218710,26582,511780,724118,34142,907726,927594,54342,35350,300308,172848,336307,428467,568229,535989,531744,810954,258186,727726,370797,586138,773356,600920,849801,970885,312443,836098,53396,337923,863733,657272,965654,12523,934265,630611,21664,519325,397551,416701,171088,577614,505270,442476,340786,457422,302390,957560,748441,255992,454773,800911,437071,51977,260443,69196,155072,777072,510722,273234,976306,391292,563340,789556,};
             for(int j = 0; j < NSAMPLES_PRINT; ++j)
                 fout << cpu_voltages[j] << ',';
             fout << std::endl;
@@ -595,7 +644,7 @@ void _RunAndPrintSimulation_ie(int const samp_freq, int const samp_len, std::ost
             {
                 // TODO: PUT SCALING IN SHADER IN GRAPHICS CODE
                 for (int k = 0; k < render_N; ++k)
-                    graphics_voltages_handle[k] = (cpu_voltages[k * (N / render_N)] + 90) / 110.0f;
+                    graphics_voltages_handle[k] = 1 / (1 + exp(-(cpu_voltages[k * (N / render_N)] - hh_params::Vt) / hh_params::Kp));
 
                 bool pause{ false };
                 Graphics::render(graphics_voltages_handle, nullptr, 0, 0, pause);
@@ -603,9 +652,9 @@ void _RunAndPrintSimulation_ie(int const samp_freq, int const samp_len, std::ost
             }
         }
 
-        // Perform coupling
-        int e_num_firing = e_coupling(e_list, V_ptr, e_spikes, e_neuron_outputs);
-        int i_num_firing = i_coupling(i_list, V_ptr, i_spikes, i_neuron_outputs);
+        // Perform coupling. The number of neurons firing is returned by each of these calls. 
+        for(auto& coup_struct: coupling_structs)
+            coup_struct();
 
         // Update ODE 
         sim_func << <32, 64>> > (thrust::raw_pointer_cast(sim_vars.data()), N, an_ie_params::rk4_dt, thrust::raw_pointer_cast(random_states.data()));
@@ -684,10 +733,16 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, int 
     init_random << <NBLOCKS, NTHREADS >> > (0, N, thrust::raw_pointer_cast(random_states.data()));
 
     // Generate coupling //TODO: Add additional coupling
-    AtomicCoupling e_coupling(N, an_ie_params::an_coupling_threshold);
-    AtomicCoupling i_coupling(N, an_ie_params::an_coupling_threshold);
+    AtomicCoupling e_coupling(N);
+    AtomicCoupling i_coupling(N);
     ChunkedAdjacencyList e_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[AN_IE_VAR_ECOUNT],"cortex_connectivity_1m_1k_exc.h5") };
     ChunkedAdjacencyList i_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[AN_IE_VAR_ICOUNT],"cortex_connectivity_1m_1k_inh.h5") };
+    std::vector<CouplingStruct> coupling_structs
+    {
+        {e_list, e_coupling, sim_vars_cpu[AN_IE_VAR_EIN], sim_vars_cpu[AN_IE_VAR_EOUTPUT]},
+        {i_list, i_coupling, sim_vars_cpu[AN_IE_VAR_IIN], sim_vars_cpu[AN_IE_VAR_IOUTPUT]},
+    };
+
 
     // Get pointers to data we want to write output for
     std::vector<Float*> sample_ptrs{
@@ -702,16 +757,11 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, int 
         sim_vars_cpu[AN_IE_VAR_ICOUNT],
     };
     Float* V_ptr{ sim_vars_cpu[AN_IE_VAR_V] };
-    Float* e_spikes{ sim_vars_cpu[AN_IE_VAR_EIN] };
-    Float* i_spikes{ sim_vars_cpu[AN_IE_VAR_IIN] };
-    Float* e_neuron_outputs{ sim_vars_cpu[AN_IE_VAR_EOUTPUT] };
-    Float* i_neuron_outputs{ sim_vars_cpu[AN_IE_VAR_IOUTPUT] };
-    _RunAndPrintSimulation_ie(samp_freq, samp_len, fout,
+    _RunAndPrintSimulation(samp_freq, samp_len, fout,
         N, sim_vars,
-        Euler_an_ie_model, e_coupling, e_list, i_coupling, i_list,
+        Euler_an_ie_model, 
+        coupling_structs,
         sim_vars_cpu[AN_IE_VAR_V],
-        sim_vars_cpu[AN_IE_VAR_EIN], sim_vars_cpu[AN_IE_VAR_EOUTPUT],
-        sim_vars_cpu[AN_IE_VAR_IIN], sim_vars_cpu[AN_IE_VAR_IOUTPUT],
         random_states,
         sample_ptrs,
         graphics_voltage_handle,
@@ -721,13 +771,20 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, int 
         cudaFree(arr);
     fout.close();
 }
-#if 0
+
 // N : number of neurons to simulate
 // samp_freq : sampling frequency (Hz)
 // samp_len : How long you record the activity of the model neuron (sec)
-void HH_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_len = 10)
+void hh_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_len = 10, int render_N = -1)
 {
     using namespace hh_params;
+
+    // Set up graphics and morphology
+    Morphology::initialize_positions(MorphologyType::eBrain2, N, "cortex_connectivity_1m_1k_inh.h5");
+
+    float* graphics_voltage_handle;
+    Graphics::setup(graphics_voltage_handle, Morphology::get_positions(), N, render_N);
+
     // Set up simulation variables. Stored in a struct of arrays.
     thrust::host_vector<Float*> sim_vars_cpu(NUM_SIM_PARAMS);
     thrust::device_vector<Float*> sim_vars;
@@ -761,12 +818,20 @@ void HH_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_le
         cudaMemcpy(sim_vars_cpu[SIM_PARAMS_H], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
         thrust::fill_n(cpu_arr.begin(), N, 0.0);
-        cudaMemcpy(sim_vars_cpu[SIM_PARAMS_Y], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+        cudaMemcpy(sim_vars_cpu[SIM_PARAMS_LOCAL_Y], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+        cudaMemcpy(sim_vars_cpu[SIM_PARAMS_IY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+        cudaMemcpy(sim_vars_cpu[SIM_PARAMS_EY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
         // No neurotransmitter input/output or connections
-        cudaMemcpy(sim_vars_cpu[SIM_PARAMS_OUTPUT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-        cudaMemcpy(sim_vars_cpu[SIM_PARAMS_TIN], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-        cudaMemcpy(sim_vars_cpu[SIM_PARAMS_TCOUNT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+        cudaMemcpy(sim_vars_cpu[SIM_PARAMS_LOCAL_OUTPUT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+        cudaMemcpy(sim_vars_cpu[SIM_PARAMS_LOCAL_IN], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+        cudaMemcpy(sim_vars_cpu[SIM_PARAMS_LOCAL_COUNT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+        cudaMemcpy(sim_vars_cpu[SIM_PARAMS_IOUTPUT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+        cudaMemcpy(sim_vars_cpu[SIM_PARAMS_IIN], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+        cudaMemcpy(sim_vars_cpu[SIM_PARAMS_ICOUNT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+        cudaMemcpy(sim_vars_cpu[SIM_PARAMS_EOUTPUT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+        cudaMemcpy(sim_vars_cpu[SIM_PARAMS_EIN], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+        cudaMemcpy(sim_vars_cpu[SIM_PARAMS_ECOUNT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
         // Set applied current
         thrust::fill_n(cpu_arr.begin(), N, appcur);
@@ -776,33 +841,45 @@ void HH_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_le
     sim_vars = sim_vars_cpu;
 
     // Generate coupling
-    AtomicCoupling coupling(N, coupling_threshold);
-    AdjacencyList list{ __GenerateConnectivity(N, sim_vars_cpu[SIM_PARAMS_TCOUNT], "cortex_connectivity_1M_1k.h5") };
+    AtomicCoupling loc_coupling(N), e_coupling(N), i_coupling(N);
+    ChunkedAdjacencyList loc_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[SIM_PARAMS_LOCAL_COUNT], "", true) };
+    ChunkedAdjacencyList e_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[SIM_PARAMS_ECOUNT],"cortex_connectivity_1m_1k_exc.h5") };
+    ChunkedAdjacencyList i_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[SIM_PARAMS_ICOUNT],"cortex_connectivity_1m_1k_inh.h5") };
+
+    std::vector<CouplingStruct> coupling_structs
+    {
+        {loc_list, loc_coupling, sim_vars_cpu[SIM_PARAMS_LOCAL_IN], sim_vars_cpu[SIM_PARAMS_LOCAL_OUTPUT]},
+        {e_list, e_coupling, sim_vars_cpu[SIM_PARAMS_EIN], sim_vars_cpu[SIM_PARAMS_EOUTPUT]},
+        {i_list, i_coupling, sim_vars_cpu[SIM_PARAMS_IIN], sim_vars_cpu[SIM_PARAMS_IOUTPUT]}
+    };
+    
+    //TODO : ADD RANDOM WHITE NOISE TO HH
+    // Random seeds setup. We get a "state" per neuron which we you can think of as the random seed.
+    thrust::device_vector<curandState_t> random_states(N);
+    init_random << <NBLOCKS, NTHREADS >> > (0, N, thrust::raw_pointer_cast(random_states.data()));
+
+
     // Get pointers to data we want to write output for
     std::vector<Float*> sample_ptrs{
         sim_vars_cpu[SIM_PARAMS_V],
-        sim_vars_cpu[SIM_PARAMS_M],
-        sim_vars_cpu[SIM_PARAMS_N],
-        sim_vars_cpu[SIM_PARAMS_H],
-        sim_vars_cpu[SIM_PARAMS_Y],
-        sim_vars_cpu[SIM_PARAMS_OUTPUT],
     };
     _RunAndPrintSimulation(samp_freq, samp_len, fout,
         N, sim_vars,
-        RK4_hh, coupling, list,
+        leapfrog, 
+        coupling_structs,
         sim_vars_cpu[SIM_PARAMS_V],
-        sim_vars_cpu[SIM_PARAMS_TIN],
-        sim_vars_cpu[SIM_PARAMS_OUTPUT],
-        sample_ptrs);
+        random_states,
+        sample_ptrs,
+        graphics_voltage_handle,
+        render_N);
 
     for (Float*& arr : sim_vars_cpu)
         cudaFree(arr);
     fout.close();
 }
-#endif
 
 int main()
 {
-    sanmodel_inhexc_benchmark(1e6, 20000, 10, 1e5);
+    hh_benchmark(1e6, 20000, 10, 1e5);
     Graphics::terminate_graphics();
 }

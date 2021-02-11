@@ -22,22 +22,19 @@ private:
 	thrust::device_vector<int> is_firing;
 	thrust::device_vector<int> firing_neurons;
 	bool fired_previously = false;
-	Float const coup_threshold;
     thrust::device_vector<Float> downstream_copies;
 public:
-	AtomicCoupling(int const N_, Float const coup_threshold_=hh_params::coupling_threshold);
+	AtomicCoupling(int const N_);
 
 	//! Perform atomic coupling given connectivity provided as an AdjacenyList.
 	/*!
 	  \param [in] connectivity Network connectivity 
-	  \param [in] voltages Voltages of neurons at current timestep
 	  \param [out] spikes Output spikes for the neurons. For HH neurons, this is neurotramsmitter concentration for downstream neurons. 
 	  \param [in] neuron_ouputs Neuron outputs, for HH neurons, this is the concentration of neurotransmitter outputted from the neuron.
 	  \return Number of neurons firing 
 	*/
-	int operator()(AdjacencyList const& connectivity, Float* voltages, Float* spikes, Float const* neuron_outputs);
-
-	int operator()(ChunkedAdjacencyList const& connectivity, Float* voltages, Float* spikes, Float const* neuron_outputs);
+	int operator()(AdjacencyList const& connectivity, Float* spikes, Float const* neuron_outputs);
+	int operator()(ChunkedAdjacencyList const& connectivity, Float* spikes, Float const* neuron_outputs);
 };
 
 // Stored in CSC format!
@@ -68,20 +65,18 @@ private:
 	int N;
 	thrust::device_vector<int> is_firing;
 	bool fired_previously = false;
-	Float const coup_threshold;
 
 public:
-	MatrixCoupling(int const N_, Float const coup_threshold_ = hh_params::coupling_threshold);
+	MatrixCoupling(int const N_);
 
 	//! (SPARSE VERSION) Perform sparse coupling given connectivity provided as an AdjacenyMatrix using cuSparse.
 	/*!
 	  \param [in] connectivity Network connectivity 
-	  \param [in] voltages Voltages of neurons at current timestep
 	  \param [out] spikes Output spikes for the neurons. For HH neurons, this is neurotramsmitter concentration for downstream neurons. 
 	  \param [in] neuron_ouputs Neuron outputs, for HH neurons, this is the concentration of neurotransmitter outputted from the neuron.
 	  \return Number of neurons firing 
 	*/
-	int operator()(CuSparseAdjacencyMatrix const& connectivity, Float* voltages, Float* spikes, Float const* neuron_outputs);
+	int operator()(CuSparseAdjacencyMatrix const& connectivity, Float* spikes, Float const* neuron_outputs);
 
 	//! (DENSE VERISON) Perform sparse coupling given connectivity provided as an AdjacenyMatrix using cuSparse.
 	/*!
@@ -91,5 +86,5 @@ public:
 	  \param [in] neuron_ouputs Neuron outputs, for HH neurons, this is the concentration of neurotransmitter outputted from the neuron.
 	  \return Number of neurons firing 
 	*/
-	int operator()(CuBlasAdjacencyMatrix const& connectivity, Float* voltages, Float* spikes, Float const* neuron_outputs);
+	int operator()(CuBlasAdjacencyMatrix const& connectivity, Float* spikes, Float const* neuron_outputs);
 };
