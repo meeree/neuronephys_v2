@@ -434,7 +434,7 @@ ChunkedAdjacencyList __GenerateConnectivityChunked(int const N, int const Ncoupl
     {
         thrust::host_vector<int> h_coupling, h_coupling_inds;
         NetworkFactory::BrainConnectivity(h_coupling, h_coupling_inds, N, connectivity_filename);
-      //  NetworkFactory::LocalConnectivity(h_coupling, h_coupling_inds, N, 50, 0.05, 2, Morphology::get_positions());
+//        NetworkFactory::LocalConnectivity(h_coupling, h_coupling_inds, N, 50, Morphology::get_positions());
 
         // Calculate numer of upstream neurons for each neuron based on synaptic coupling
         thrust::host_vector<int> indices_cpu(h_coupling);
@@ -675,8 +675,8 @@ void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostrea
                 cudaMemcpy(cpu_voltages, V_ptr, N * sizeof(Float), cudaMemcpyDeviceToHost);
 
                 // TODO: PUT SCALING IN SHADER IN GRAPHICS CODE
-                for (int i = 0; i < render_N; ++i)
-                    graphics_voltages_handle[i] = (cpu_voltages[i * (N / render_N)] + 90) / 110.0f;
+                for (int k = 0; k < render_N; ++k)
+                    graphics_voltages_handle[k] = (cpu_voltages[k * (N / render_N)] + 90) / 110.0f;
 
                 bool pause{ false };
                 Graphics::render(graphics_voltages_handle, nullptr, 0, 0, pause);
@@ -704,7 +704,7 @@ template<typename SimFunc>
 void _RunAndPrintSimulation_ie(int const samp_freq, int const samp_len, std::ostream& fout,
     int const N, thrust::device_vector<Float*>& sim_vars,
     SimFunc sim_func, AtomicCoupling& e_coupling, ChunkedAdjacencyList& e_list,
-    AtomicCoupling& i_coupling, AdjacencyList& i_list,
+    AtomicCoupling& i_coupling, ChunkedAdjacencyList& i_list,
     Float* V_ptr, Float* e_spikes, Float* e_neuron_outputs,
     Float* i_spikes, Float* i_neuron_outputs,
     thrust::device_vector<curandState_t>& random_states,
@@ -742,12 +742,12 @@ void _RunAndPrintSimulation_ie(int const samp_freq, int const samp_len, std::ost
             if (graphics_voltages_handle)
             {
                 // TODO: PUT SCALING IN SHADER IN GRAPHICS CODE
-                for (int i = 0; i < render_N; ++i)
-                    graphics_voltages_handle[i] = (cpu_voltages[i * (N / render_N)] + 90) / 110.0f;
+                for (int k = 0; k < render_N; ++k)
+                    graphics_voltages_handle[k] = 1 / (1.0 + exp(-(cpu_voltages[i * (N / render_N)] - an_ie_params::an_Vt) / an_ie_params::an_Kp));
 
                 bool pause{ false };
-                Graphics::render(graphics_voltages_handle, nullptr, 0, 0, pause);
-                Graphics::write_frame(replay_out, frame_data);
+//                Graphics::render(graphics_voltages_handle, nullptr, 0, 0, pause);
+//                Graphics::write_frame(replay_out, frame_data);
             }
         }
 
@@ -919,7 +919,7 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const Ncouple = 0, int const
     AtomicCoupling e_coupling(N, an_ie_params::an_coupling_threshold);
     AtomicCoupling i_coupling(N, an_ie_params::an_coupling_threshold);
     ChunkedAdjacencyList e_list{ __GenerateConnectivityChunked(N, Ncouple, sim_vars_cpu[AN_IE_VAR_ECOUNT],"cortex_connectivity_1m_1k_exc.h5") };
-    AdjacencyList i_list{ __GenerateConnectivity(N, Ncouple, sim_vars_cpu[AN_IE_VAR_ICOUNT],"cortex_connectivity_1m_1k_inh.h5") };
+    ChunkedAdjacencyList i_list{ __GenerateConnectivityChunked(N, Ncouple, sim_vars_cpu[AN_IE_VAR_ICOUNT],"cortex_connectivity_1m_1k_inh.h5") };
 
     // Get pointers to data we want to write output for
     std::vector<Float*> sample_ptrs{
@@ -1036,6 +1036,6 @@ int main()
 {
     //    UniformTest();
     //    HH_benchmark(1024, 1e2, 1000, 10);
-    sanmodel_inhexc_benchmark(1e6, 10, 20000, 1, 1e5);
+    sanmodel_inhexc_benchmark(1e6, 10, 20000, 10, 1e5);
     Graphics::terminate_graphics();
 }
