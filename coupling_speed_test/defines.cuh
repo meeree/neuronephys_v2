@@ -62,53 +62,6 @@ namespace hh_params {
 }
 
 
-// PARAMETERS FOR AN MODEL (AN: Averaged neuron)
-#define AN_PARAMS_V 0
-#define AN_PARAMS_NK 1 
-#define AN_PARAMS_CA 2
-#define AN_PARAMS_Y  3
-#define AN_PARAMS_TIN 4 //input synaptic neurotransmitter
-#define AN_PARAMS_TCOUNT 5//count of presynaptic neurons
-#define AN_PARAMS_OUTPUT 6
-#define NUM_AN_PARAMS 7 //Dimension of state space
-
-// an coupling parametrs are calculated so that the outputs are the same as for HH, but shifted to the correct range for an neurons.
-namespace an_params {
-    constexpr static const Float an_Vt = -45; constexpr static const Float an_Kp = 1.0;
-    constexpr static const Float an_coupling_threshold = -60;
-    constexpr static const Float Tmax = 1.0;
-    constexpr static const Float C = 1;
-    constexpr static const Float A = 0.02;
-    constexpr static const Float vL = -60.95;
-    constexpr static const Float vNa = 55;
-    constexpr static const Float vK = -100;
-    constexpr static const Float tauhA = 15;
-    constexpr static const Float vCa = 120;
-    constexpr static const Float kD = 30;
-    constexpr static const Float vAMPA = 0;
-    constexpr static const Float vNMDA = 0;
-    constexpr static const Float vGABA = -70;
-    constexpr static const Float alphaCa = 0.5;
-    constexpr static const Float tauAMPA = 2;
-    constexpr static const Float tausNMDA = 100;
-    constexpr static const Float tauxNMDA = 2;
-    constexpr static const Float tauGABA = 10;
-    constexpr static const Float gL = 0.016307;
-    constexpr static const Float gNa = 12.2438;
-    constexpr static const Float gK = 19.20436;
-    constexpr static const Float gA = 1.79259;
-    constexpr static const Float gKS = 0.0350135;
-    constexpr static const Float gNaP = 0.63314;
-    constexpr static const Float gAR = 0.0166454;
-    constexpr static const Float gCa = 0.1624;
-    constexpr static const Float gKCa = 0.7506;
-    constexpr static const Float gAMPA = 0.513425;
-    constexpr static const Float gNMDA = 0.00434132;
-    constexpr static const Float gGABA = 0.00252916;
-    constexpr static const Float tauCa = 739.09;
-};
-
-
 //PARAMETERS FOR AN MODEL with INHIBITORY-EXCITATORY NETWORK
 //excitatory: AMPA, NMDA. inhibitory: GABA
 #define AN_IE_VAR_V 0
