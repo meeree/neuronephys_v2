@@ -176,90 +176,6 @@ __global__ void RK4_hh(Float** sim_vars, const int N, const float timestep)
     }
 }
 
-__device__ void dxdt_anmodel(const int idx,
-    Float const V, Float const nK, Float const Ca, Float const Y, Float const Tinavg,//Tinavg: neurotransmitter input
-    Float* dvdt, Float* dnKdt, Float* dCadt, Float* dYdt)
-{
-    using namespace an_params;
-    // Calculate intermediate quantities
-    Float mCa_inf = 1 / (1 + exp(-(V + 20) / 9));
-    Float mKCa_inf = 1 / (1 + powf(kD / Ca, 3.5));
-    Float mNaP_inf = 1 / (1 + exp(-(V + 55.7) / 7.7));
-
-    Float alpha_n = V == -34 ? 0.1 : 0.01 * (V + 34) / (1 - exp(-(V + 34) / 10));
-    Float beta_n = 0.125 * exp(-(V + 44) / 25);
-
-    // Calculate gating variable derivatives
-    *dnKdt = 4 * (alpha_n * (1 - nK) - beta_n * nK);
-    *dYdt = hh_params::Ar * Tinavg * (1 - Y) - hh_params::Ad * Y; //Check if correct value is used?
-
-    // Calculate Ca2+ derivative 
-    Float ICa = gCa * mCa_inf * mCa_inf * (V - vCa);
-    *dCadt = -alphaCa * (10 * A * ICa) - Ca / tauCa;
-
-    // Calculate voltage derivative
-    *dvdt = -gK * powf(nK, 4) * (V - vK)
-        - ICa
-        - gKCa * mKCa_inf * (V - vK)
-        - gNaP * mNaP_inf * mNaP_inf * mNaP_inf * (V - vNa)
-        - gL * (V - vL)
-        - hh_params::g_coupling * Y * (V - hh_params::e_coupling_gaba);//Check if correct value is used?
-
-    *dvdt /= C;
-}
-
-__global__ void RK4_anmodel(Float** sim_vars, const int N, const float timestep)
-{
-    using namespace an_params;
-    Float dvdt1, dnKdt1, dCadt1, dYdt1;
-    Float dvdt2, dnKdt2, dCadt2, dYdt2;
-    Float dvdt3, dnKdt3, dCadt3, dYdt3;
-    Float dvdt4, dnKdt4, dCadt4, dYdt4;
-    for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < N; idx += gridDim.x * blockDim.x)
-    {
-        Float* V_ptr = sim_vars[AN_PARAMS_V] + idx;
-        Float* nK_ptr = sim_vars[AN_PARAMS_NK] + idx;
-        Float* Ca_ptr = sim_vars[AN_PARAMS_CA] + idx;
-        Float* Y_ptr = sim_vars[AN_PARAMS_Y] + idx;
-
-        // Calculate average neurotransmitter input
-        Float Tinavg = sim_vars[AN_PARAMS_TCOUNT][idx];
-        Tinavg = Tinavg == 0 ? 0 : sim_vars[AN_PARAMS_TIN][idx] / Tinavg;
-
-        Float const V = *V_ptr;
-        Float const nK = *nK_ptr;
-        Float const Ca = *Ca_ptr;
-        Float const Y = *Y_ptr;
-
-        // k1 = f(X)
-        dxdt_anmodel(idx, V, nK, Ca, Y, Tinavg, &dvdt1, &dnKdt1, &dCadt1, &dYdt1);
-
-        // k2 = f(X + dt/2 * k1)
-        dxdt_anmodel(idx,
-            V + dvdt1 * timestep / 2, nK + dnKdt1 * timestep / 2, Ca + dCadt1 * timestep / 2, Y + dYdt1 * timestep / 2, Tinavg,
-            &dvdt2, &dnKdt2, &dCadt2, &dYdt2);
-
-        // k3 = f(X + dt/2 * k2)
-        dxdt_anmodel(idx,
-            V + dvdt2 * timestep / 2, nK + dnKdt2 * timestep / 2, Ca + dCadt2 * timestep / 2, Y + dYdt2 * timestep / 2, Tinavg,
-            &dvdt3, &dnKdt3, &dCadt3, &dYdt3);
-
-
-        // k4 = f(X + dt * k3)
-        dxdt_anmodel(idx,
-            V + dvdt3 * timestep, nK + dnKdt3 * timestep, Ca + dCadt3 * timestep, Y + dYdt3 * timestep, Tinavg,
-            &dvdt4, &dnKdt4, &dCadt4, &dYdt4);
-
-        // X(t + dt) = X(t) + dt * (k1 + 2k2 + 2k3 + k4)/6
-        *V_ptr = V + timestep * (dvdt1 + dvdt2 * 2 + dvdt3 * 2 + dvdt4) / 6;
-        *nK_ptr = nK + timestep * (dnKdt1 + dnKdt2 * 2 + dnKdt3 * 2 + dnKdt4) / 6;
-        *Ca_ptr = Ca + timestep * (dCadt1 + dCadt2 * 2 + dCadt3 * 2 + dCadt4) / 6;
-        *Y_ptr = Y + timestep * (dYdt1 + dYdt2 * 2 + dYdt3 * 2 + dYdt4) / 6;
-
-        // Calculate amount of neurotransmitter outputted AFTER update
-        sim_vars[AN_PARAMS_OUTPUT][idx] = Tmax / (1.0 + exp(-(*V_ptr - an_Vt) / hh_params::Kp));
-    }
-}
 __device__ void dxdt_an_ie_model(const int idx,
     Float const V, Float const nK, Float const Ca, Float const Ye, Float const Yi,
     Float const e_Tinavg, Float const i_Tinavg,//e/i_Tinavg: excitatory/inhibitory neurotransmitter input
@@ -297,6 +213,7 @@ __device__ void dxdt_an_ie_model(const int idx,
 
     *dvdt /= C;
 }
+
 __global__ void RK4_an_ie_model(Float** sim_vars, const int N, const float timestep, curandState_t* random_states)
 {
     using namespace an_ie_params;
@@ -399,7 +316,7 @@ __global__ void Euler_an_ie_model(Float** sim_vars, const int N, const float tim
 }
 
 // Internal function. Sets up network connectivity.
-AdjacencyList __GenerateConnectivity(int const N, int const Ncouple, Float*& Tcount, const std::string connectivity_filename)
+AdjacencyList __GenerateConnectivity(int const N, Float*& Tcount, const std::string connectivity_filename)
 {
     // Generate coupling
     AdjacencyList list;
@@ -426,7 +343,7 @@ AdjacencyList __GenerateConnectivity(int const N, int const Ncouple, Float*& Tco
     return list;
 }
 
-ChunkedAdjacencyList __GenerateConnectivityChunked(int const N, int const Ncouple, Float*& Tcount, const std::string connectivity_filename)
+ChunkedAdjacencyList __GenerateConnectivityChunked(int const N, Float*& Tcount, const std::string connectivity_filename)
 {
     // Generate coupling
     ChunkedAdjacencyList list;
@@ -508,7 +425,7 @@ std::pair<float, float> run_timing(int const N, int const Ncouple)
 
     // Generate coupling
     AtomicCoupling coupling(N);
-    AdjacencyList list{ __GenerateConnectivity(N, Ncouple, sim_vars_cpu[SIM_PARAMS_TCOUNT], "cortex_connectivity_1M_1k.h5") };
+    AdjacencyList list{ __GenerateConnectivity(N, sim_vars_cpu[SIM_PARAMS_TCOUNT], "cortex_connectivity_1M_1k.h5") };
 
     std::cout << "Setup input connectivity" << std::endl;
 
@@ -635,71 +552,6 @@ std::string SampleValsToStr(int const smpl, std::vector<Float*> const& ptrs)
     return out;
 }
 
-// Runs simulation for specified number of increments and prints output. Helper function.
-template<typename SimFunc>
-void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostream& fout,
-    int const N, thrust::device_vector<Float*>& sim_vars,
-    SimFunc sim_func, AtomicCoupling& coupling, AdjacencyList& list,
-    Float* V_ptr, Float* spikes, Float* neuron_outputs,
-    std::vector<Float*> const& sample_ptrs,
-    float* graphics_voltages_handle = nullptr, int const render_N = -1)
-{
-    // Note, we multiply by 1000 to convert from sec to ms.
-    int const nincs = (1000 * samp_len / hh_params::rk4_dt);
-    int const print_incs = (int)((1000.0 / samp_freq) / hh_params::rk4_dt + 0.5);
-
-    // If graphics handle is non-null, allocate CPU mem to copy voltages to.
-    Float* cpu_voltages;
-    uint8_t* frame_data;
-    FILE* replay_out;
-    if (graphics_voltages_handle)
-    {
-        cpu_voltages = (Float*)malloc(sizeof(Float) * N);
-        frame_data = (uint8_t*)malloc(3 * sizeof(uint8_t) * Graphics::get_width() * Graphics::get_height());
-        std::cout << Graphics::get_width() << ',' << Graphics::get_height() << std::endl;
-        replay_out = fopen("REPLAY.raw", "wb");
-    }
-
-    for (int i = 0; i < nincs; ++i)
-    {
-        if (i % (nincs / 100) == 0)
-            std::cout << 100 * (i / (float)nincs) << "%" << std::endl;
-
-        if (i % print_incs == 0)
-        {
-            fout << SampleValsToStr(0, sample_ptrs) << SampleValsToStr(1, sample_ptrs) << SampleValsToStr(2, sample_ptrs) << std::endl;
-
-            // Update graphics if the graphics handle is non-null
-            if (graphics_voltages_handle)
-            {
-                cudaMemcpy(cpu_voltages, V_ptr, N * sizeof(Float), cudaMemcpyDeviceToHost);
-
-                // TODO: PUT SCALING IN SHADER IN GRAPHICS CODE
-                for (int k = 0; k < render_N; ++k)
-                    graphics_voltages_handle[k] = (cpu_voltages[k * (N / render_N)] + 90) / 110.0f;
-
-                bool pause{ false };
-                Graphics::render(graphics_voltages_handle, nullptr, 0, 0, pause);
-                Graphics::write_frame(replay_out, frame_data);
-            }
-        }
-
-        // Perform coupling
-        int num_firing = coupling(list, V_ptr, spikes, neuron_outputs);
-        std::cout << i << ',' << num_firing << std::endl;
-
-        // Update ODE 
-        sim_func << <NBLOCKS, NTHREADS >> > (thrust::raw_pointer_cast(sim_vars.data()), N, hh_params::rk4_dt);
-    }
-    fout << SampleValsToStr(0, sample_ptrs) << SampleValsToStr(1, sample_ptrs) << SampleValsToStr(2, sample_ptrs) << std::endl;
-
-    if (graphics_voltages_handle)
-    {
-        free(cpu_voltages);
-        free(frame_data);
-        fclose(replay_out);
-    }
-}
 template<typename SimFunc>
 void _RunAndPrintSimulation_ie(int const samp_freq, int const samp_len, std::ostream& fout,
     int const N, thrust::device_vector<Float*>& sim_vars,
@@ -746,8 +598,8 @@ void _RunAndPrintSimulation_ie(int const samp_freq, int const samp_len, std::ost
                     graphics_voltages_handle[k] = (cpu_voltages[k * (N / render_N)] + 90) / 110.0f;
 
                 bool pause{ false };
-//                Graphics::render(graphics_voltages_handle, nullptr, 0, 0, pause);
-//                Graphics::write_frame(replay_out, frame_data);
+                Graphics::render(graphics_voltages_handle, nullptr, 0, 0, pause);
+                Graphics::write_frame(replay_out, frame_data);
             }
         }
 
@@ -767,95 +619,11 @@ void _RunAndPrintSimulation_ie(int const samp_freq, int const samp_len, std::ost
         fclose(replay_out);
     }
 }
+
 // N : number of neurons to simulate
-// Ncouple : number of downstream connections per neuron
 // samp_freq : sampling frequency (Hz)
 // samp_len : How long you record the activity of the model neuron (sec)
-void sanmodel_benchmark(int const N = 1, int const Ncouple = 0, int const samp_freq = 1000, int const samp_len = 10, int render_N = -1)
-{
-    // Set up graphics and morphology
-    using namespace an_params;
-    Morphology::initialize_positions(MorphologyType::eBrain2, N, "cortex_connectivity_1M_1k_inh.h5");
-    float* graphics_voltage_handle;
-    Graphics::setup(graphics_voltage_handle, Morphology::get_positions(), N, render_N);
-
-    // Set up simulation variables. Stored in a struct of arrays.
-    thrust::host_vector<Float*> sim_vars_cpu(NUM_AN_PARAMS);
-    thrust::device_vector<Float*> sim_vars;
-    std::ofstream fout("OUT_AN.txt");
-    {
-        thrust::host_vector<Float> cpu_arr(N, 0);
-
-        for (Float*& arr : sim_vars_cpu)
-            cudaMalloc(&arr, N * sizeof(Float));
-
-        // Set voltages randomly
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::normal_distribution<> voltage_dist(-80, 20);
-        for (auto& val : cpu_arr)
-            val = voltage_dist(gen);
-        cudaMemcpy(sim_vars_cpu[AN_PARAMS_V], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-
-        // Set Ca 
-        std::uniform_real_distribution<> Ca_dist(0.1, 0.5);
-        for (auto& val : cpu_arr)
-            val = Ca_dist(gen);
-        cudaMemcpy(sim_vars_cpu[AN_PARAMS_CA], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-
-        // Set potasium gating variable 
-        std::uniform_real_distribution<> nK_dist(0.0, 0.5);
-        for (auto& val : cpu_arr)
-            val = nK_dist(gen);
-        cudaMemcpy(sim_vars_cpu[AN_PARAMS_NK], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-
-        // GABA gating variable
-        thrust::fill_n(cpu_arr.begin(), N, 0.0);
-        cudaMemcpy(sim_vars_cpu[AN_PARAMS_Y], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-
-        // No neurotransmitter input/output. Connection counts are set to zero for now and edited below. 
-        cudaMemcpy(sim_vars_cpu[AN_PARAMS_OUTPUT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-        cudaMemcpy(sim_vars_cpu[AN_PARAMS_TIN], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-        cudaMemcpy(sim_vars_cpu[AN_PARAMS_TCOUNT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-    }
-    // Copy pointers from CPU to GPU 
-    sim_vars = sim_vars_cpu;
-
-    // Generate coupling //TODO: Add additional coupling
-    AtomicCoupling coupling(N, an_coupling_threshold);
-    AdjacencyList list{ __GenerateConnectivity(N, Ncouple, sim_vars_cpu[AN_PARAMS_TCOUNT], "cortex_connectivity_1M_1k.h5") };
-
-    // Get pointers to data we want to write output for
-    std::vector<Float*> sample_ptrs{
-        sim_vars_cpu[AN_PARAMS_V],
-        sim_vars_cpu[AN_PARAMS_CA],
-        sim_vars_cpu[AN_PARAMS_NK],
-        sim_vars_cpu[AN_PARAMS_OUTPUT],
-        sim_vars_cpu[AN_PARAMS_TIN],
-        sim_vars_cpu[AN_PARAMS_TCOUNT],
-    };
-    Float* V_ptr{ sim_vars_cpu[AN_PARAMS_V] };
-    Float* spikes{ sim_vars_cpu[AN_PARAMS_TIN] };
-    Float* neuron_outputs{ sim_vars_cpu[AN_PARAMS_OUTPUT] };
-    _RunAndPrintSimulation(samp_freq, samp_len, fout,
-        N, sim_vars,
-        RK4_anmodel, coupling, list,
-        sim_vars_cpu[AN_PARAMS_V],
-        sim_vars_cpu[AN_PARAMS_TIN],
-        sim_vars_cpu[AN_PARAMS_OUTPUT],
-        sample_ptrs,
-        graphics_voltage_handle,
-        render_N);
-
-    for (Float*& arr : sim_vars_cpu)
-        cudaFree(arr);
-    fout.close();
-}
-// N : number of neurons to simulate
-// Ncouple : number of downstream connections per neuron
-// samp_freq : sampling frequency (Hz)
-// samp_len : How long you record the activity of the model neuron (sec)
-void sanmodel_inhexc_benchmark(int const N = 1, int const Ncouple = 0, int const samp_freq = 1000, int const samp_len = 10, int render_N = -1)
+void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_len = 10, int render_N = -1)
 {
     // Set up graphics and morphology
     Morphology::initialize_positions(MorphologyType::eBrain2, N, "cortex_connectivity_1m_1k_inh.h5");
@@ -918,8 +686,8 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const Ncouple = 0, int const
     // Generate coupling //TODO: Add additional coupling
     AtomicCoupling e_coupling(N, an_ie_params::an_coupling_threshold);
     AtomicCoupling i_coupling(N, an_ie_params::an_coupling_threshold);
-    ChunkedAdjacencyList e_list{ __GenerateConnectivityChunked(N, Ncouple, sim_vars_cpu[AN_IE_VAR_ECOUNT],"cortex_connectivity_1m_1k_exc.h5") };
-    ChunkedAdjacencyList i_list{ __GenerateConnectivityChunked(N, Ncouple, sim_vars_cpu[AN_IE_VAR_ICOUNT],"cortex_connectivity_1m_1k_inh.h5") };
+    ChunkedAdjacencyList e_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[AN_IE_VAR_ECOUNT],"cortex_connectivity_1m_1k_exc.h5") };
+    ChunkedAdjacencyList i_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[AN_IE_VAR_ICOUNT],"cortex_connectivity_1m_1k_inh.h5") };
 
     // Get pointers to data we want to write output for
     std::vector<Float*> sample_ptrs{
@@ -953,11 +721,11 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const Ncouple = 0, int const
         cudaFree(arr);
     fout.close();
 }
+#if 0
 // N : number of neurons to simulate
-// Ncouple : number of downstream connections per neuron
 // samp_freq : sampling frequency (Hz)
 // samp_len : How long you record the activity of the model neuron (sec)
-void HH_benchmark(int const N = 1, int const Ncouple = 0, int const samp_freq = 1000, int const samp_len = 10)
+void HH_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_len = 10)
 {
     using namespace hh_params;
     // Set up simulation variables. Stored in a struct of arrays.
@@ -1009,7 +777,7 @@ void HH_benchmark(int const N = 1, int const Ncouple = 0, int const samp_freq = 
 
     // Generate coupling
     AtomicCoupling coupling(N, coupling_threshold);
-    AdjacencyList list{ __GenerateConnectivity(N, Ncouple, sim_vars_cpu[SIM_PARAMS_TCOUNT], "cortex_connectivity_1M_1k.h5") };
+    AdjacencyList list{ __GenerateConnectivity(N, sim_vars_cpu[SIM_PARAMS_TCOUNT], "cortex_connectivity_1M_1k.h5") };
     // Get pointers to data we want to write output for
     std::vector<Float*> sample_ptrs{
         sim_vars_cpu[SIM_PARAMS_V],
@@ -1031,11 +799,10 @@ void HH_benchmark(int const N = 1, int const Ncouple = 0, int const samp_freq = 
         cudaFree(arr);
     fout.close();
 }
+#endif
 
 int main()
 {
-    //    UniformTest();
-    //    HH_benchmark(1024, 1e2, 1000, 10);
-    sanmodel_inhexc_benchmark(1e6, 10, 20000, 10, 1e5);
+    sanmodel_inhexc_benchmark(1e6, 20000, 10, 1e5);
     Graphics::terminate_graphics();
 }
