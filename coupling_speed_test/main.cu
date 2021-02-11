@@ -743,7 +743,7 @@ void _RunAndPrintSimulation_ie(int const samp_freq, int const samp_len, std::ost
             {
                 // TODO: PUT SCALING IN SHADER IN GRAPHICS CODE
                 for (int k = 0; k < render_N; ++k)
-                    graphics_voltages_handle[k] = 1 / (1.0 + exp(-(cpu_voltages[i * (N / render_N)] - an_ie_params::an_Vt) / an_ie_params::an_Kp));
+                    graphics_voltages_handle[k] = (cpu_voltages[k * (N / render_N)] + 90) / 110.0f;
 
                 bool pause{ false };
 //                Graphics::render(graphics_voltages_handle, nullptr, 0, 0, pause);
