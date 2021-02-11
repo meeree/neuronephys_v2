@@ -44,7 +44,7 @@ typedef float Float;
 #define NBLOCKS 32
 #define NCHUNKS 100
 #define N_PER_CHUNK 10000
-#define NSAMPLES_PRINT 100
+#define NSAMPLES_PRINT 501
 
 namespace hh_params {
     constexpr static const Float rk4_dt = 0.05;                                                          // Timestep used with RK4 numerical method (ms)
@@ -124,7 +124,7 @@ namespace an_params {
 #define AN_IE_VAR_IOUTPUT 10//neurotransmitter output
 #define NUM_AN_IE_VAR 11 //Dimension of state space
 namespace an_ie_params {
-    constexpr static const Float rk4_dt = 0.05;
+    constexpr static const Float rk4_dt = 0.04;
     constexpr static const Float an_Vt = -45; constexpr static const Float an_Kp = 1;
     constexpr static const Float an_coupling_threshold = -60;
     constexpr static const Float Tmax = 1.0;
@@ -153,10 +153,10 @@ namespace an_ie_params {
     constexpr static const Float gAR = 0.0166454;
     constexpr static const Float gCa = 0.1624;
     constexpr static const Float gKCa = 0.7506;
-    constexpr static const Float gAMPA = 0.05;
+    constexpr static const Float gAMPA = 0.03;
     constexpr static const Float gNMDA = 0.0; // 0.0434132;
-    constexpr static const Float gGABA = 0.252916;//TODO: Change to non-averaged value
-    constexpr static const Float tauCa = 0.6 * 100.09;
-    constexpr static const Float white_noise_mean = 5.0f;
-    constexpr static const Float white_noise_intensity = 4.0f; // Controls stddev of white noise.
+    constexpr static const Float gGABA = 0.0; //TODO: Change to non-averaged value
+    constexpr static const Float tauCa = 739.09;
+    constexpr static const Float white_noise_mean = 0.1f;
+    constexpr static const Float white_noise_intensity = 0.05f; // Controls stddev of white noise.
 };
