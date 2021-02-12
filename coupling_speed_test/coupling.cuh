@@ -1,3 +1,4 @@
+#pragma once
 #include "defines.cuh"
 #include <cusparse.h>
 #include <cublas.h>

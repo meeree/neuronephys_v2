@@ -59,7 +59,7 @@ typedef float Float;
 #define NSAMPLES_PRINT 501
 
 namespace hh_params {
-    constexpr static const Float rk4_dt = 0.05;                                                          // Timestep used with RK4 numerical method (ms)
+    constexpr static const Float rk4_dt = 0.04;                                                          // Timestep used with RK4 numerical method (ms)
     constexpr static const Float leapfrog_dt = 0.4;                                                      // Timestep used with leapfrog numerical method (ms)
     constexpr static const Float C = 1;
     constexpr static const Float gna = 120;  constexpr static const Float ena = 55;                      // Sodium conductance and potential 
@@ -116,7 +116,7 @@ namespace an_ie_params {
     constexpr static const Float gAMPA = 0.03;
     constexpr static const Float gNMDA = 0.0; // 0.0434132;
     constexpr static const Float gGABA = 0.0; //TODO: Change to non-averaged value
-    constexpr static const Float tauCa = 739.09;
+    constexpr static const Float tauCa = 0.5 * 739.09; // Controls calcium decay rate. Decrease to decrease the length of the resting state between bursts. Around half is close to transition from wake to sleep.
     constexpr static const Float white_noise_mean = 0.1f;
     constexpr static const Float white_noise_intensity = 0.05f; // Controls stddev of white noise.
 };

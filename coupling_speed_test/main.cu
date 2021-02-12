@@ -27,7 +27,8 @@ void UniformTest()
     int N = 10;
     int Ncouple = 3;
     thrust::host_vector<int> h_coupling, h_coupling_inds;
-    NetworkFactory::UniformNetwork(h_coupling, h_coupling_inds, N, Ncouple);
+    NetworkFactory net_fac(N, Morphology::get_positions());
+    net_fac.UniformNetwork(h_coupling, h_coupling_inds, Ncouple);
     AdjacencyList list{ h_coupling, h_coupling_inds };
 
     thrust::host_vector<int> indices = list.indices;
@@ -342,10 +343,11 @@ AdjacencyList __GenerateConnectivity(int const N, Float*& Tcount, const std::str
     AdjacencyList list;
     {
         thrust::host_vector<int> h_coupling, h_coupling_inds;
+        NetworkFactory net_fac(N, Morphology::get_positions());
         if(local)
-            NetworkFactory::LocalConnectivity(h_coupling, h_coupling_inds, N, 50, Morphology::get_positions());
+            net_fac.LocalConnectivity(h_coupling, h_coupling_inds, 50);
         else
-            NetworkFactory::BrainConnectivity(h_coupling, h_coupling_inds, N, connectivity_filename);
+            net_fac.BrainConnectivity(h_coupling, h_coupling_inds, connectivity_filename);
         list.indices = h_coupling;
         list.offset_in_indices = h_coupling_inds;
     }
@@ -372,11 +374,12 @@ ChunkedAdjacencyList __GenerateConnectivityChunked(int const N, Float*& Tcount, 
     ChunkedAdjacencyList list;
     thrust::host_vector<Float> Tcount_cpu(N, 0);
     {
+        NetworkFactory net_fac(N, Morphology::get_positions());
         thrust::host_vector<int> h_coupling, h_coupling_inds;
         if(local)
-            NetworkFactory::LocalConnectivity(h_coupling, h_coupling_inds, N, 50, Morphology::get_positions());
+            net_fac.LocalConnectivity(h_coupling, h_coupling_inds, 50);
         else
-            NetworkFactory::BrainConnectivity(h_coupling, h_coupling_inds, N, connectivity_filename);
+            net_fac.BrainConnectivity(h_coupling, h_coupling_inds, connectivity_filename);
 
         // Calculate numer of upstream neurons for each neuron based on synaptic coupling
         thrust::host_vector<int> indices_cpu(h_coupling);
@@ -604,7 +607,7 @@ std::string SampleValsToStr(int const smpl, std::vector<Float*> const& ptrs)
 template<typename SimFunc>
 void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostream& fout,
     int const N, thrust::device_vector<Float*>& sim_vars,
-    SimFunc sim_func, 
+    SimFunc sim_func, Float const dt,
     std::vector<CouplingStruct>& coupling_structs,
     Float* V_ptr,
     thrust::device_vector<curandState_t>& random_states,
@@ -657,7 +660,7 @@ void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostrea
             coup_struct();
 
         // Update ODE 
-        sim_func << <32, 64>> > (thrust::raw_pointer_cast(sim_vars.data()), N, an_ie_params::rk4_dt, thrust::raw_pointer_cast(random_states.data()));
+        sim_func << <NBLOCKS, NTHREADS>> > (thrust::raw_pointer_cast(sim_vars.data()), N, dt, thrust::raw_pointer_cast(random_states.data()));
     }
     fout << SampleValsToStr(0, sample_ptrs) << SampleValsToStr(1, sample_ptrs) << SampleValsToStr(2, sample_ptrs) << std::endl;
 
@@ -759,7 +762,7 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, int 
     Float* V_ptr{ sim_vars_cpu[AN_IE_VAR_V] };
     _RunAndPrintSimulation(samp_freq, samp_len, fout,
         N, sim_vars,
-        Euler_an_ie_model, 
+        Euler_an_ie_model, an_ie_params::rk4_dt,
         coupling_structs,
         sim_vars_cpu[AN_IE_VAR_V],
         random_states,
@@ -865,7 +868,7 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_le
     };
     _RunAndPrintSimulation(samp_freq, samp_len, fout,
         N, sim_vars,
-        leapfrog, 
+        leapfrog, leapfrog_dt,
         coupling_structs,
         sim_vars_cpu[SIM_PARAMS_V],
         random_states,
@@ -880,6 +883,6 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_le
 
 int main()
 {
-    hh_benchmark(1e6, 20000, 10, 1e5);
+    sanmodel_inhexc_benchmark(1e6, 20000, 10, 1e5);
     Graphics::terminate_graphics();
 }
