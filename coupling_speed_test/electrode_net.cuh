@@ -1,7 +1,7 @@
 #pragma once
 #include "coupling.cuh"
 
-// Implements a networks of "electrodes" measuring averaged activity in regions. 
+// Implements a network of "electrodes" measuring averaged activity in regions. 
 // Regions are stored as an adjacency list.
 class ElectrodeNet 
 {
@@ -22,6 +22,9 @@ public:
 
 	// Computes the averaged activity in each region and then copies to CPU in h_avg_voltages.
 	void DoElectrodeMeasurements (Float const* V_ptr);
+
+	// Computes the average voltage over the ENTIRE network of neurons.
+	static Float MeasureAverageEntireNetwork (Float const* V_ptr, int const N);
 	
 	Float const* ElectrodeOutputHandle () const
 	{

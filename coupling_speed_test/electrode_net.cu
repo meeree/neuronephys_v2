@@ -32,3 +32,8 @@ void ElectrodeNet::DoElectrodeMeasurements (Float const* V_ptr)
     // Copy averages from GPU to CPU.
     h_avg_voltages = d_avg_voltages;
 }
+
+Float ElectrodeNet::MeasureAverageEntireNetwork (Float const* V_ptr, int const N)
+{
+    return thrust::reduce(thrust::device_ptr<Float const>(V_ptr), thrust::device_ptr<Float const>(V_ptr + N), 0) / (Float)N;
+}
