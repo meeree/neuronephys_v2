@@ -113,9 +113,9 @@ namespace an_ie_params {
     constexpr static const Float gNaP = 0.63314;
     constexpr static const Float gCa = 0.1624;
     constexpr static const Float gKCa = 0.7506;
-    constexpr static const Float gAMPA = 0.03;
+    constexpr static const Float gAMPA = 0.01;
     constexpr static const Float gNMDA = 0.0; // 0.0434132;
-    constexpr static const Float gGABA = 0.0; //TODO: Change to non-averaged value
+    constexpr static const Float gGABA = 0.5; //TODO: Change to non-averaged value
     constexpr static const Float tauCa = 0.5 * 739.09; // Controls calcium decay rate. Decrease to decrease the length of the resting state between bursts. Around half is close to transition from wake to sleep.
     constexpr static const Float white_noise_mean = 0.1f;
     constexpr static const Float white_noise_intensity = 0.05f; // Controls stddev of white noise.

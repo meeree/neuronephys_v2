@@ -1,6 +1,7 @@
 #include "network_factory.cuh"
 #include "graphics.h"
 #include "morphology.h"
+#include "electrode_net.cuh"
 
 // we need these includes for CUDA's random number stuff
 #include <curand.h>
@@ -337,13 +338,12 @@ __global__ void Euler_an_ie_model(Float** sim_vars, const int N, const float tim
 }
 
 // Internal function. Sets up network connectivity.
-AdjacencyList __GenerateConnectivity(int const N, Float*& Tcount, const std::string connectivity_filename, bool local=false)
+AdjacencyList __GenerateConnectivity(int const N, Float*& Tcount, const std::string connectivity_filename, NetworkFactory& net_fac, bool local=false)
 {
     // Generate coupling
     AdjacencyList list;
     {
         thrust::host_vector<int> h_coupling, h_coupling_inds;
-        NetworkFactory net_fac(N, Morphology::get_positions());
         if(local)
             net_fac.LocalConnectivity(h_coupling, h_coupling_inds, 50);
         else
@@ -368,13 +368,12 @@ AdjacencyList __GenerateConnectivity(int const N, Float*& Tcount, const std::str
     return list;
 }
 
-ChunkedAdjacencyList __GenerateConnectivityChunked(int const N, Float*& Tcount, const std::string connectivity_filename, bool local=false)
+ChunkedAdjacencyList __GenerateConnectivityChunked(int const N, Float*& Tcount, const std::string connectivity_filename, NetworkFactory& net_fac, bool local=false)
 {
     // Generate coupling
     ChunkedAdjacencyList list;
     thrust::host_vector<Float> Tcount_cpu(N, 0);
     {
-        NetworkFactory net_fac(N, Morphology::get_positions());
         thrust::host_vector<int> h_coupling, h_coupling_inds;
         if(local)
             net_fac.LocalConnectivity(h_coupling, h_coupling_inds, 50);
@@ -612,7 +611,8 @@ void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostrea
     Float* V_ptr,
     thrust::device_vector<curandState_t>& random_states,
     std::vector<Float*> const& sample_ptrs,
-    float* graphics_voltages_handle = nullptr, int const render_N = -1)
+    float* graphics_voltages_handle = nullptr, int const render_N = -1,
+    ElectrodeNet* electrodes = nullptr)
 {
     // Note, we multiply by 1000 to convert from sec to ms.
     int const nincs = (1000 * samp_len / an_ie_params::rk4_dt);
@@ -636,18 +636,23 @@ void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostrea
 
         if (i % print_incs == 0)
         {
-//            fout << SampleValsToStr(0, sample_ptrs) << SampleValsToStr(1, sample_ptrs) << SampleValsToStr(2, sample_ptrs) << std::endl;
             cudaMemcpy(cpu_voltages, V_ptr, N * sizeof(Float), cudaMemcpyDeviceToHost);
-            static constexpr int knn[NSAMPLES_PRINT]{0,967185,961357,975142,526318,60760,82355,889193,282324,132016,967680,140256,655715,699914,571249,239471,901947,293158,983985,755743,961660,449918,437360,627379,29632,680144,428995,215054,920443,497422,589815,705522,987485,877772,415620,673572,642659,207738,469096,944894,346830,431706,829327,661825,856795,84950,344529,196000,637175,653581,278265,692725,384015,294834,607171,570985,798159,984694,517696,853142,801988,173291,946596,67240,433000,47727,139214,764181,869719,747938,659871,461688,626386,323483,978204,170081,33011,297149,161269,49778,833242,947781,477872,816586,459457,302955,976979,752175,281266,482258,468056,252779,481624,306572,69381,512634,878731,770683,210172,754446,245179,775737,505566,273374,631691,257039,866962,943383,781515,302851,274716,654170,774270,186777,579090,961701,248403,391131,798679,920072,836068,725939,139961,725711,68872,208176,554174,451865,850095,928513,71331,184185,206851,963520,573202,422621,276440,431509,656213,574629,348116,340017,401641,178121,472683,431773,988701,316288,448838,324110,50348,252161,900363,371728,202627,420531,707788,33432,689220,507782,377508,107303,533828,244536,708091,434632,242843,186242,802645,888756,422591,375054,708090,290710,473553,278169,742863,551584,562769,650165,154231,263174,651342,187576,328880,215595,826343,935886,183387,526888,991855,225328,323132,608489,887376,28236,269977,609839,933220,465649,601520,314942,512062,943806,715931,492248,783693,798671,215384,780301,908531,588077,863234,681511,397050,582488,533481,666441,45380,743624,43468,161719,666957,533942,709263,662386,550030,809869,91080,392005,910547,117060,673043,720240,293677,564055,589958,90427,486179,293069,426522,378106,351327,305623,885385,630214,870897,835287,422143,940460,144863,890594,751034,650683,726834,321292,559376,548866,383831,429849,979435,864547,256001,271901,80066,303600,753288,939501,496765,274702,109476,324612,446988,944277,92655,813987,745160,639754,568133,316620,921455,852744,761448,538212,889081,181322,774844,438699,882910,825952,892970,561245,303096,49105,431972,269526,570834,920537,83053,357971,548059,76702,546377,639199,48515,537343,227433,994022,256743,708243,831805,800631,186153,328407,475406,825812,483786,605903,772703,9133,627279,765917,570353,854218,969682,85903,454470,810733,798181,585285,54784,904765,5545,771511,569866,553573,194211,818803,923613,818750,931593,77719,418810,44761,877443,784262,665775,501328,638257,501456,973938,216234,367553,157029,345303,718477,918721,112831,695753,108911,259227,350743,551548,489462,523224,773820,305604,312870,818408,621835,221604,804503,983347,638845,290967,951122,187620,435227,221674,127157,532711,131785,769775,961772,423529,597319,986476,148765,251611,68233,341725,941188,397586,915420,100636,895764,953846,328385,509381,998085,448631,29592,12218,34619,702110,637220,597893,100955,834199,126684,561530,79852,394475,190459,733710,450115,465709,496841,720446,35182,469826,653679,299793,542261,434817,840478,232963,590503,49355,147137,838593,661034,417028,177005,539474,136283,590339,912605,218710,26582,511780,724118,34142,907726,927594,54342,35350,300308,172848,336307,428467,568229,535989,531744,810954,258186,727726,370797,586138,773356,600920,849801,970885,312443,836098,53396,337923,863733,657272,965654,12523,934265,630611,21664,519325,397551,416701,171088,577614,505270,442476,340786,457422,302390,957560,748441,255992,454773,800911,437071,51977,260443,69196,155072,777072,510722,273234,976306,391292,563340,789556,};
-            for(int j = 0; j < NSAMPLES_PRINT; ++j)
-                fout << cpu_voltages[knn[j]] << ',';
-            fout << std::endl;
+
             // Update graphics if the graphics handle is non-null
             if (graphics_voltages_handle)
             {
-                // TODO: PUT SCALING IN SHADER IN GRAPHICS CODE
-                for (int k = 0; k < render_N; ++k)
-                    graphics_voltages_handle[k] = 1 / (1 + exp(-(cpu_voltages[k * (N / render_N)] - hh_params::Vt) / hh_params::Kp));
+             //   // TODO: PUT SCALING IN SHADER IN GRAPHICS CODE
+             //   for (int k = 0; k < render_N; ++k)
+             //       graphics_voltages_handle[k] = 1 / (1 + exp(-(cpu_voltages[k * (N / render_N)] - hh_params::Vt) / hh_params::Kp));
+                electrodes->DoElectrodeMeasurements(V_ptr);
+                Float const* avg_V_handle = electrodes->ElectrodeOutputHandle();
+                for(int k = 0; k < render_N; ++k)
+                    graphics_voltages_handle[k] = avg_V_handle[k];
+                               
+//                fout << ElectrodeNet::MeasureAverageEntireNetwork(V_ptr, N);
+                for(int k = 0; k < render_N; ++k)
+                    fout << avg_V_handle[k] << ',';
+                fout << std::endl;
 
                 bool pause{ false };
                 Graphics::render(graphics_voltages_handle, nullptr, 0, 0, pause);
@@ -738,14 +743,22 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, int 
     // Generate coupling //TODO: Add additional coupling
     AtomicCoupling e_coupling(N);
     AtomicCoupling i_coupling(N);
-    ChunkedAdjacencyList e_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[AN_IE_VAR_ECOUNT],"cortex_connectivity_1m_1k_exc.h5") };
-    ChunkedAdjacencyList i_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[AN_IE_VAR_ICOUNT],"cortex_connectivity_1m_1k_inh.h5") };
+    NetworkFactory net_fac(N, Morphology::get_positions());
+    ChunkedAdjacencyList e_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[AN_IE_VAR_ECOUNT], "cortex_connectivity_1m_1k_exc.h5", net_fac, true) };
+    ChunkedAdjacencyList i_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[AN_IE_VAR_ICOUNT], "cortex_connectivity_1m_1k_inh.h5", net_fac, true) };
     std::vector<CouplingStruct> coupling_structs
     {
         {e_list, e_coupling, sim_vars_cpu[AN_IE_VAR_EIN], sim_vars_cpu[AN_IE_VAR_EOUTPUT]},
         {i_list, i_coupling, sim_vars_cpu[AN_IE_VAR_IIN], sim_vars_cpu[AN_IE_VAR_IOUTPUT]},
     };
 
+    // Setup electrodes on cortex.
+    thrust::host_vector<int> h_regions, h_regions_inds;
+    std::vector<int> electrode_inds(render_N);
+    for(int i = 0; i < render_N; ++i)
+        electrode_inds[i] = (N / render_N) * i;
+    net_fac.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 100);
+    ElectrodeNet electrode_net(h_regions, h_regions_inds);
 
     // Get pointers to data we want to write output for
     std::vector<Float*> sample_ptrs{
@@ -768,7 +781,8 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, int 
         random_states,
         sample_ptrs,
         graphics_voltage_handle,
-        render_N);
+        render_N,
+        &electrode_net);
 
     for (Float*& arr : sim_vars_cpu)
         cudaFree(arr);
@@ -845,9 +859,10 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_le
 
     // Generate coupling
     AtomicCoupling loc_coupling(N), e_coupling(N), i_coupling(N);
-    ChunkedAdjacencyList loc_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[SIM_PARAMS_LOCAL_COUNT], "", true) };
-    ChunkedAdjacencyList e_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[SIM_PARAMS_ECOUNT],"cortex_connectivity_1m_1k_exc.h5") };
-    ChunkedAdjacencyList i_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[SIM_PARAMS_ICOUNT],"cortex_connectivity_1m_1k_inh.h5") };
+    NetworkFactory net_fac(N, Morphology::get_positions());
+    ChunkedAdjacencyList loc_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[SIM_PARAMS_LOCAL_COUNT], "", net_fac, true) };
+    ChunkedAdjacencyList e_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[SIM_PARAMS_ECOUNT], "cortex_connectivity_1m_1k_exc.h5", net_fac) };
+    ChunkedAdjacencyList i_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[SIM_PARAMS_ICOUNT], "cortex_connectivity_1m_1k_inh.h5", net_fac) };
 
     std::vector<CouplingStruct> coupling_structs
     {
@@ -883,6 +898,8 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_le
 
 int main()
 {
-    sanmodel_inhexc_benchmark(1e6, 20000, 10, 1e5);
+    std::cout << FLT_MAX << std::endl;
+    int N_electrodes = 2048 * 2;
+    sanmodel_inhexc_benchmark(1e6, 20000, 10, N_electrodes);
     Graphics::terminate_graphics();
 }
