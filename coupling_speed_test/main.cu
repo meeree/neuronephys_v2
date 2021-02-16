@@ -376,7 +376,7 @@ ChunkedAdjacencyList __GenerateConnectivityChunked(int const N, Float*& Tcount, 
     {
         thrust::host_vector<int> h_coupling, h_coupling_inds;
         if(local)
-            net_fac.LocalConnectivity(h_coupling, h_coupling_inds, 50);
+            net_fac.LocalConnectivity(h_coupling, h_coupling_inds, 500);
         else
             net_fac.BrainConnectivity(h_coupling, h_coupling_inds, connectivity_filename);
 
@@ -649,14 +649,14 @@ void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostrea
                 for(int k = 0; k < render_N; ++k)
                     graphics_voltages_handle[k] = avg_V_handle[k];
                                
-//                fout << ElectrodeNet::MeasureAverageEntireNetwork(V_ptr, N);
-                for(int k = 0; k < render_N; ++k)
-                    fout << avg_V_handle[k] << ',';
+                fout << ElectrodeNet::MeasureAverageEntireNetwork(V_ptr, N);
+//                for(int k = 0; k < render_N; ++k)
+//                    fout << avg_V_handle[k] << ',';
                 fout << std::endl;
 
                 bool pause{ false };
                 Graphics::render(graphics_voltages_handle, nullptr, 0, 0, pause);
-                Graphics::write_frame(replay_out, frame_data);
+//                Graphics::write_frame(replay_out, frame_data);
             }
         }
 
@@ -683,7 +683,7 @@ void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostrea
 void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_len = 10, int render_N = -1)
 {
     // Set up graphics and morphology
-    Morphology::initialize_positions(MorphologyType::eBrain2, N, "cortex_connectivity_1m_1k_inh.h5");
+    Morphology::initialize_positions(MorphologyType::eSphere, N, "cortex_connectivity_1m_1k_inh.h5");
 
     float* graphics_voltage_handle;
     Graphics::setup(graphics_voltage_handle, Morphology::get_positions(), N, render_N);
@@ -752,7 +752,7 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, int 
         {i_list, i_coupling, sim_vars_cpu[AN_IE_VAR_IIN], sim_vars_cpu[AN_IE_VAR_IOUTPUT]},
     };
 
-    // Setup electrodes on cortex.
+    // Setup electrodes randomly distributed.
     thrust::host_vector<int> h_regions, h_regions_inds;
     std::vector<int> electrode_inds(render_N);
     for(int i = 0; i < render_N; ++i)
@@ -797,7 +797,7 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_le
     using namespace hh_params;
 
     // Set up graphics and morphology
-    Morphology::initialize_positions(MorphologyType::eBrain2, N, "cortex_connectivity_1m_1k_inh.h5");
+    Morphology::initialize_positions(MorphologyType::eSphere, N, "cortex_connectivity_1m_1k_inh.h5");
 
     float* graphics_voltage_handle;
     Graphics::setup(graphics_voltage_handle, Morphology::get_positions(), N, render_N);
@@ -876,6 +876,13 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_le
     thrust::device_vector<curandState_t> random_states(N);
     init_random << <NBLOCKS, NTHREADS >> > (0, N, thrust::raw_pointer_cast(random_states.data()));
 
+    // Setup electrodes randomly distributed.
+    thrust::host_vector<int> h_regions, h_regions_inds;
+    std::vector<int> electrode_inds(render_N);
+    for(int i = 0; i < render_N; ++i)
+        electrode_inds[i] = (N / render_N) * i;
+    net_fac.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 1);
+    ElectrodeNet electrode_net(h_regions, h_regions_inds);
 
     // Get pointers to data we want to write output for
     std::vector<Float*> sample_ptrs{
@@ -889,7 +896,8 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_le
         random_states,
         sample_ptrs,
         graphics_voltage_handle,
-        render_N);
+        render_N,
+        &electrode_net);
 
     for (Float*& arr : sim_vars_cpu)
         cudaFree(arr);
@@ -898,8 +906,7 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_le
 
 int main()
 {
-    std::cout << FLT_MAX << std::endl;
-    int N_electrodes = 2048 * 2;
-    sanmodel_inhexc_benchmark(1e6, 20000, 10, N_electrodes);
+    int N_electrodes = 1e5;
+    sanmodel_inhexc_benchmark(1e5, 25000, 10, N_electrodes);
     Graphics::terminate_graphics();
 }

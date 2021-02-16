@@ -33,7 +33,22 @@ void ElectrodeNet::DoElectrodeMeasurements (Float const* V_ptr)
     h_avg_voltages = d_avg_voltages;
 }
 
+inline __global__ void TMP_kernel(Float const* V, int const N, Float* sum)
+{
+    *sum = 0;
+    for(int i = 0; i < N; ++i)
+        *sum += V[i]; 
+    *sum /= N;
+}
+
 Float ElectrodeNet::MeasureAverageEntireNetwork (Float const* V_ptr, int const N)
 {
-    return thrust::reduce(thrust::device_ptr<Float const>(V_ptr), thrust::device_ptr<Float const>(V_ptr + N), 0) / (Float)N;
+    return thrust::reduce(thrust::device_ptr<Float const>(V_ptr), thrust::device_ptr<Float const>(V_ptr + N)) / N;
+    Float* sum;
+    cudaMalloc(&sum, sizeof(Float));
+    TMP_kernel<<<NBLOCKS, NTHREADS>>>(V_ptr, N, sum);
+    Float cpu_sum;
+    cudaMemcpy(&cpu_sum, sum, sizeof(Float), cudaMemcpyDeviceToHost);
+    cudaFree(sum);
+    return cpu_sum;
 }
