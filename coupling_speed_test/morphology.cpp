@@ -36,6 +36,34 @@ std::pair<bool,std::array<float,3>> gen_sphere(int const N)
     return std::make_pair(true,scaling_rate);
 }
 
+std::pair<bool, std::array<float, 3>> gen_square(int const N)
+{
+    std::array<float, 3> scaling_rate = { 2.0f,2.0f,2.0f };
+    unsigned const seed = chrono::system_clock::now().time_since_epoch().count();
+    default_random_engine gen(seed);
+    uniform_real_distribution<float> dist(-1, 1);
+    for (int i = 0; i < N; ++i)
+    {
+        float const x{ dist(gen) }, y{ dist(gen) };
+        g_morph.positions[i] = { x, y, 0 };
+    }
+    return std::make_pair(true, scaling_rate);
+}
+
+
+std::pair<bool, std::array<float, 3>> gen_cube(int const N)
+{
+    std::array<float, 3> scaling_rate = { 2.0f,2.0f,2.0f };
+    unsigned const seed = chrono::system_clock::now().time_since_epoch().count();
+    default_random_engine gen(seed);
+    uniform_real_distribution<float> dist(-1, 1);
+    for (int i = 0; i < N; ++i)
+    {
+        float const x{ dist(gen) }, y{ dist(gen) }, z{ dist(gen) };
+        g_morph.positions[i] = { x, y, z };
+    }
+    return std::make_pair(true, scaling_rate);
+}
 
 std::pair<bool, std::array<float, 3>> load_cubic_brain_2(int const N, const std::string coupling_file_name)
 {
@@ -154,6 +182,8 @@ std::pair<bool, std::array<float,3>> initialize_positions(MorphologyType const t
     {
     case eBrain2: return load_cubic_brain_2(N,coupling_filename);
     case eSphere: return gen_sphere(N); 
+    case eSquare: return gen_square(N);
+    case eCube: return gen_cube(N);
     case eSCN: return load_cubic_scn(N);
 	default: cerr << "Unknown MorphologyType: " << type << endl; return std::make_pair(false,scaling_rate);
     }

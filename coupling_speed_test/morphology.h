@@ -5,7 +5,7 @@
 
 enum MorphologyType : unsigned char
 {
-    eBrain = 0, eBrain2, eSphere, eSCN, eCount, eUndefined
+    eBrain = 0, eBrain2, eSphere, eSCN, eSquare, eCube, eCount, eUndefined
 };
 
 namespace Morphology
