@@ -79,7 +79,7 @@ std::vector<std::vector<int>> NetworkFactory::KNN(int const k)
 {
 	// Generate a lookup table of k nearest neighbors per neuron. 
 	std::vector<std::vector<int>> knn(N, std::vector<int>(k));
-	std::vector<std::vector<double>> knn_dists(N, std::vector<double>(k));
+	std::vector<std::vector<ANNdist>> knn_dists(N, std::vector<ANNdist>(k));
 	std::cout << "Generating KNN Lookup Table..." << std::endl;
 		
 	for(int n = 0; n < N; ++n)
@@ -101,7 +101,7 @@ void NetworkFactory::LocalConnectivity(thrust::host_vector<int>& h_coupling, thr
 {
     std::cout << "Generating local atomic coupling..." << std::endl;
     std::vector<int> my_knn(k+1); 
-    std::vector<double> my_knn_dists(k+1);
+    std::vector<ANNdist> my_knn_dists(k+1);
 
     ANNkd_tree* kd_tree{ new ANNkd_tree(p_vec, N, 3) };
 
@@ -133,7 +133,7 @@ void NetworkFactory::GenSphericalRegions(thrust::host_vector<int>& h_regions, th
 {
     std::cout << "Generating spherical regions..." << std::endl;
     std::vector<int> my_knn(k+1); 
-    std::vector<double> my_knn_dists(k+1);
+    std::vector<ANNdist> my_knn_dists(k+1);
 	
 	int const N_regions = electrode_inds.size();
     h_regions.resize(N_regions * k);
