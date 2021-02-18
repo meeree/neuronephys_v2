@@ -28,7 +28,9 @@ void UniformTest()
     int N = 10;
     int Ncouple = 3;
     thrust::host_vector<int> h_coupling, h_coupling_inds;
-    NetworkFactory net_fac(N, Morphology::get_positions());
+    UnitSquare morphology;
+    morphology.Generate(N);
+    NetworkFactory net_fac(N, morphology.GetPositionsRaw());
     net_fac.UniformNetwork(h_coupling, h_coupling_inds, Ncouple);
     AdjacencyList list{ h_coupling, h_coupling_inds };
 
@@ -656,7 +658,7 @@ void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostrea
 
                 bool pause{ false };
                 Graphics::render(graphics_voltages_handle, nullptr, 0, 0, pause);
-//                Graphics::write_frame(replay_out, frame_data);
+                Graphics::write_frame(replay_out, frame_data);
             }
         }
 
@@ -683,10 +685,19 @@ void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostrea
 void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_len = 10, int render_N = -1)
 {
     // Set up graphics and morphology
-    Morphology::initialize_positions(MorphologyType::eSphere, N, "cortex_connectivity_1m_1k_inh.h5");
+    UnitSquare morphology;
+    morphology.Generate(N / 5);
+    morphology.Translate(glm::vec3(0, 0, -1));
+	for (int i = 0; i < 5; ++i)
+	{
+		UnitSquare morphology2;
+		morphology2.Generate(N / 5);
+		morphology2.Translate(glm::vec3(0, 0, -1 + 2 * (i + 1) / 5.0f));
+		morphology.Union(&morphology2);
+	}
 
     float* graphics_voltage_handle;
-    Graphics::setup(graphics_voltage_handle, Morphology::get_positions(), N, render_N);
+    Graphics::setup(graphics_voltage_handle, morphology.GetPositionsRaw(), N, render_N);
 
     // Set up simulation variables. Stored in a struct of arrays.
     thrust::host_vector<Float*> sim_vars_cpu(NUM_AN_IE_VAR);
@@ -743,7 +754,7 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, int 
     // Generate coupling //TODO: Add additional coupling
     AtomicCoupling e_coupling(N);
     AtomicCoupling i_coupling(N);
-    NetworkFactory net_fac(N, Morphology::get_positions());
+    NetworkFactory net_fac(N, morphology.GetPositionsRaw());
     ChunkedAdjacencyList e_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[AN_IE_VAR_ECOUNT], "cortex_connectivity_1m_1k_exc.h5", net_fac, true) };
     ChunkedAdjacencyList i_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[AN_IE_VAR_ICOUNT], "cortex_connectivity_1m_1k_inh.h5", net_fac, true) };
     std::vector<CouplingStruct> coupling_structs
@@ -797,10 +808,11 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_le
     using namespace hh_params;
 
     // Set up graphics and morphology
-    Morphology::initialize_positions(MorphologyType::eSphere, N, "cortex_connectivity_1m_1k_inh.h5");
+    FileMorphology morphology("cortex_connectivity_1m_1k_inh.h5");
+    morphology.Generate(N);
 
     float* graphics_voltage_handle;
-    Graphics::setup(graphics_voltage_handle, Morphology::get_positions(), N, render_N);
+    Graphics::setup(graphics_voltage_handle, morphology.GetPositionsRaw(), N, render_N);
 
     // Set up simulation variables. Stored in a struct of arrays.
     thrust::host_vector<Float*> sim_vars_cpu(NUM_SIM_PARAMS);
@@ -859,7 +871,7 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_le
 
     // Generate coupling
     AtomicCoupling loc_coupling(N), e_coupling(N), i_coupling(N);
-    NetworkFactory net_fac(N, Morphology::get_positions());
+    NetworkFactory net_fac(N, morphology.GetPositionsRaw());
     ChunkedAdjacencyList loc_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[SIM_PARAMS_LOCAL_COUNT], "", net_fac, true) };
     ChunkedAdjacencyList e_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[SIM_PARAMS_ECOUNT], "cortex_connectivity_1m_1k_exc.h5", net_fac) };
     ChunkedAdjacencyList i_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[SIM_PARAMS_ICOUNT], "cortex_connectivity_1m_1k_inh.h5", net_fac) };

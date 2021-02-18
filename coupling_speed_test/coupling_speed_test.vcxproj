@@ -88,6 +88,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <CudaCompile Include="coupling.cu" />
+	<CudaCompile Include="electrode_net.cu" />
     <CudaCompile Include="main.cu">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </CudaCompile>
@@ -96,6 +97,7 @@
   <ItemGroup>
     <ClInclude Include="coupling.cuh" />
     <ClInclude Include="defines.cuh" />
+	<ClInclude Include="electrode_net.cuh" />
     <ClInclude Include="graphics.h" />
     <ClInclude Include="morphology.h" />
     <ClInclude Include="network_factory.cuh" />
