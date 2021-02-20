@@ -23,29 +23,6 @@ __global__ void get_random_test(curandState_t* states, int const N, int* numbers
     }
 }
 
-void UniformTest()
-{
-    int N = 10;
-    int Ncouple = 3;
-    thrust::host_vector<int> h_coupling, h_coupling_inds;
-    UnitSquare morphology;
-    morphology.Generate(N);
-    NetworkFactory net_fac(N, morphology.GetPositionsRaw());
-    net_fac.UniformNetwork(h_coupling, h_coupling_inds, Ncouple);
-    AdjacencyList list{ h_coupling, h_coupling_inds };
-
-    thrust::host_vector<int> indices = list.indices;
-    thrust::host_vector<int> offsets_in_indices = list.offset_in_indices;
-
-    for (int i = 0; i < offsets_in_indices.size() - 1; ++i)
-    {
-        std::cout << offsets_in_indices[i + 1] - offsets_in_indices[i] << ": ";
-        for (int j = offsets_in_indices[i]; j < offsets_in_indices[i + 1]; ++j)
-            std::cout << indices[j] << ',';
-        std::cout << std::endl;
-    }
-}
-
 __global__ void leapfrog(Float** sim_vars, const int N, const Float timestep, curandState_t* random_states)
 {
     using namespace hh_params;
@@ -339,92 +316,6 @@ __global__ void Euler_an_ie_model(Float** sim_vars, const int N, const float tim
     }
 }
 
-// Internal function. Sets up network connectivity.
-AdjacencyList __GenerateConnectivity(int const N, Float*& Tcount, const std::string connectivity_filename, NetworkFactory& net_fac, bool local=false)
-{
-    // Generate coupling
-    AdjacencyList list;
-    {
-        thrust::host_vector<int> h_coupling, h_coupling_inds;
-        if(local)
-            net_fac.LocalConnectivity(h_coupling, h_coupling_inds, 50);
-        else
-            net_fac.BrainConnectivity(h_coupling, h_coupling_inds, connectivity_filename);
-        list.indices = h_coupling;
-        list.offset_in_indices = h_coupling_inds;
-    }
-
-    // Calculate numer of upstream neurons for each neuron based on synaptic coupling
-    thrust::host_vector<Float> Tcount_cpu(N, 0);
-    {
-        thrust::host_vector<int> indices_cpu(list.indices);
-        for (auto ind : indices_cpu)
-        {
-            if (ind >= N)
-                throw std::runtime_error("ERROR in __GenerateConnectivity: Index " + std::to_string(ind) + " out of range.");
-            ++Tcount_cpu[ind];
-        }
-        cudaMemcpy(Tcount, Tcount_cpu.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-    }
-    std::cout << "Setup input connectivity" << std::endl;
-    return list;
-}
-
-ChunkedAdjacencyList __GenerateConnectivityChunked(int const N, Float*& Tcount, const std::string connectivity_filename, NetworkFactory& net_fac, bool local=false)
-{
-    // Generate coupling
-    ChunkedAdjacencyList list;
-    thrust::host_vector<Float> Tcount_cpu(N, 0);
-    {
-        thrust::host_vector<int> h_coupling, h_coupling_inds;
-        if(local)
-            net_fac.LocalConnectivity(h_coupling, h_coupling_inds, 500);
-        else
-            net_fac.BrainConnectivity(h_coupling, h_coupling_inds, connectivity_filename);
-
-        // Calculate numer of upstream neurons for each neuron based on synaptic coupling
-        thrust::host_vector<int> indices_cpu(h_coupling);
-        for (auto ind : indices_cpu)
-        {
-            if (ind >= N)
-                throw std::runtime_error("ERROR in __GenerateConnectivity: Index " + std::to_string(ind) + " out of range.");
-            ++Tcount_cpu[ind];
-        }
-        cudaMemcpy(Tcount, Tcount_cpu.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-
-        thrust::host_vector<thrust::host_vector<int>> h_coupling_chunked(NCHUNKS), h_coupling_inds_chunked(NCHUNKS, h_coupling_inds);
-        for (int i = 1; i < N+1; ++i)
-        {
-            for(auto& inds_chunk: h_coupling_inds_chunked)
-                inds_chunk[i] = inds_chunk[i - 1];
-
-            for (int j = h_coupling_inds[i - 1]; j < h_coupling_inds[i]; ++j)
-            {
-                int const ds_idx = h_coupling[j];
-                int const ds_chunk = ds_idx / N_PER_CHUNK;
-                h_coupling_chunked[ds_chunk].push_back(ds_idx % N_PER_CHUNK);
-                h_coupling_inds_chunked[ds_chunk][i] += 1;
-            }
-        }
-
-        thrust::host_vector<int*> raw_h_coupling_chunked(NCHUNKS), raw_h_coupling_inds_chunked(NCHUNKS);
-        for (int i = 0; i < NCHUNKS; ++i)
-        {
-            int sz = h_coupling_chunked[i].size() * sizeof(int);
-            cudaMalloc(&(raw_h_coupling_chunked[i]), sz);
-            cudaMemcpy(raw_h_coupling_chunked[i], h_coupling_chunked[i].data(), sz, cudaMemcpyHostToDevice);
-
-            sz = h_coupling_inds_chunked[i].size() * sizeof(int);
-            cudaMalloc(&(raw_h_coupling_inds_chunked[i]), sz);
-            cudaMemcpy(raw_h_coupling_inds_chunked[i], h_coupling_inds_chunked[i].data(), sz, cudaMemcpyHostToDevice);
-        }
-        list.indices_chunks = raw_h_coupling_chunked;
-        list.offset_in_indices_chunks = raw_h_coupling_inds_chunked;
-    }
-    std::cout << "Setup input connectivity" << std::endl;
-    return list;
-}
-
 // This is simply a struct that contains all the relevant stuff for coupling. 
 // It can be called which will perform coupling and store it. 
 // Description:
@@ -621,12 +512,10 @@ void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostrea
     int const print_incs = (int)((1000.0 / samp_freq) / an_ie_params::rk4_dt + 0.5);
 
     // If graphics handle is non-null, allocate CPU mem to copy voltages to.
-    Float* cpu_voltages;
     uint8_t* frame_data;
     FILE* replay_out;
     if (graphics_voltages_handle)
     {
-        cpu_voltages = (Float*)malloc(sizeof(Float) * N);
         frame_data = (uint8_t*)malloc(3 * sizeof(uint8_t) * Graphics::get_width() * Graphics::get_height());
         replay_out = fopen("REPLAY.raw", "wb");
     }
@@ -638,17 +527,12 @@ void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostrea
 
         if (i % print_incs == 0)
         {
-            cudaMemcpy(cpu_voltages, V_ptr, N * sizeof(Float), cudaMemcpyDeviceToHost);
-
             // Update graphics if the graphics handle is non-null
             if (graphics_voltages_handle)
             {
-             //   // TODO: PUT SCALING IN SHADER IN GRAPHICS CODE
-             //   for (int k = 0; k < render_N; ++k)
-             //       graphics_voltages_handle[k] = 1 / (1 + exp(-(cpu_voltages[k * (N / render_N)] - hh_params::Vt) / hh_params::Kp));
                 electrodes->DoElectrodeMeasurements(V_ptr);
                 Float const* avg_V_handle = electrodes->ElectrodeOutputHandle();
-                for(int k = 0; k < render_N; ++k)
+                for (int k = 0; k < render_N; ++k)
                     graphics_voltages_handle[k] = avg_V_handle[k];
                                
                 fout << ElectrodeNet::MeasureAverageEntireNetwork(V_ptr, N);
@@ -658,7 +542,7 @@ void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostrea
 
                 bool pause{ false };
                 Graphics::render(graphics_voltages_handle, nullptr, 0, 0, pause);
-                Graphics::write_frame(replay_out, frame_data);
+//                Graphics::write_frame(replay_out, frame_data);
             }
         }
 
@@ -668,12 +552,13 @@ void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostrea
 
         // Update ODE 
         sim_func << <NBLOCKS, NTHREADS>> > (thrust::raw_pointer_cast(sim_vars.data()), N, dt, thrust::raw_pointer_cast(random_states.data()));
+		gpuErrchk( cudaPeekAtLastError() );
+		gpuErrchk( cudaDeviceSynchronize() );
     }
     fout << SampleValsToStr(0, sample_ptrs) << SampleValsToStr(1, sample_ptrs) << SampleValsToStr(2, sample_ptrs) << std::endl;
 
     if (graphics_voltages_handle)
     {
-        free(cpu_voltages);
         free(frame_data);
         fclose(replay_out);
     }
@@ -686,15 +571,15 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, int 
 {
     // Set up graphics and morphology
     UnitSquare morphology;
-    morphology.Generate(N / 5);
-    morphology.Translate(glm::vec3(0, 0, -1));
-	for (int i = 0; i < 5; ++i)
-	{
-		UnitSquare morphology2;
-		morphology2.Generate(N / 5);
-		morphology2.Translate(glm::vec3(0, 0, -1 + 2 * (i + 1) / 5.0f));
-		morphology.Union(&morphology2);
-	}
+    morphology.Generate(N);
+//    morphology.Translate(glm::vec3(0, 0, -1));
+//	for (int i = 0; i < 5; ++i)
+//	{
+//		UnitSquare morphology2;
+//		morphology2.Generate(N / 5);
+//		morphology2.Translate(glm::vec3(0, 0, -1 + 2 * (i + 1) / 5.0f));
+//		morphology.Union(&morphology2);
+//	}
 
     float* graphics_voltage_handle;
     Graphics::setup(graphics_voltage_handle, morphology.GetPositionsRaw(), N, render_N);
@@ -750,13 +635,15 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, int 
     // Random seeds setup. We get a "state" per neuron which we you can think of as the random seed.
     thrust::device_vector<curandState_t> random_states(N);
     init_random << <NBLOCKS, NTHREADS >> > (0, N, thrust::raw_pointer_cast(random_states.data()));
+	gpuErrchk( cudaPeekAtLastError() );
+	gpuErrchk( cudaDeviceSynchronize() );
 
-    // Generate coupling //TODO: Add additional coupling
-    AtomicCoupling e_coupling(N);
-    AtomicCoupling i_coupling(N);
-    NetworkFactory net_fac(N, morphology.GetPositionsRaw());
-    ChunkedAdjacencyList e_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[AN_IE_VAR_ECOUNT], "cortex_connectivity_1m_1k_exc.h5", net_fac, true) };
-    ChunkedAdjacencyList i_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[AN_IE_VAR_ICOUNT], "cortex_connectivity_1m_1k_inh.h5", net_fac, true) };
+    // Generate coupling 
+    AtomicCoupling e_coupling(N), i_coupling(N);
+    KNNNetwork e_net(500, &morphology), i_net(500, &morphology);
+    e_net.Generate(N); i_net.Generate(N);
+    ChunkedAdjacencyList e_list{ e_net.ToChunkedAdjacencyList(sim_vars_cpu[AN_IE_VAR_ECOUNT]) };
+    ChunkedAdjacencyList i_list{ i_net.ToChunkedAdjacencyList(sim_vars_cpu[AN_IE_VAR_ICOUNT]) };
     std::vector<CouplingStruct> coupling_structs
     {
         {e_list, e_coupling, sim_vars_cpu[AN_IE_VAR_EIN], sim_vars_cpu[AN_IE_VAR_EOUTPUT]},
@@ -768,7 +655,7 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, int 
     std::vector<int> electrode_inds(render_N);
     for(int i = 0; i < render_N; ++i)
         electrode_inds[i] = (N / render_N) * i;
-    net_fac.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 100);
+    morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 100);
     ElectrodeNet electrode_net(h_regions, h_regions_inds);
 
     // Get pointers to data we want to write output for
@@ -871,11 +758,12 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_le
 
     // Generate coupling
     AtomicCoupling loc_coupling(N), e_coupling(N), i_coupling(N);
-    NetworkFactory net_fac(N, morphology.GetPositionsRaw());
-    ChunkedAdjacencyList loc_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[SIM_PARAMS_LOCAL_COUNT], "", net_fac, true) };
-    ChunkedAdjacencyList e_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[SIM_PARAMS_ECOUNT], "cortex_connectivity_1m_1k_exc.h5", net_fac) };
-    ChunkedAdjacencyList i_list{ __GenerateConnectivityChunked(N, sim_vars_cpu[SIM_PARAMS_ICOUNT], "cortex_connectivity_1m_1k_inh.h5", net_fac) };
-
+    KNNNetwork loc_net(500, &morphology);
+    FileNetwork e_net("cortex_connectivity_1m_1k_exc.h5"), i_net("cortex_connectivity_1m_1k_inh.h5");
+    e_net.Generate(N); i_net.Generate(N);
+    ChunkedAdjacencyList loc_list{ loc_net.ToChunkedAdjacencyList(sim_vars_cpu[SIM_PARAMS_LOCAL_COUNT]) };
+    ChunkedAdjacencyList e_list{ e_net.ToChunkedAdjacencyList(sim_vars_cpu[SIM_PARAMS_ECOUNT]) };
+    ChunkedAdjacencyList i_list{ i_net.ToChunkedAdjacencyList(sim_vars_cpu[SIM_PARAMS_ICOUNT]) };
     std::vector<CouplingStruct> coupling_structs
     {
         {loc_list, loc_coupling, sim_vars_cpu[SIM_PARAMS_LOCAL_IN], sim_vars_cpu[SIM_PARAMS_LOCAL_OUTPUT]},
@@ -887,13 +775,15 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_le
     // Random seeds setup. We get a "state" per neuron which we you can think of as the random seed.
     thrust::device_vector<curandState_t> random_states(N);
     init_random << <NBLOCKS, NTHREADS >> > (0, N, thrust::raw_pointer_cast(random_states.data()));
+	gpuErrchk( cudaPeekAtLastError() );
+	gpuErrchk( cudaDeviceSynchronize() );
 
     // Setup electrodes randomly distributed.
     thrust::host_vector<int> h_regions, h_regions_inds;
     std::vector<int> electrode_inds(render_N);
     for(int i = 0; i < render_N; ++i)
         electrode_inds[i] = (N / render_N) * i;
-    net_fac.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 1);
+    morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 100);
     ElectrodeNet electrode_net(h_regions, h_regions_inds);
 
     // Get pointers to data we want to write output for

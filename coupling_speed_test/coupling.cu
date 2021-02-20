@@ -129,22 +129,14 @@ int AtomicCoupling::operator()(AdjacencyList const& connectivity, Float* spikes,
 		return 0;
 
 	// Transfer neurotransmitter from neurons to post-synaptic neurons.
-    cudaEvent_t s, sp;
-    cudaEventCreate(&s);
-    cudaEventCreate(&sp);
-    cudaEventRecord(s, 0);
 	signal_spikes_kernel<<<NBLOCKS, NTHREADS>>>(
 		num_firing, thrust::raw_pointer_cast(connectivity.indices.data()), thrust::raw_pointer_cast(connectivity.offset_in_indices.data()),
 		thrust::raw_pointer_cast(firing_neurons.data()), spikes, neuron_outputs);
-    cudaEventRecord(sp, 0);
-    cudaEventSynchronize(sp);
-
-    float time;
-    cudaEventElapsedTime(&time, s, sp);
+	gpuErrchk( cudaPeekAtLastError() );
+	gpuErrchk( cudaDeviceSynchronize() );
 
 	// For next time:
 	fired_previously = true;
-//	std::cout << "Num firing : " << num_firing << std::endl;
 	return num_firing;
 }
 
@@ -172,23 +164,16 @@ int AtomicCoupling::operator()(ChunkedAdjacencyList const& connectivity, Float* 
 		return 0;
 
 	// Transfer neurotransmitter from neurons to post-synaptic neurons.
-    cudaEvent_t s, sp;
-    cudaEventCreate(&s);
-    cudaEventCreate(&sp);
-    cudaEventRecord(s, 0);
 	signal_spikes_kernel_chunked<<<NBLOCKS, NTHREADS>>>(
 		num_firing, thrust::raw_pointer_cast(connectivity.indices_chunks.data()), thrust::raw_pointer_cast(connectivity.offset_in_indices_chunks.data()),
 		thrust::raw_pointer_cast(firing_neurons.data()), thrust::raw_pointer_cast(downstream_copies.data()), spikes, neuron_outputs);
+	gpuErrchk( cudaPeekAtLastError() );
+	gpuErrchk( cudaDeviceSynchronize() );
 
     merge_kernel << <NBLOCKS, NTHREADS >> > (thrust::raw_pointer_cast(downstream_copies.data()), spikes);
 
-    cudaEventRecord(sp, 0);
-    cudaEventSynchronize(sp);
-    float time;
-    cudaEventElapsedTime(&time, s, sp);
 	// For next time:
 	fired_previously = true;
-//	std::cout << "Num firing : " << num_firing << std::endl;
 	return num_firing;
 }
 

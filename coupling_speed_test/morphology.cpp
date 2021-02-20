@@ -1,9 +1,12 @@
 #define _USE_MATH_DEFINES
 #include "morphology.h"
+#include <glm/ext.hpp>
+#include <glm/gtc/type_ptr.hpp>
 using namespace H5;
 
 void Morphology::Union(Morphology* rhs)
 {
+    std::cout << "Computing union of two morphologies..." << std::endl;
 	size_t cur_size{ positions.size() };
 	positions.resize(cur_size + rhs->positions.size());
 	std::copy(rhs->positions.begin(), rhs->positions.end(), positions.begin() + cur_size);
@@ -21,9 +24,53 @@ void Morphology::Scale(glm::vec3 const& scale)
         pt *= scale;
 }
 
+void Morphology::KNN(int const n, int const k, std::vector<int>& knn, std::vector<ANNdist>& knn_dists)
+{
+    if (!kd_tree)
+        SetupANN();
+    ANNpoint pt{ glm::value_ptr(positions[n]) };
+	kd_tree->annkSearch(pt, k, knn.data(), knn_dists.data());
+}
+
+void Morphology::GenSphericalRegions(
+    thrust::host_vector<int>& h_regions, thrust::host_vector<int>& h_region_inds, 
+    std::vector<int> const& electrode_inds, int const k)
+{
+    if (!kd_tree)
+        SetupANN();
+
+    std::cout << "Generating spherical regions..." << std::endl;
+    std::vector<int> knn(k+1); 
+    std::vector<ANNdist> knn_dists(k+1);
+
+	int const N_regions = electrode_inds.size();
+    h_regions.resize(N_regions * k);
+    h_region_inds.resize(N_regions + 1, 0);
+    for (int n = 0; n < N_regions; ++n)
+    {
+		// Initialize query point. 
+		int const idx = electrode_inds[n];
+	
+        KNN(n, k, knn, knn_dists);
+		std::copy(knn.begin(), knn.end(), h_regions.begin() + k * n);
+        h_region_inds[n + 1] = h_region_inds[n] + k;
+    }
+}
+
+void Morphology::SetupANN ()
+{
+    std::cout << "Setting up ANN..." << std::endl;
+    int const N = positions.size();
+    ANNpointArray p_vec{ annAllocPts(N, 3) };
+    for (int i = 0; i < N; ++i)
+        p_vec[i] = glm::value_ptr(positions[i]);
+	kd_tree = std::make_unique<ANNkd_tree>(p_vec, N, 3);
+}
+
 bool HollowSphere::Generate(int const N)
 {
-    static auto gen{ std::default_random_engine() }; // No seed used. This means the randomness is the same for each run.
+    std::cout << "Generating hollow sphere morphology..." << std::endl;
+    auto& gen{ Utility::UnseededRandomEngine() };
     std::uniform_real_distribution<float> dist(0, 2 * M_PI);
     positions.resize(N);
     for (int i = 0; i < N; ++i)
@@ -36,7 +83,8 @@ bool HollowSphere::Generate(int const N)
 
 bool UnitSquare::Generate(int const N)
 {
-    static auto gen{ std::default_random_engine() }; // No seed used. This means the randomness is the same for each run.
+    std::cout << "Generating unit square morphology..." << std::endl;
+    auto& gen{ Utility::UnseededRandomEngine() };
     std::uniform_real_distribution<float> dist(-1, 1);
     positions.resize(N);
     for (int i = 0; i < N; ++i)
@@ -49,7 +97,8 @@ bool UnitSquare::Generate(int const N)
 
 bool UnitCube::Generate(int const N)
 {
-    static auto gen{ std::default_random_engine() }; // No seed used. This means the randomness is the same for each run.
+    std::cout << "Generating unit cube morphology..." << std::endl;
+    auto& gen{ Utility::UnseededRandomEngine() };
     std::uniform_real_distribution<float> dist(-1, 1);
     positions.resize(N);
     for (int i = 0; i < N; ++i)
@@ -67,8 +116,12 @@ FileMorphology::FileMorphology(std::string const& fl_name_)
 
 bool FileMorphology::Generate(int const N)
 {
-    if (format != "hdf" && format != "HDF")
-        return false; // Unsupported format.
+    std::cout << "Generating morphology from file '" + fl_name + "'..." << std::endl;
+    if (format != "h5" && format != "H5")
+    {
+        std::cerr << "Unsupported format " << format << std::endl;
+        return false;
+    }
     return GenerateFromHDF(N);
 }
 
