@@ -17,9 +17,4 @@ void main(void)
     if((fs_in.voltage + 65) / 2 > 0.8)
         discard;
     color = mix(vec4(1.0, 0.0, 1.0, 1.0), vec4(1.0, 1.0, 0.0, 1.0), (fs_in.voltage + 65) / 2);
-/*    if(fs_in.voltage < 0.1)
-        discard;a
-    color = mix(vec4(0.4, 0.0, 0.0, 0.8), vec4(0.0, 1.0, 0.0, 1.0), fs_in.voltage); 
-    if (fs_in.voltage > 0.95)
-        color = vec4(0.0, 1.0, 0.0, 1.0);*/
 }

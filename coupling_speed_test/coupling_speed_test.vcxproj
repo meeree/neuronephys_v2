@@ -89,6 +89,7 @@
   <ItemGroup>
     <CudaCompile Include="coupling.cu" />
 	<CudaCompile Include="electrode_net.cu" />
+	<CudaCompile Include="defines.cu" />
     <CudaCompile Include="main.cu">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </CudaCompile>

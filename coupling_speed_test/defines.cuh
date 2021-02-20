@@ -23,6 +23,13 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
    }
 }
 
+// Just some utility functions that can be used throughout the codebase.
+namespace Utility
+{
+    std::default_random_engine& UnseededRandomEngine();
+	std::default_random_engine& SeededRandomEngine();
+};
+
 #define USE_DOUBLE_PRECISION 0 
 #if USE_DOUBLE_PRECISION
 typedef double Float;

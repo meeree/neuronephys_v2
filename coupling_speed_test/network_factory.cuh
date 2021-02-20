@@ -1,63 +1,90 @@
 #pragma once
 #include "coupling.cuh"
-#include <ANN/ANN.h>
+#include "morphology.h"
 
-// Handles things related to creation of connectivities, localized information, regions, etc.
-class NetworkFactory 
+// Network is an abstract class that supports creation of connectivity on a set of neurons and operations as union.
+class Network
 {
-private:
-	int N;
-
-	// Stuff used for localized information gathering.
-	std::unique_ptr<ANNkd_tree> kd_tree;
-	ANNpointArray p_vec; // Positions in ANN format.
+protected:
+	// Connections in adjacency list format.
+	thrust::host_vector<int> indices, offset_in_indices;
 
 public:
-	NetworkFactory (int N_, float const* positions)
-		: N{N_}, kd_tree{nullptr}, p_vec{ annAllocPts(N, 3) }
-	{
-		float const* pos_it = positions;
-        for (int i = 0; i < N; ++i)
-            for (int dim = 0; dim < 3; ++dim)
-                p_vec[i][dim] = *pos_it++;
-		kd_tree = std::make_unique<ANNkd_tree>(p_vec, N, 3);
-	}
+	Network() = default;
 
-	// Establishes a uniform random network coupling with N neurons.
-	// Ncouple is the number of neurons each neuron is connected to.
-	void UniformNetwork(thrust::host_vector<int>& h_coupling, thrust::host_vector<int>& h_coupling_inds, int Ncouple);
-
-	// Read hdf file and convert to AdjacenyList
-	void BrainConnectivity(thrust::host_vector<int>& h_coupling, thrust::host_vector<int>& h_coupling_inds, const H5std_string file_name);
-
-	// 
-	//! Localized coupling where a neuron is connected to the k-nearest neighbors.
+	//! Generates a network. Pure virtual function.
 	/*!
-	  \param [out] h_coupling Connectivity column indices for connectivity matrix.
-	  \param [out] h_coupling_inds Connectivity row offsets for connectivity matrix.
-	  \param [in] k Number of nearest neighbors to couple to.
+	  \param [in] N Number of neurons.
+      \return If the function is successful for not.
 	*/
-	void LocalConnectivity(thrust::host_vector<int>& h_coupling, thrust::host_vector<int>& h_coupling_inds, int k);
+    virtual bool Generate (int const N) = 0;
 
-	// 
-	//! Generate a lookup table of k nearest neighbors per neuron. 
+
+	//! Generates an AdjacencyList on the GPU and returns it.
 	/*!
-	  \param [in] k Number of nearest neighbors to record.
-	*/	
-	std::vector<std::vector<int>> KNN(int const k);
+	  \param [out] Tcount Number of upstream connections per neuron. 
+      \return The adjacency list.
+	*/
+	AdjacencyList ToAdjacencyList(Float*& Tcount) const;
 
-	// 
-	//! Generate a list of spherical regions at specific neurons.
+	//! Generates a ChunkedAdjacencyList on the GPU and returns it.
 	/*!
-		\param [out] h_regions Column indices for region adjacency list. 
-		\param [out] h_region_inds Row offsets for region adjacency list.
-		\param [in] electrode_inds Indices of neurons at which to place electrodes.
-		\param [in] k Number of nearest neighbors for regions.
-	*/	
-	void GenSphericalRegions(thrust::host_vector<int>& h_regions, thrust::host_vector<int>& h_region_inds, std::vector<int> const& electrode_inds, int const k);
+	  \param [out] Tcount Number of upstream connections per neuron. 
+      \return The chunked adjacency list.
+	*/
+	ChunkedAdjacencyList ToChunkedAdjacencyList(Float*& Tcount) const;
 
-	// Convert coupling stored as DOWNSTREAM network to upstream matrix connectivity. 
-	CuSparseAdjacencyMatrix DownstreamToUpstreamSpMatrix(cusparseHandle_t& handle, AdjacencyList& list);
+	//! Generates a CuSparseAdjacencyMatrix on the GPU which gives upstream neuron connections (transpose of downstream).
+	/*!
+	  \param [in, out] handle The cusparse handle to use. 
+	  \param [in, out] list Connectivity stored in AdjacencyList format. 
+      \return The sparse matrix coupling.
+	*/
+	CuSparseAdjacencyMatrix ToUpstreamSparseMatrix(cusparseHandle_t& handle, AdjacencyList& list) const;
+};
 
-	~NetworkFactory () { annClose(); }
+// Network where each neuron has a fixed number of downstream connections chosen uniformly randomly.
+class UniformRandomNetwork : public Network
+{
+private:
+	int Ncouple;
+
+public:
+	/*!
+	  \param [in] Ncouple_ Number of connections per neuron..
+	*/
+	UniformRandomNetwork(int Ncouple_) : Ncouple(Ncouple_) {}
+	virtual bool Generate(int const N) override;
+};
+
+// Localized coupling where a neuron is connected to the k-nearest neighbors.
+class KNNNetwork : public Network
+{
+private:
+	int k;
+	Morphology* morphology_handle;
+
+public:
+	/*!
+	  \param [in] k_ Number of nearest neighbors to couple to per neuron.
+	  \param [in] morphology_handle_ A pointer to the morphology which handles finding neighbors.
+	*/
+	KNNNetwork(int k_, Morphology* morphology_handle_) : k(k_), morphology_handle{ morphology_handle_ } {}
+	virtual bool Generate(int const N) override;
+};
+
+// Network read in from a file with the format inferred in constructor.
+class FileNetwork : public Network
+{
+private:	
+	std::string fl_name;	
+	std::string format;
+
+public:
+	/*!
+	  \param [in] fl_name_ Name of file to read from.
+	*/
+	FileNetwork(std::string const& fl_name_);
+	bool GenerateFromHDF(int const N);
+	virtual bool Generate(int const N) override;
 };
