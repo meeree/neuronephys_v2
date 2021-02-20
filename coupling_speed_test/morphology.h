@@ -111,6 +111,14 @@ protected:
 	virtual Float F(glm::vec3 const& p) override;
 };
 
+//! Sphere with "wrinkles" that are polar oscillations in the radius.
+class SimpleWrinkledSolidSphere : public ImplicitSolid
+{
+protected:
+	//! Returns L2 norm squared minus 1 plus some variation for the "wrinkles.
+	virtual Float F(glm::vec3 const& p) override;
+};
+
 //! Morphology read in from a file with format inferred in constructor.
 class FileMorphology : public Morphology
 {
