@@ -1,6 +1,7 @@
 #define _USE_MATH_DEFINES
 #include "morphology.h"
 #include <glm/ext.hpp>
+#include <glm/gtx/norm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 using namespace H5;
 
@@ -107,6 +108,32 @@ bool UnitCube::Generate(int const N)
         positions[i] = { x, y, z };
     }
     return true;
+}
+
+bool ImplicitSolid::Generate(int const N)
+{
+    // Generate points uniformly in unit cube and only keep those for which F(p) <= 0.
+    std::cout << "Generating implicit solid morphology..." << std::endl;
+    auto& gen{ Utility::UnseededRandomEngine() };
+    std::uniform_real_distribution<float> dist(-1, 1);
+    positions.resize(N);
+    int pos_size = 0;
+    while (pos_size < N)
+    {
+        float const x{ dist(gen) }, y{ dist(gen) }, z{ dist(gen) };
+        glm::vec3 p{ x, y, z };
+        if (F(p) <= 0)
+        {
+            positions[pos_size] = p;
+            pos_size += 1;
+        }
+    }
+    return true;
+}
+
+Float SolidSphere::F(glm::vec3 const& p)
+{
+    return glm::length2(p) - 1;
 }
 
 FileMorphology::FileMorphology(std::string const& fl_name_)

@@ -38,7 +38,7 @@ public:
 	int operator()(ChunkedAdjacencyList const& connectivity, Float* spikes, Float const* neuron_outputs);
 };
 
-// Stored in CSC format!
+//! Stored in CSC format!
 struct CuSparseAdjacencyMatrix
 {
 	cusparseHandle_t& context;
@@ -46,7 +46,7 @@ struct CuSparseAdjacencyMatrix
 	thrust::device_vector<Float> vals;
 	static cusparseMatDescr_t default_descr;
 
-	// gemv performs operator y = alpha * A * x + beta * y, where A is this matrix. 
+	//! gemv performs operator y = alpha * A * x + beta * y, where A is this matrix. 
 	void gemv(Float const* x, Float* y, Float alpha = 1.0, Float beta = 0.0, bool transpose = false) const;
 };
 
@@ -55,7 +55,7 @@ struct CuBlasAdjacencyMatrix
 	cublasHandle_t& context;
 	thrust::device_vector<Float> matrix;
 
-	// gemv performs operator y = alpha * A * x + beta * y, where A is this matrix. 
+	//! gemv performs operator y = alpha * A * x + beta * y, where A is this matrix. 
 	void gemv(Float const* x, Float* y, Float alpha = 1.0, Float beta = 0.0, bool transpose = false) const;
 };
 

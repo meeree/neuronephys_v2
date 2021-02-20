@@ -1,8 +1,8 @@
 #pragma once
 #include "coupling.cuh"
 
-// Implements a network of "electrodes" measuring averaged activity in regions. 
-// Regions are stored as an adjacency list.
+//! Implements a network of "electrodes" measuring averaged activity in regions. 
+//! Regions are stored as an adjacency list.
 class ElectrodeNet 
 {
 private:

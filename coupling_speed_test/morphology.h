@@ -6,13 +6,13 @@
 #include <glm/glm.hpp>
 #pragma once
 
-// Morphology is an abstract class that supports morphology generation 
-// and operations such as union, nearest-neighbor, etc.
+//! Morphology is an abstract class that supports morphology generation 
+//! and operations such as union, nearest-neighbor, etc.
 class Morphology
 {
 protected:
-	std::unique_ptr<ANNkd_tree> kd_tree; // Tree used by ANN for spatial search.
-	std::vector<glm::vec3> positions; // Positions in GLM format.
+	std::unique_ptr<ANNkd_tree> kd_tree; //! Tree used by ANN for spatial search.
+	std::vector<glm::vec3> positions; //! Positions in GLM format.
 
 	//! Creates kd_tree using positions.
 	void SetupANN();
@@ -71,31 +71,50 @@ public:
 	virtual ~Morphology() { annClose(); }
 };
 
-// Hollow Sphere shell. 2D Manifold.
+//! Hollow Sphere shell. 2D Manifold.
 class HollowSphere : public Morphology
 {
 public:
     virtual bool Generate(int const N) override;
 };
 
-// 2D Square [-1,1] X [-1,1]. 2D Manifold.
+//! 2D Square [-1,1] X [-1,1]. 2D Manifold.
 class UnitSquare : public Morphology
 {
 public:
     virtual bool Generate(int const N) override;
 };
 
-// 3D Square [-1,1] X [-1,1] X [-1,1]. 3D Manifold.
+//! 3D Square [-1,1] X [-1,1] X [-1,1]. 
 class UnitCube : public Morphology
 {
 public:
 	virtual bool Generate(int const N) override;
 };
 
-// Morphology read in from a file with format inferred in constructor.
+//! Volume given by the solution of the equations F(x,y,z) <= 0.
+//! NOTE THAT WE ASSUME THE SOLID IS WITHIN THE UNIT CUBE!
+class ImplicitSolid : public Morphology
+{
+protected:
+	//! Defines the inside, outside and boundary by F(x,y,z) < 0, > 0 and = 0, respectively.
+	virtual Float F(glm::vec3 const& p) = 0;
+public:
+	virtual bool Generate(int const N) override;
+};
+
+//! Solid unit sphere implemented as an implicit solid.
+class SolidSphere : public ImplicitSolid
+{
+protected:
+	//! Returns L2 norm squared minus 1.
+	virtual Float F(glm::vec3 const& p) override;
+};
+
+//! Morphology read in from a file with format inferred in constructor.
 class FileMorphology : public Morphology
 {
-private:	
+protected:	
 	std::string fl_name;	
 	std::string format;
 
