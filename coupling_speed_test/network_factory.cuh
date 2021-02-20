@@ -2,12 +2,15 @@
 #include "coupling.cuh"
 #include "morphology.h"
 
-// Network is an abstract class that supports creation of connectivity on a set of neurons and operations as union.
+//! Network is an abstract class that supports creation of connectivity on a set of neurons and operations as union.
 class Network
 {
 protected:
-	// Connections in adjacency list format.
-	thrust::host_vector<int> indices, offset_in_indices;
+	//! Connections indices for adjacency list format.
+	thrust::host_vector<int> indices;
+
+	//! Connections row offsets for adjacency list format.
+	thrust::host_vector<int> offset_in_indices;
 
 public:
 	Network() = default;
@@ -43,10 +46,10 @@ public:
 	CuSparseAdjacencyMatrix ToUpstreamSparseMatrix(cusparseHandle_t& handle, AdjacencyList& list) const;
 };
 
-// Network where each neuron has a fixed number of downstream connections chosen uniformly randomly.
+//! Network where each neuron has a fixed number of downstream connections chosen uniformly randomly.
 class UniformRandomNetwork : public Network
 {
-private:
+protected:
 	int Ncouple;
 
 public:
@@ -57,10 +60,10 @@ public:
 	virtual bool Generate(int const N) override;
 };
 
-// Localized coupling where a neuron is connected to the k-nearest neighbors.
+//! Localized coupling where a neuron is connected to the k-nearest neighbors.
 class KNNNetwork : public Network
 {
-private:
+protected:
 	int k;
 	Morphology* morphology_handle;
 
@@ -73,10 +76,10 @@ public:
 	virtual bool Generate(int const N) override;
 };
 
-// Network read in from a file with the format inferred in constructor.
+//! Network read in from a file with the format inferred in constructor.
 class FileNetwork : public Network
 {
-private:	
+protected:	
 	std::string fl_name;	
 	std::string format;
 

@@ -538,7 +538,6 @@ void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostrea
                 fout << ElectrodeNet::MeasureAverageEntireNetwork(V_ptr, N);
 //                for(int k = 0; k < render_N; ++k)
 //                    fout << avg_V_handle[k] << ',';
-                fout << std::endl;
 
                 bool pause{ false };
                 Graphics::render(graphics_voltages_handle, nullptr, 0, 0, pause);
@@ -547,8 +546,11 @@ void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostrea
         }
 
         // Perform coupling. The number of neurons firing is returned by each of these calls. 
+        int n_firing;
         for(auto& coup_struct: coupling_structs)
-            coup_struct();
+            n_firing = coup_struct();
+        fout << ',' << n_firing;
+		fout << std::endl;
 
         // Update ODE 
         sim_func << <NBLOCKS, NTHREADS>> > (thrust::raw_pointer_cast(sim_vars.data()), N, dt, thrust::raw_pointer_cast(random_states.data()));
@@ -570,7 +572,7 @@ void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostrea
 void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_len = 10, int render_N = -1)
 {
     // Set up graphics and morphology
-    UnitSquare morphology;
+    SolidSphere morphology;
     morphology.Generate(N);
 //    morphology.Translate(glm::vec3(0, 0, -1));
 //	for (int i = 0; i < 5; ++i)

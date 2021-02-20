@@ -1,6 +1,7 @@
 #pragma once
 #include <stddef.h>
 #include <cstdio>
+#pragma once
 #include <cstdint>
 
 namespace Graphics
@@ -10,21 +11,25 @@ namespace Graphics
     bool render(float const* voltages, void const* slice, int const slice_width, int const slice_height, bool& pause);
     void terminate_graphics();
 
-    // Sets size of maximum raw video size. If we exceed this, the raw video is converted to an mp4 and overwritten. 
+    //! Sets size of maximum raw video size. If we exceed this, the raw video is converted to an mp4 and overwritten. 
     void set_max_raw_video_size(int const size_in_gb);
 
-    // Writes a frame to raw video file. If file size starts to exceed limit, it is converted to an mp4 and will be overwritten.
+    //! Writes a frame to raw video file. If file size starts to exceed limit, it is converted to an mp4 and will be overwritten.
     void write_frame(FILE* out, uint8_t* data);
 
-    // replay utilities. Allows user to record a replay of voltages and replay it. 
+    //! replay utilities. Allows user to record a replay of voltages and replay it. 
     void setup_replay(int frame_cache_count); // Allocate frame_cache_count frames to store replay. 
+    //! replay utilities. Allows user to record a replay of voltages and replay it. 
     void record_for_replay(float const* voltages);
 
+    //! replay utilities. Allows user to record a replay of voltages and replay it. 
     void set_window_title(const char* title);
 
-    // helper functions
+    //! helper function
     int get_width ();
+    //! helper function
     int get_height ();
 
+    //! helper function
     int get_slice_index();
 };
