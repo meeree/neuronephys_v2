@@ -136,6 +136,15 @@ Float SolidSphere::F(glm::vec3 const& p)
     return glm::length2(p) - 1;
 }
 
+Float SimpleWrinkledSolidSphere::F(glm::vec3 const& p)
+{
+    // Convert cartesian to spherical coordinates.
+    Float r = glm::length(p);
+    Float theta = atan2(p.y, p.x);
+    Float phi = atan2(sqrt(p.x * p.x + p.y * p.y), p.z);
+    return r - cos(phi) * (0.15 * cos(20 * theta) + 0.85);
+}
+
 FileMorphology::FileMorphology(std::string const& fl_name_)
     : fl_name{ "../" + fl_name_ }, format{ fl_name_.substr(fl_name_.find_last_of('.') + 1) }
 {
