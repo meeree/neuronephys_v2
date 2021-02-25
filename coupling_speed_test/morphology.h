@@ -17,6 +17,9 @@ protected:
 	//! Creates kd_tree using positions.
 	void SetupANN();
 
+	//! Virtual function to check if point p is on the boundary. By default returns false.
+	virtual bool IsBoundaryPoint(glm::vec3 const& p) const { return false; }
+
 public:
 	Morphology() : kd_tree{ nullptr } {}
 
@@ -61,8 +64,15 @@ public:
 		\param [in] electrode_inds Indices of neurons at which to place electrodes.
 		\param [in] k Number of nearest neighbors for regions.
 	*/	
-	void GenSphericalRegions(thrust::host_vector<int>& h_regions, thrust::host_vector<int>& h_region_inds, \
+	void GenSphericalRegions(thrust::host_vector<int>& h_regions, thrust::host_vector<int>& h_region_inds, 
 		                     std::vector<int> const& electrode_inds, int const k);
+
+	//! Function for getting the boundary points of a morphology using on IsBoundaryPoint function.
+	/*!
+		\param [out] h_regions Column indices for region adjacency list. 
+		\param [out] h_region_inds Row offsets for region adjacency list.
+	*/	
+	void GetBoundaryRegion(thrust::host_vector<int>& h_regions, thrust::host_vector<int>& h_region_inds) const;
 
 	//! Getter for positions. 
 	std::vector<glm::vec3> const& GetPositions() { return positions; }
@@ -98,7 +108,8 @@ class ImplicitSolid : public Morphology
 {
 protected:
 	//! Defines the inside, outside and boundary by F(x,y,z) < 0, > 0 and = 0, respectively.
-	virtual Float F(glm::vec3 const& p) = 0;
+	virtual Float F(glm::vec3 const& p) const = 0;
+	virtual bool IsBoundaryPoint(glm::vec3 const& p) const override;
 public:
 	virtual bool Generate(int const N) override;
 };
@@ -108,7 +119,7 @@ class SolidSphere : public ImplicitSolid
 {
 protected:
 	//! Returns L2 norm squared minus 1.
-	virtual Float F(glm::vec3 const& p) override;
+	virtual Float F(glm::vec3 const& p) const override;
 };
 
 //! Sphere with "wrinkles" that are polar oscillations in the radius.
@@ -116,7 +127,7 @@ class SimpleWrinkledSolidSphere : public ImplicitSolid
 {
 protected:
 	//! Returns L2 norm squared minus 1 plus some variation for the "wrinkles.
-	virtual Float F(glm::vec3 const& p) override;
+	virtual Float F(glm::vec3 const& p) const override;
 };
 
 //! Morphology read in from a file with format inferred in constructor.

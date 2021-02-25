@@ -44,6 +44,12 @@ public:
       \return The sparse matrix coupling.
 	*/
 	CuSparseAdjacencyMatrix ToUpstreamSparseMatrix(cusparseHandle_t& handle, AdjacencyList& list) const;
+
+	//! Getter for indices on cpu.
+	thrust::host_vector<int> const& GetCpuIndices() const { return indices; }
+
+	//! Getter for offsets_in_indices on CPU.
+	thrust::host_vector<int> const& GetCpuOffsetsIntoIndices() const { return offset_in_indices; }
 };
 
 //! Network where each neuron has a fixed number of downstream connections chosen uniformly randomly.

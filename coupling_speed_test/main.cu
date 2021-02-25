@@ -2,6 +2,8 @@
 #include "graphics.h"
 #include "morphology.h"
 #include "electrode_net.cuh"
+#include <glm/gtx/norm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 // we need these includes for CUDA's random number stuff
 #include <curand.h>
@@ -514,6 +516,7 @@ void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostrea
     // If graphics handle is non-null, allocate CPU mem to copy voltages to.
     uint8_t* frame_data;
     FILE* replay_out;
+    bool pause{ false };
     if (graphics_voltages_handle)
     {
         frame_data = (uint8_t*)malloc(3 * sizeof(uint8_t) * Graphics::get_width() * Graphics::get_height());
@@ -539,11 +542,13 @@ void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostrea
 //                for(int k = 0; k < render_N; ++k)
 //                    fout << avg_V_handle[k] << ',';
 
-                bool pause{ false };
-                Graphics::render(graphics_voltages_handle, nullptr, 0, 0, pause);
+                pause = Graphics::render(graphics_voltages_handle, nullptr, 0, 0, pause);
 //                Graphics::write_frame(replay_out, frame_data);
             }
         }
+
+        if (pause)
+            continue;
 
         // Perform coupling. The number of neurons firing is returned by each of these calls. 
         int n_firing;
@@ -566,13 +571,20 @@ void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostrea
     }
 }
 
+
+bool length_predicate(float const* p1, float const* p2)
+{
+	return glm::distance2(glm::make_vec3(p1), glm::make_vec3(p2)) > 0.8 * 0.8;
+}
+
 // N : number of neurons to simulate
 // samp_freq : sampling frequency (Hz)
 // samp_len : How long you record the activity of the model neuron (sec)
 void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_len = 10, int render_N = -1)
 {
     // Set up graphics and morphology
-    SolidSphere morphology;
+    //UnitSquare morphology;
+    FileMorphology morphology("cortex_connectivity_1m_1k_inh.h5");
     morphology.Generate(N);
 //    morphology.Translate(glm::vec3(0, 0, -1));
 //	for (int i = 0; i < 5; ++i)
@@ -642,7 +654,8 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, int 
 
     // Generate coupling 
     AtomicCoupling e_coupling(N), i_coupling(N);
-    KNNNetwork e_net(500, &morphology), i_net(500, &morphology);
+    FileNetwork e_net("cortex_connectivity_1m_1k_exc.h5");
+    KNNNetwork  i_net(30, &morphology);
     e_net.Generate(N); i_net.Generate(N);
     ChunkedAdjacencyList e_list{ e_net.ToChunkedAdjacencyList(sim_vars_cpu[AN_IE_VAR_ECOUNT]) };
     ChunkedAdjacencyList i_list{ i_net.ToChunkedAdjacencyList(sim_vars_cpu[AN_IE_VAR_ICOUNT]) };
@@ -652,12 +665,25 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, int 
         {i_list, i_coupling, sim_vars_cpu[AN_IE_VAR_IIN], sim_vars_cpu[AN_IE_VAR_IOUTPUT]},
     };
 
+    // Send the connectivity to graphics.
+    auto const& positions{ morphology.GetPositions() };
+    Graphics::load_in_connectivity(
+        e_net.GetCpuIndices().data(),
+        e_net.GetCpuOffsetsIntoIndices().data(),
+        N, 1e5,
+        length_predicate);
+
+//    Graphics::load_in_connectivity(i_net.GetCpuIndices().data(), 
+//                                  i_net.GetCpuOffsetsIntoIndices().data(), 
+//                                  N, 10);
+
     // Setup electrodes randomly distributed.
     thrust::host_vector<int> h_regions, h_regions_inds;
     std::vector<int> electrode_inds(render_N);
     for(int i = 0; i < render_N; ++i)
         electrode_inds[i] = (N / render_N) * i;
-    morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 100);
+    morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 1);
+//    morphology.GetBoundaryRegion(h_regions, h_regions_inds);
     ElectrodeNet electrode_net(h_regions, h_regions_inds);
 
     // Get pointers to data we want to write output for

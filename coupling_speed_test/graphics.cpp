@@ -72,14 +72,16 @@ struct
     glm::vec2 theta{0.0f, 0.0f};
     bool pause{ false }, rotate{ true }, replay{ false };
     glm::vec3 world_min, world_max;
+    int draw_mode = 0;
 
     ReplayBuffer replay_buffer; // Used for replaying video 
 
     // Locations of stuff
     GLint voltage_loc, pos_loc, tex_coord_loc; // attributes 
     GLint p_mat_loc, v_mat_loc, m_mat_loc, sampler_loc; // uniforms
+    GLint render_lines_loc;
 
-    GLuint pos_buff, voltage_buff, tex_coord_buff;
+    GLuint pos_buff, voltage_buff, tex_coord_buff, line_buff;
 
     int raw_video_frame_idx = 0;
     int max_raw_video_size_gb = 10;
@@ -88,6 +90,7 @@ struct
     // Application-specific stuff
     vector<GLfloat> voltages;
     vector<glm::vec3> points;
+    vector<GLuint> lines;
     int slice_index{ 0 };
 } g_attrs;
 
@@ -183,6 +186,41 @@ void shutdown ()
     glDeleteProgram(g_attrs.shaderProgram);
 }
 
+bool trivial_predicate(float const*, float const*) { return true; }
+
+void load_in_connectivity(int const* connectivity_inds, int const* offset_into_inds, int const N, int const N_pts_to_use, LinePredicate pred)
+{
+    // We use an index buffer to store the indices for the lines. An index buffer is nice 
+    // because it means we can use the already loaded positions and just index into them.
+    int const stride =  g_attrs.points.size() / N_pts_to_use;
+    int const points_stride = N / g_attrs.points.size(); // We may not be rendering all points being simulated.
+
+    if (!pred)
+        pred = trivial_predicate;
+
+    for (int i = 0; i < N; i += stride)
+    {
+        for (int j = offset_into_inds[i]; j < offset_into_inds[i + 1]; ++j)
+        {
+            int const ds_idx = connectivity_inds[j];
+            if (ds_idx % points_stride != 0)
+                continue;
+
+            float const* p1 = glm::value_ptr(g_attrs.points[i]);
+            float const* p2 = glm::value_ptr(g_attrs.points[ds_idx / points_stride]);
+            if (!pred(p1, p2))
+                continue;
+
+            g_attrs.lines.push_back(i);
+            g_attrs.lines.push_back(ds_idx / points_stride);
+        }
+    }
+
+    // Setup index buffer.
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_attrs.line_buff);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, g_attrs.lines.size() * sizeof(GLuint), g_attrs.lines.data(), GL_STATIC_DRAW);
+}
+
 bool render (float const* voltages, void const* slice, int const slice_width, int const slice_height, bool& pause)
 {   
     if(glfwWindowShouldClose(g_attrs.window))
@@ -215,8 +253,11 @@ bool render (float const* voltages, void const* slice, int const slice_width, in
         };
         g_attrs.theta = 0.001f * (mouse - g_attrs.mouse);
 
-        g_attrs.model = glm::rotate(g_attrs.model, g_attrs.theta.x, glm::vec3(0.0f, 1.0f, 0.0f));
-        g_attrs.model = glm::rotate(g_attrs.model, g_attrs.theta.y, glm::vec3(1.0f, 0.0f, 0.0f));
+        auto rot_mat = glm::rotate(glm::mat4(1.0f), -g_attrs.theta.x, glm::vec3(0.0f, 1.0f, 0.0f));
+        rot_mat = glm::rotate(rot_mat, -g_attrs.theta.y, glm::vec3(0.0f, 0.0f, 1.0f));
+        g_attrs.cam_pos = glm::vec3(rot_mat * glm::vec4(g_attrs.cam_pos, 1.0f));
+        
+        g_attrs.view = glm::lookAt(g_attrs.cam_pos, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         g_attrs.mouse = mouse;
     }
     else if (g_attrs.rotate)
@@ -233,11 +274,22 @@ bool render (float const* voltages, void const* slice, int const slice_width, in
     glVertexAttribPointer(g_attrs.voltage_loc, 1, GL_FLOAT, GL_FALSE, sizeof(GLfloat), NULL);
     glEnableVertexAttribArray(g_attrs.voltage_loc);
 
-    // Render neurons
     glUniformMatrix4fv(g_attrs.p_mat_loc, 1, GL_FALSE, glm::value_ptr(g_attrs.projection));
     glUniformMatrix4fv(g_attrs.m_mat_loc, 1, GL_FALSE, glm::value_ptr(g_attrs.model));
     glUniformMatrix4fv(g_attrs.v_mat_loc, 1, GL_FALSE, glm::value_ptr(g_attrs.view));
-    glDrawArrays(GL_POINTS, 0, g_attrs.points.size());
+
+    if (g_attrs.draw_mode > 0 && !g_attrs.lines.empty())
+    {
+		// Draw the connectivity.
+		glUniform1i(g_attrs.render_lines_loc, 1);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_attrs.line_buff);
+		glDrawElements(GL_LINES, g_attrs.lines.size(), GL_UNSIGNED_INT, (void*)0);
+		glUniform1i(g_attrs.render_lines_loc, 0);
+    }
+
+    // Render neurons
+    if(g_attrs.draw_mode < 2)
+		glDrawArrays(GL_POINTS, 0, g_attrs.points.size());
 
     // Render texture
     if(slice)
@@ -270,7 +322,7 @@ bool render (float const* voltages, void const* slice, int const slice_width, in
     glfwPollEvents();
     glfwSwapBuffers(g_attrs.window);
     pause = g_attrs.pause;
-    return true;
+    return pause;
 }
 
 void keyCallback(GLFWwindow* window, int key, int, int action, int)
@@ -298,36 +350,39 @@ void keyCallback(GLFWwindow* window, int key, int, int action, int)
         else // enable cursor
             glfwSetInputMode(g_attrs.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         g_attrs.pause = !g_attrs.pause; // Toggle pause
-		if (!g_attrs.pause)
-		{
-			set_window_title(g_attrs.title.c_str());
-			g_attrs.replay = false;
-		}
-		else
-		{
-			set_window_title((g_attrs.title + " ( PAUSED ) ").c_str());
-		}
+        if (!g_attrs.pause)
+        {
+            set_window_title(g_attrs.title.c_str());
+            g_attrs.replay = false;
+        }
+        else
+        {
+            set_window_title((g_attrs.title + " ( PAUSED ) ").c_str());
+        }
     }
     else if (key == GLFW_KEY_R && action == GLFW_PRESS)
         g_attrs.rotate = !g_attrs.rotate; // Toggle rotation
-	else if (g_attrs.pause && key == GLFW_KEY_T && action == GLFW_PRESS) // Can only replay when paused! 
-	{
+    else if (g_attrs.pause && key == GLFW_KEY_T && action == GLFW_PRESS) // Can only replay when paused! 
+    {
         g_attrs.replay = !g_attrs.replay; // Toggle replay
-		if(g_attrs.replay)
-			set_window_title((g_attrs.title + " ( PAUSED ) ( REPLAY MODE ) -0").c_str());
-		else
-			set_window_title((g_attrs.title + " ( PAUSED ) ").c_str());
-	}
-  
+        if (g_attrs.replay)
+            set_window_title((g_attrs.title + " ( PAUSED ) ( REPLAY MODE ) -0").c_str());
+        else
+            set_window_title((g_attrs.title + " ( PAUSED ) ").c_str());
+    }
+
     else if (g_attrs.replay)
     {
-        if(key == GLFW_KEY_UP && (action == GLFW_REPEAT || action == GLFW_PRESS))
+        if (key == GLFW_KEY_UP && (action == GLFW_REPEAT || action == GLFW_PRESS))
             g_attrs.replay_buffer.move_N_frames(1); // Fast forward replay one frame
         else if (key == GLFW_KEY_DOWN && (action == GLFW_REPEAT || action == GLFW_PRESS))
             g_attrs.replay_buffer.move_N_frames(-1); // Rewind replay one frame
 
-		set_window_title((g_attrs.title + " ( PAUSED ) ( REPLAY MODE ) -" + std::to_string(g_attrs.replay_buffer.frame_rewind_idx)).c_str());
+        set_window_title((g_attrs.title + " ( PAUSED ) ( REPLAY MODE ) -" + std::to_string(g_attrs.replay_buffer.frame_rewind_idx)).c_str());
     }
+
+    else if (key == GLFW_KEY_P && (action == GLFW_REPEAT || action == GLFW_PRESS))
+        g_attrs.draw_mode = (g_attrs.draw_mode + 1) % 3;
 
     else if (key == GLFW_KEY_RIGHT && (action == GLFW_REPEAT || action == GLFW_PRESS))
         g_attrs.slice_index += 1;
@@ -371,6 +426,7 @@ int setup(float*& voltages, float const* positions, size_t N, size_t render_N)
         g_attrs.p_mat_loc = glGetUniformLocation(g_attrs.shaderProgram, "pMat");
         g_attrs.v_mat_loc = glGetUniformLocation(g_attrs.shaderProgram, "vMat");
         g_attrs.m_mat_loc = glGetUniformLocation(g_attrs.shaderProgram, "mMat");
+        g_attrs.render_lines_loc = glGetUniformLocation(g_attrs.shaderProgram, "render_lines");
         g_attrs.tex_coord_loc = glGetAttribLocation(g_attrs.tex_shaderProgram, "tex_coords");
         g_attrs.sampler_loc = glGetUniformLocation(g_attrs.tex_shaderProgram, "tex");
 
@@ -396,6 +452,7 @@ int setup(float*& voltages, float const* positions, size_t N, size_t render_N)
                 g_attrs.voltages.data(),
                 GL_DYNAMIC_DRAW);
 
+		glGenBuffers(1, &g_attrs.line_buff);
 
         // Generate texture
         glGenTextures(1, &g_attrs.texture);
