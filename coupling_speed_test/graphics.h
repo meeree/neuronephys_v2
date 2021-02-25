@@ -6,6 +6,7 @@
 
 namespace Graphics
 {
+    //! Sets up the graphics.
     int setup(float*& voltages, float const* positions, size_t N, size_t render_N);
 
     bool render(float const* voltages, void const* slice, int const slice_width, int const slice_height, bool& pause);
@@ -32,4 +33,11 @@ namespace Graphics
 
     //! helper function
     int get_slice_index();
+
+    typedef bool (*LinePredicate)(float const*, float const*);
+    //! Load a connectivity as a collection of lines to be rendered.
+    void load_in_connectivity(
+        int const* connectivity_inds, int const* offset_into_inds,
+        int const N, int const N_pts_to_use,
+        LinePredicate pred);
 };

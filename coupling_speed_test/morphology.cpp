@@ -58,6 +58,19 @@ void Morphology::GenSphericalRegions(
     }
 }
 
+void Morphology::GetBoundaryRegion(
+    thrust::host_vector<int>& h_regions, thrust::host_vector<int>& h_region_inds) const
+{
+    for (int i = 0; i < positions.size(); ++i)
+        if (IsBoundaryPoint(positions[i]))
+            h_regions.push_back(i);
+    h_region_inds.resize(2);
+    h_region_inds[0] = 0;
+    h_region_inds[1] = (int)h_regions.size();
+    std::cout << "Boundary region number of points: " << h_regions.size() << std::endl;
+}
+
+
 void Morphology::SetupANN ()
 {
     std::cout << "Setting up ANN..." << std::endl;
@@ -131,12 +144,18 @@ bool ImplicitSolid::Generate(int const N)
     return true;
 }
 
-Float SolidSphere::F(glm::vec3 const& p)
+bool ImplicitSolid::IsBoundaryPoint(glm::vec3 const& p) const
+{
+    static constexpr Float tol = 0.01f;
+    return fabs(F(p)) <= tol;
+}
+
+Float SolidSphere::F(glm::vec3 const& p) const
 {
     return glm::length2(p) - 1;
 }
 
-Float SimpleWrinkledSolidSphere::F(glm::vec3 const& p)
+Float SimpleWrinkledSolidSphere::F(glm::vec3 const& p) const
 {
     // Convert cartesian to spherical coordinates.
     Float r = glm::length(p);
@@ -203,6 +222,7 @@ bool FileMorphology::GenerateFromHDF(int const N)
 
     // Sample points uniformly so that we have exactly N, not numpnts. 
     int stride{ numpnts / N };
+    positions.resize(N);
     for (int i = 0; i < N; ++i)
     {
         int const j{ stride * i };

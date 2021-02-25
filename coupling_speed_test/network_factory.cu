@@ -154,7 +154,6 @@ bool FileNetwork::Generate(int const N)
 bool FileNetwork::GenerateFromHDF(int const N)
 {
 	using namespace H5;
-	const H5std_string fl_name = "../" + fl_name;
 	int numconns, numpnts;
 	std::vector<int> col_idx, row_ptr;
 	try
