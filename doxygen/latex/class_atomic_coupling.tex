@@ -1,0 +1,81 @@
+\doxysection{Atomic\+Coupling Class Reference}
+\label{class_atomic_coupling}\index{AtomicCoupling@{AtomicCoupling}}
+
+
+Class that performs coupling using adjacency list telling us the downstream neurons per neuron.  
+
+
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\textbf{ Atomic\+Coupling} (int const N\+\_\+)
+\item 
+int \textbf{ operator()} (\textbf{ Adjacency\+List} const \&connectivity, \textbf{ Float} $\ast$spikes, \textbf{ Float} const $\ast$neuron\+\_\+outputs)
+\begin{DoxyCompactList}\small\item\em Perform atomic coupling given connectivity provided as an Adjaceny\+List. \end{DoxyCompactList}\item 
+int \textbf{ operator()} (\textbf{ Chunked\+Adjacency\+List} const \&connectivity, \textbf{ Float} $\ast$spikes, \textbf{ Float} const $\ast$neuron\+\_\+outputs)
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Class that performs coupling using adjacency list telling us the downstream neurons per neuron. 
+
+Definition at line 19 of file coupling.\+cuh.
+
+
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\label{class_atomic_coupling_ac80691e7dd9f97a69384248c5929c420}} 
+\index{AtomicCoupling@{AtomicCoupling}!AtomicCoupling@{AtomicCoupling}}
+\index{AtomicCoupling@{AtomicCoupling}!AtomicCoupling@{AtomicCoupling}}
+\doxysubsubsection{AtomicCoupling()}
+{\footnotesize\ttfamily Atomic\+Coupling\+::\+Atomic\+Coupling (\begin{DoxyParamCaption}\item[{int const}]{N\+\_\+ }\end{DoxyParamCaption})}
+
+
+
+Definition at line 5 of file coupling.\+cu.
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\label{class_atomic_coupling_aec984ded1c4f5368c4a7820ea6312435}} 
+\index{AtomicCoupling@{AtomicCoupling}!operator()@{operator()}}
+\index{operator()@{operator()}!AtomicCoupling@{AtomicCoupling}}
+\doxysubsubsection{operator()()\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily int Atomic\+Coupling\+::operator() (\begin{DoxyParamCaption}\item[{\textbf{ Adjacency\+List} const \&}]{connectivity,  }\item[{\textbf{ Float} $\ast$}]{spikes,  }\item[{\textbf{ Float} const $\ast$}]{neuron\+\_\+outputs }\end{DoxyParamCaption})}
+
+
+
+Perform atomic coupling given connectivity provided as an Adjaceny\+List. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em connectivity} & \doxyref{Network}{p.}{class_network} connectivity \\
+\hline
+\mbox{\texttt{ out}}  & {\em spikes} & Output spikes for the neurons. For HH neurons, this is neurotramsmitter concentration for downstream neurons. \\
+\hline
+\mbox{\texttt{ in}}  & {\em neuron\+\_\+ouputs} & Neuron outputs, for HH neurons, this is the concentration of neurotransmitter outputted from the neuron. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Number of neurons firing 
+\end{DoxyReturn}
+
+
+Definition at line 111 of file coupling.\+cu.
+
+\mbox{\label{class_atomic_coupling_ab22e36dad8ee6fa575d2de03adda412c}} 
+\index{AtomicCoupling@{AtomicCoupling}!operator()@{operator()}}
+\index{operator()@{operator()}!AtomicCoupling@{AtomicCoupling}}
+\doxysubsubsection{operator()()\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily int Atomic\+Coupling\+::operator() (\begin{DoxyParamCaption}\item[{\textbf{ Chunked\+Adjacency\+List} const \&}]{connectivity,  }\item[{\textbf{ Float} $\ast$}]{spikes,  }\item[{\textbf{ Float} const $\ast$}]{neuron\+\_\+outputs }\end{DoxyParamCaption})}
+
+
+
+Definition at line 143 of file coupling.\+cu.
+
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+C\+:/\+Users/james hazelden/\+Desktop/\+HFSP/neuronephys\+\_\+v2/coupling\+\_\+speed\+\_\+test/\textbf{ coupling.\+cuh}\item 
+C\+:/\+Users/james hazelden/\+Desktop/\+HFSP/neuronephys\+\_\+v2/coupling\+\_\+speed\+\_\+test/\textbf{ coupling.\+cu}\end{DoxyCompactItemize}

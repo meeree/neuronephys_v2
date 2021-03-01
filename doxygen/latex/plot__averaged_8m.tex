@@ -1,0 +1,109 @@
+\doxysection{C\+:/\+Users/james hazelden/\+Desktop/\+HFSP/neuronephys\+\_\+v2/coupling\+\_\+speed\+\_\+test/plot\+\_\+averaged.m File Reference}
+\label{plot__averaged_8m}\index{C:/Users/james hazelden/Desktop/HFSP/neuronephys\_v2/coupling\_speed\_test/plot\_averaged.m@{C:/Users/james hazelden/Desktop/HFSP/neuronephys\_v2/coupling\_speed\_test/plot\_averaged.m}}
+\doxysubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+end \textbf{ y} (\textbf{ i}, \+:)
+\item 
+Creates a matrix where all entries in column \textbf{ i} are \textbf{ i} \textbf{ plot} ((1\+:n).\textquotesingle{} $\ast$0.\+04, \textbf{ y}+\textbf{ col\+\_\+inc} $\ast$3)
+\end{DoxyCompactItemize}
+\doxysubsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+cd \textbf{ C}
+\item 
+\textbf{ y} = [y(2500\+:numel(y))]
+\item 
+Blur along each column \textbf{ cpy} = \textbf{ y}
+\item 
+\textbf{ blur\+\_\+n} = 25
+\item 
+for \textbf{ i}
+\item 
+\textbf{ col\+\_\+inc} = repmat(0\+:m-\/1, [n 1])
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Function Documentation}
+\mbox{\label{plot__averaged_8m_ae924fcab71bd1de5bbeab832827ce822}} 
+\index{plot\_averaged.m@{plot\_averaged.m}!plot@{plot}}
+\index{plot@{plot}!plot\_averaged.m@{plot\_averaged.m}}
+\doxysubsubsection{plot()}
+{\footnotesize\ttfamily Creates a matrix where all entries in column \textbf{ i} are \textbf{ i} plot (\begin{DoxyParamCaption}\item[{(1\+:n).\textquotesingle{} $\ast$0.}]{04,  }\item[{\textbf{ y}+\textbf{ col\+\_\+inc} $\ast$}]{3 }\end{DoxyParamCaption})}
+
+\mbox{\label{plot__averaged_8m_ad76fa1bb8dc098987f6ebb518c9cefca}} 
+\index{plot\_averaged.m@{plot\_averaged.m}!y@{y}}
+\index{y@{y}!plot\_averaged.m@{plot\_averaged.m}}
+\doxysubsubsection{y()}
+{\footnotesize\ttfamily end y (\begin{DoxyParamCaption}\item[{\textbf{ i}}]{,  }\item[{\+:}]{ }\end{DoxyParamCaption})}
+
+
+
+\doxysubsection{Variable Documentation}
+\mbox{\label{plot__averaged_8m_ac4c5ba045dafde4ed2a80e38b38cc3d4}} 
+\index{plot\_averaged.m@{plot\_averaged.m}!blur\_n@{blur\_n}}
+\index{blur\_n@{blur\_n}!plot\_averaged.m@{plot\_averaged.m}}
+\doxysubsubsection{blur\_n}
+{\footnotesize\ttfamily blur\+\_\+n = 25}
+
+
+
+Definition at line 8 of file plot\+\_\+averaged.\+m.
+
+\mbox{\label{plot__averaged_8m_a9b17f2e4c88779bce82eaae0c0f6c78a}} 
+\index{plot\_averaged.m@{plot\_averaged.m}!C@{C}}
+\index{C@{C}!plot\_averaged.m@{plot\_averaged.m}}
+\doxysubsubsection{C}
+{\footnotesize\ttfamily cd C}
+
+
+
+Definition at line 1 of file plot\+\_\+averaged.\+m.
+
+\mbox{\label{plot__averaged_8m_a309dc908fc8a219e3b65db95ada162ed}} 
+\index{plot\_averaged.m@{plot\_averaged.m}!col\_inc@{col\_inc}}
+\index{col\_inc@{col\_inc}!plot\_averaged.m@{plot\_averaged.m}}
+\doxysubsubsection{col\_inc}
+{\footnotesize\ttfamily col\+\_\+inc = repmat(0\+:m-\/1, [n 1])}
+
+
+
+Definition at line 18 of file plot\+\_\+averaged.\+m.
+
+\mbox{\label{plot__averaged_8m_afc1673f49e0c512e55c00d9c01b7add9}} 
+\index{plot\_averaged.m@{plot\_averaged.m}!cpy@{cpy}}
+\index{cpy@{cpy}!plot\_averaged.m@{plot\_averaged.m}}
+\doxysubsubsection{cpy}
+{\footnotesize\ttfamily Blur along each column cpy = \textbf{ y}}
+
+
+
+Definition at line 7 of file plot\+\_\+averaged.\+m.
+
+\mbox{\label{plot__averaged_8m_a6f6ccfcf58b31cb6412107d9d5281426}} 
+\index{plot\_averaged.m@{plot\_averaged.m}!i@{i}}
+\index{i@{i}!plot\_averaged.m@{plot\_averaged.m}}
+\doxysubsubsection{i}
+{\footnotesize\ttfamily for i}
+
+{\bfseries Initial value\+:}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{=blur\_n+1:n}
+\DoxyCodeLine{    for j=1:blur\_n}
+\DoxyCodeLine{        y(i, :) = y(i, :) + cpy(i -\/ j, :)}
+
+\end{DoxyCode}
+
+
+Definition at line 9 of file plot\+\_\+averaged.\+m.
+
+\mbox{\label{plot__averaged_8m_aa9b4a652922d86915477b2e4eb323a58}} 
+\index{plot\_averaged.m@{plot\_averaged.m}!y@{y}}
+\index{y@{y}!plot\_averaged.m@{plot\_averaged.m}}
+\doxysubsubsection{y}
+{\footnotesize\ttfamily end y = [y(2500\+:numel(y))]}
+
+
+
+Definition at line 3 of file plot\+\_\+averaged.\+m.
+
