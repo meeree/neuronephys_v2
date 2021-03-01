@@ -27,10 +27,14 @@ void Morphology::Scale(glm::vec3 const& scale)
 
 void Morphology::KNN(int const n, int const k, std::vector<int>& knn, std::vector<ANNdist>& knn_dists)
 {
+    KNN(glm::value_ptr(positions[n]), k, knn, knn_dists);
+}
+
+void Morphology::KNN(ANNpoint pos , int const k, std::vector<int>& knn, std::vector<ANNdist>& knn_dists)
+{
     if (!kd_tree)
         SetupANN();
-    ANNpoint pt{ glm::value_ptr(positions[n]) };
-	kd_tree->annkSearch(pt, k, knn.data(), knn_dists.data());
+	kd_tree->annkSearch(pos, k, knn.data(), knn_dists.data());
 }
 
 void Morphology::GenSphericalRegions(
@@ -52,7 +56,33 @@ void Morphology::GenSphericalRegions(
 		// Initialize query point. 
 		int const idx = electrode_inds[n];
 	
-        KNN(n, k, knn, knn_dists);
+        KNN(idx, k, knn, knn_dists);
+		std::copy(knn.begin(), knn.end(), h_regions.begin() + k * n);
+        h_region_inds[n + 1] = h_region_inds[n] + k;
+    }
+}
+
+// TODO: reduce code duplication.
+void Morphology::GenSphericalRegions(
+    thrust::host_vector<int>& h_regions, thrust::host_vector<int>& h_region_inds, 
+    std::vector<glm::vec3> const& electrode_positions, int const k)
+{
+    if (!kd_tree)
+        SetupANN();
+
+    std::cout << "Generating spherical regions..." << std::endl;
+    std::vector<int> knn(k+1); 
+    std::vector<ANNdist> knn_dists(k+1);
+
+	int const N_regions = electrode_positions.size();
+    h_regions.resize(N_regions * k);
+    h_region_inds.resize(N_regions + 1, 0);
+    for (int n = 0; n < N_regions; ++n)
+    {
+		// Initialize query point. 
+		glm::vec3 pos = electrode_positions[n];
+	
+        KNN(glm::value_ptr(pos), k, knn, knn_dists);
 		std::copy(knn.begin(), knn.end(), h_regions.begin() + k * n);
         h_region_inds[n + 1] = h_region_inds[n] + k;
     }
@@ -239,4 +269,67 @@ bool FileMorphology::GenerateFromHDF(int const N)
     Translate(glm::vec3(-1));
 
 	return true;
+}
+
+MouseBrain2D::MouseBrain2D(std::string const& bmp_scan_)
+    : bmp_scan{ "../" + bmp_scan_ }
+{}
+
+unsigned char* ReadBMP(std::string const& filename, int& width, int& height)
+{
+    int i;
+    FILE* f = fopen(filename.c_str(), "rb");
+    unsigned char info[24];
+
+    // read the 24 bytes
+    fread(info, sizeof(unsigned char), 24, f);
+
+    unsigned int start_idx = *(std::uint32_t*)&info[10];
+
+    // extract image height and width from header
+    width = *(std::uint16_t*)&info[18];
+    height = *(std::uint16_t*)&info[22];
+
+    // skip to start of data
+    fseek(f, start_idx, SEEK_SET);
+
+    // allocate 4 bytes per pixel
+    int size = 4 * width * height;
+    unsigned char* data = new unsigned char[size];
+
+    // read the rest of the data at once
+    fread(data, sizeof(unsigned char), size, f);
+    fclose(f);
+    return data;
+}
+
+bool MouseBrain2D::Generate(int const N)
+{
+    std::cout << "Generating 2D Mouse Brain Morphology..." << std::endl;
+    int width, height;
+    unsigned char* grid = ReadBMP(bmp_scan, width, height);
+    float aspect{ width / (float)height };
+
+    // Generate points uniformly in square [-aspect, aspect] X [-1, 1]
+    // and only keep those for which BMP value is black.
+    auto& gen{ Utility::UnseededRandomEngine() };
+    std::uniform_real_distribution<float> x_dist(-aspect, aspect), y_dist(-1, 1);
+    positions.resize(N);
+    int pos_size = 0;
+    while (pos_size < N)
+    {
+        float const x{ x_dist(gen) }, y{ y_dist(gen) };
+        glm::vec3 p{ x, y, 0.0f };
+        int const i = width * (x + aspect) / (2 * aspect), 
+                  j = height * (y + 1) / 2;
+
+        // Check if pixel is black. Index of 4 byte pixel data is 4 * (j * width + i.
+        // First byte is alpha, so skip to second byte (hence the +1).
+        if (grid[4 * (j * width + i) + 1] == 0)
+        {
+            positions[pos_size] = p;
+            pos_size += 1;
+        }
+    }
+    return true;
 }

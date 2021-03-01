@@ -57,6 +57,9 @@ public:
 	*/
 	void KNN(int const n, int const k, std::vector<int>& knn, std::vector<ANNdist>& knn_dists);
 
+	//! Same as other KNN, but position, not neuron index, is sent.
+	void KNN(ANNpoint pos, int const k, std::vector<int>& knn, std::vector<ANNdist>& knn_dists);
+
 	//! Generate a list of KNN regions at specific neurons.
 	/*!
 		\param [out] h_regions Column indices for region adjacency list. 
@@ -66,6 +69,10 @@ public:
 	*/	
 	void GenSphericalRegions(thrust::host_vector<int>& h_regions, thrust::host_vector<int>& h_region_inds, 
 		                     std::vector<int> const& electrode_inds, int const k);
+
+	//! Same as other GenSphericalRegions but positions, not neuron indices, are passed.
+	void GenSphericalRegions(thrust::host_vector<int>& h_regions, thrust::host_vector<int>& h_region_inds, 
+		                     std::vector<glm::vec3> const& electrode_positions, int const k);
 
 	//! Function for getting the boundary points of a morphology using on IsBoundaryPoint function.
 	/*!
@@ -143,5 +150,19 @@ public:
 	*/
 	FileMorphology(std::string const& fl_name_);
 	bool GenerateFromHDF(int const N);
+	virtual bool Generate(int const N) override;
+};
+
+//! 2D Mouse brain scan generated from a BMP binary image.
+class MouseBrain2D : public Morphology
+{
+protected:	
+	std::string bmp_scan;	
+
+public:
+	/*!
+	  \param [in] bmp_scan_ Name of bmp file to read from.
+	*/
+	MouseBrain2D(std::string const& bmp_scan_);
 	virtual bool Generate(int const N) override;
 };
