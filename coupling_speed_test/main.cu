@@ -75,8 +75,8 @@ __global__ void leapfrog(Float** sim_vars, const int N, const Float timestep, cu
         const Float Ein_avg = Enum_in > 0 ? Ein / Enum_in : 0;
         const Float new_EY = (Ar * Ein_avg * timestep + (1 - timestep / 2 * (Ar * Ein_avg + Ad)) * EY) / (timestep / 2 * (Ar * Ein_avg + Ad) + 1);
 
-        const Float G = gna * new_M*new_M*new_M*new_H + gk * (powf(new_N, 4)) + gl + g_ampa * new_local_Y + g_gaba * new_IY + g_ampa * new_EY;
-        const Float E = gna * new_M*new_M*new_M*new_H * ena + gk * (powf(new_N, 4)) * ek + gl * el + g_ampa * new_local_Y * e_ampa + g_gaba * new_IY * e_gaba + g_ampa * new_EY * e_ampa;
+        const Float G = gna * new_M*new_M*new_M*new_H + gk * (powf(new_N, 4)) + gl + g_ampa * new_local_Y /*+ g_gaba * new_IY + g_ampa * new_EY*/;
+        const Float E = gna * new_M*new_M*new_M*new_H * ena + gk * (powf(new_N, 4)) * ek + gl * el + g_ampa * new_local_Y * e_ampa /*+ g_gaba * new_IY * e_gaba + g_ampa * new_EY * e_ampa*/;
 
         // Add random white noise to V.
         Float white_noise = white_noise_intensity * curand_normal(random_states + idx) + white_noise_mean;
@@ -286,8 +286,8 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
         float t = i * hh_params::leapfrog_dt;
         if (t > 1000 && t <= 2000 && fmod(t - 1000, 1000.0 / 50) <= 1)
         {
-            thrust::fill_n(thrust::device_ptr<Float>(sim_vars_cpu[SIM_PARAMS_APPCUR]), N, hh_params::appcur + 3.5);
-            fout << hh_params::appcur + 3.5 << ',';
+            thrust::fill_n(thrust::device_ptr<Float>(sim_vars_cpu[SIM_PARAMS_APPCUR]), N, hh_params::appcur + 1.5);
+            fout << hh_params::appcur + 0.5 << ',';
         }
         else
         {
@@ -520,8 +520,7 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
     using namespace hh_params;
 
     // Set up graphics and morphology
-//    MouseBrain2D morphology("2d_brain_region.bmp");
-    FileMorphology morphology("cortex_connectivity_1m_1k_inh.h5");
+    MouseBrain2D morphology("2d_brain_region.bmp");
     morphology.Generate(N);
 
     float* graphics_voltage_handle;
