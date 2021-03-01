@@ -29,6 +29,9 @@ void main(void)
             color = vec4(0.9, 0.9, 0.9, 0.9);
         return;
     }
+    color = mix(vec4(1.0, 0.0, 1.0, 1.0), vec4(1.0, 1.0, 0.0, 1.0), (fs_in.voltage + 60) / 15);
+
+    return;
     if((fs_in.voltage + 65) / 2 > 0.8)
         discard;
     color = mix(vec4(1.0, 0.0, 1.0, 1.0), vec4(1.0, 1.0, 0.0, 1.0), (fs_in.voltage + 65) / 2);

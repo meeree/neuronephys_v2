@@ -75,11 +75,14 @@ __global__ void leapfrog(Float** sim_vars, const int N, const Float timestep, cu
         const Float Ein_avg = Enum_in > 0 ? Ein / Enum_in : 0;
         const Float new_EY = (Ar * Ein_avg * timestep + (1 - timestep / 2 * (Ar * Ein_avg + Ad)) * EY) / (timestep / 2 * (Ar * Ein_avg + Ad) + 1);
 
-        const Float G = gna * new_M*new_M*new_M*new_H + gk * (powf(new_N, 4)) + gl + g_gaba * new_local_Y + g_gaba * new_IY + g_ampa * new_EY;
-        const Float E = gna * new_M*new_M*new_M*new_H * ena + gk * (powf(new_N, 4)) * ek + gl * el + g_gaba * new_local_Y * e_gaba + g_gaba * new_IY * e_gaba + g_ampa * new_EY * e_ampa;
+        const Float G = gna * new_M*new_M*new_M*new_H + gk * (powf(new_N, 4)) + gl + g_ampa * new_local_Y + g_gaba * new_IY + g_ampa * new_EY;
+        const Float E = gna * new_M*new_M*new_M*new_H * ena + gk * (powf(new_N, 4)) * ek + gl * el + g_ampa * new_local_Y * e_ampa + g_gaba * new_IY * e_gaba + g_ampa * new_EY * e_ampa;
+
+        // Add random white noise to V.
+        Float white_noise = white_noise_intensity * curand_normal(random_states + idx) + white_noise_mean;
 
         // Copy back to sim_vars
-        *V_ptr = (appcur * timestep + E * timestep + (1 - timestep / 2 * G)*V) / (1 + timestep / 2 * G);
+        *V_ptr = ((white_noise + appcur) * timestep + E * timestep + (1 - timestep / 2 * G)*V) / (1 + timestep / 2 * G);
         *M_ptr = new_M;
         *N_ptr = new_N;
         *H_ptr = new_H;
@@ -91,93 +94,6 @@ __global__ void leapfrog(Float** sim_vars, const int N, const Float timestep, cu
         sim_vars[SIM_PARAMS_LOCAL_OUTPUT][idx] = sim_vars[SIM_PARAMS_IOUTPUT][idx] = sim_vars[SIM_PARAMS_EOUTPUT][idx] = Tmax / (1.0 + exp(-(*V_ptr - Vt) / Kp));
     }
 }
-
-#if 0
-__device__ void dxdt_hh(const int idx,
-    Float const V, Float const M, Float const N, Float const H, Float const Y, Float const Tinavg,
-    Float* dvdt, Float* dMdt, Float* dNdt, Float* dHdt, Float* dYdt)
-{
-    using namespace hh_params;
-    // Calculate intermediate quantities
-    const Float Am = (3.5 + 0.1 * V) / (1 - exp(-3.5 - 0.1*V));
-    const Float An = (-0.5 - 0.01 * V) / (exp(-5 - 0.1 * V) - 1);
-    const Float Ah = 0.07 * exp(-V / 20 - 3);
-
-    const Float Bm = 4 * exp(-(V + 60) / 18);
-    const Float Bn = 0.125*exp(-(V + 60) / 80);
-    const Float Bh = 1 / (exp(-3 - 0.1*V) + 1);
-
-    // Calculate gating variable derivatives
-    *dMdt = Am * (1 - M) - Bm * M;
-    *dNdt = An * (1 - N) - Bn * N;
-    *dHdt = Ah * (1 - H) - Bh * H;
-    *dYdt = Ar * Tinavg * (1 - Y) - Ad * Y;
-
-    // Calculate voltage derivative
-    *dvdt = appcur
-        - gna * M * M * M * H * (V - ena)
-        - gk * powf(N, 4) * (V - ek)
-        - gl * (V - el)
-        - g_coupling * Y * (V - e_coupling_gaba);
-
-    *dvdt /= C;
-}
-
-__global__ void RK4_hh(Float** sim_vars, const int N, const float timestep, curandState_t* random_states)
-{
-    using namespace hh_params;
-    Float dvdt1, dMdt1, dNdt1, dHdt1, dYdt1;
-    Float dvdt2, dMdt2, dNdt2, dHdt2, dYdt2;
-    Float dvdt3, dMdt3, dNdt3, dHdt3, dYdt3;
-    Float dvdt4, dMdt4, dNdt4, dHdt4, dYdt4;
-    for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < N; idx += gridDim.x * blockDim.x)
-    {
-        Float* V_ptr = sim_vars[SIM_PARAMS_V] + idx;
-        Float* M_ptr = sim_vars[SIM_PARAMS_M] + idx;
-        Float* N_ptr = sim_vars[SIM_PARAMS_N] + idx;
-        Float* H_ptr = sim_vars[SIM_PARAMS_H] + idx;
-        Float* Y_ptr = sim_vars[SIM_PARAMS_Y] + idx;
-
-        Float const V = *V_ptr;
-        Float const M = *M_ptr;
-        Float const N = *N_ptr;
-        Float const H = *H_ptr;
-        Float const Y = *Y_ptr;
-
-        // Calculate average neurotransmitter input
-        Float Tinavg = sim_vars[SIM_PARAMS_TCOUNT][idx];
-        Tinavg = Tinavg == 0 ? 0 : sim_vars[SIM_PARAMS_TIN][idx] / Tinavg;
-
-        // k1 = f(X)
-        dxdt_hh(idx, V, M, N, H, Y, Tinavg, &dvdt1, &dMdt1, &dNdt1, &dHdt1, &dYdt1);
-
-        // k2 = f(X + dt/2 * k1)
-        dxdt_hh(idx,
-            V + dvdt1 * timestep / 2, M + dMdt1 * timestep / 2, N + dNdt1 * timestep / 2, H + dHdt1 * timestep / 2, Y + dYdt1 * timestep / 2, Tinavg,
-            &dvdt2, &dMdt2, &dNdt2, &dHdt2, &dYdt2);
-
-        // k3 = f(X + dt/2 * k2)
-        dxdt_hh(idx,
-            V + dvdt2 * timestep / 2, M + dMdt2 * timestep / 2, N + dNdt2 * timestep / 2, H + dHdt2 * timestep / 2, Y + dYdt2 * timestep / 2, Tinavg,
-            &dvdt3, &dMdt3, &dNdt3, &dHdt3, &dYdt3);
-
-        // k4 = f(X + dt * k3)
-        dxdt_hh(idx,
-            V + dvdt3 * timestep, M + dMdt3 * timestep, N + dNdt3 * timestep, H + dHdt3 * timestep, Y + dYdt3 * timestep, Tinavg,
-            &dvdt4, &dMdt4, &dNdt4, &dHdt4, &dYdt4);
-
-        // X(t + dt) = X(t) + dt * (k1 + 2k2 + 2k3 + k4)/6
-        *V_ptr = V + timestep * (dvdt1 + dvdt2 * 2 + dvdt3 * 2 + dvdt4) / 6;
-        *M_ptr = M + timestep * (dMdt1 + dMdt2 * 2 + dMdt3 * 2 + dMdt4) / 6;
-        *N_ptr = N + timestep * (dNdt1 + dNdt2 * 2 + dNdt3 * 2 + dNdt4) / 6;
-        *H_ptr = H + timestep * (dHdt1 + dHdt2 * 2 + dHdt3 * 2 + dHdt4) / 6;
-        *Y_ptr = Y + timestep * (dYdt1 + dYdt2 * 2 + dYdt3 * 2 + dYdt4) / 6;
-
-        // Calculate amount of neurotransmitter outputted AFTER update
-        sim_vars[SIM_PARAMS_OUTPUT][idx] = Tmax / (1.0 + exp(-(*V_ptr - Vt) / Kp));
-    }
-}
-#endif
 
 __device__ void dxdt_an_ie_model(const int idx,
     Float const V, Float const nK, Float const Ca, Float const Ye, Float const Yi,
@@ -340,167 +256,9 @@ struct CouplingStruct
     }
 };
 
-#if 0
-std::pair<float, float> run_timing(int const N, int const Ncouple)
-{
-    // Set up simulation variables. Stored in a struct of arrays.
-    std::ofstream coupling_timing_fl("COUPLING_TIMING_" + std::to_string(N) + "_" + std::to_string(Ncouple) + ".txt");
-    std::ofstream num_firing_fl("NUM_FIRING_" + std::to_string(N) + "_" + std::to_string(Ncouple) + ".txt");
-    std::ofstream sample_fl("SAMPLE_FILE.txt");
-    thrust::host_vector<Float*> sim_vars_cpu(NUM_SIM_PARAMS);
-    thrust::device_vector<Float*> sim_vars;
-    {
-        thrust::host_vector<Float> zeroed_arr_cpu(N, 0);
-        for (Float*& arr : sim_vars_cpu)
-        {
-            cudaMalloc(&arr, N * sizeof(Float));
-            cudaMemcpy(arr, zeroed_arr_cpu.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-        }
-
-        // Set H gating var to 1 since it is a deactive var
-        thrust::fill_n(zeroed_arr_cpu.begin(), N, 1);
-        cudaMemcpy(sim_vars_cpu[SIM_PARAMS_H], zeroed_arr_cpu.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-
-        // Set applied currents to 9
-        thrust::fill_n(zeroed_arr_cpu.begin(), N, 9);
-        cudaMemcpy(sim_vars_cpu[SIM_PARAMS_APPCUR], zeroed_arr_cpu.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-    }
-    // Copy pointers onto device
-    sim_vars = sim_vars_cpu;
-
-    // Generate coupling
-    AtomicCoupling coupling(N);
-    AdjacencyList list{ __GenerateConnectivity(N, sim_vars_cpu[SIM_PARAMS_TCOUNT], "cortex_connectivity_1M_1k.h5") };
-
-    std::cout << "Setup input connectivity" << std::endl;
-
-    Float* V_ptr = sim_vars[SIM_PARAMS_V];
-    Float* neuron_outputs = sim_vars[SIM_PARAMS_OUTPUT];
-    Float* spikes = sim_vars[SIM_PARAMS_TIN];
-    Float* spike_counts = sim_vars[SIM_PARAMS_TCOUNT];
-
-#if 0
-    std::cout << "Running transient simulation setup " << std::endl;
-    for (int i = 0; i < 0; ++i)
-    {
-        if (i % 100 == 0)
-            std::cout << i << std::endl;
-        // Update ODE 
-        leapfrog << <NBLOCKS, NTHREADS >> > (thrust::raw_pointer_cast(sim_vars.data()), N, 0.4);
-
-        // Perform coupling
-        coupling(connectivity, V_ptr, spikes, neuron_outputs);
-    }
-#endif 
-
-    float time1 = 0, time2 = 0;
-    float time_inc;
-
-    // Use Gaussian white noise with variance proportional to dt.
-    Float const sqrt_dt = sqrt(0.4);
-    Float const noise_intensity = 0;
-    Float const ambient_noise = 8;
-    thrust::host_vector<Float> appcur(N, 0);
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::normal_distribution<> appcur_dist(ambient_noise, sqrt_dt * noise_intensity);
-    for (int i = 0; i < 2500; ++i)
-    {
-#if 1  // Output some sample values. Useful to check the simulation is correct.
-        int smpl0 = 0, smpl1 = 1025, smpl2 = N - 1;
-        Float V0, V1, V2;
-        cudaMemcpy(&V0, V_ptr + smpl0, sizeof(Float), cudaMemcpyDeviceToHost);
-        cudaMemcpy(&V1, V_ptr + smpl1, sizeof(Float), cudaMemcpyDeviceToHost);
-        cudaMemcpy(&V2, V_ptr + smpl2, sizeof(Float), cudaMemcpyDeviceToHost);
-        sample_fl << V0 << ',' << V1 << ',' << V2 << std::endl;
-#endif 
-
-        for (auto& val : appcur)
-            val = appcur_dist(gen);
-        cudaMemcpy(sim_vars[SIM_PARAMS_APPCUR], appcur.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-
-        cudaEvent_t start, stop;
-        cudaEventCreate(&start);
-        cudaEventCreate(&stop);
-        cudaEventRecord(start, 0);
-        // Update ODE 
-        leapfrog << <NBLOCKS, NTHREADS >> > (thrust::raw_pointer_cast(sim_vars.data()), N, 0.4);
-        cudaEventRecord(stop, 0);
-        cudaEventSynchronize(stop);
-        cudaEventElapsedTime(&time_inc, start, stop);
-        time1 += time_inc;
-
-        // Perform coupling
-        cudaEvent_t start2, stop2;
-        cudaEventCreate(&start2);
-        cudaEventCreate(&stop2);
-        cudaEventRecord(start2, 0);
-        int num_firing = coupling(list, spikes, neuron_outputs);
-        cudaDeviceSynchronize();
-        cudaEventRecord(stop2, 0);
-        cudaEventSynchronize(stop2);
-        cudaEventElapsedTime(&time_inc, start2, stop2);
-        time2 += time_inc;
-
-        // Write to output files
-        coupling_timing_fl << time_inc << '\n';
-        num_firing_fl << num_firing << '\n';
-    }
-    coupling_timing_fl.close();
-    num_firing_fl.close();
-    sample_fl.close();
-    return { time1 / 1000, time2 / 1000 };
-}
-
-void run_benchmark()
-{
-    std::vector<int> sample_Ncouple{ 200 };
-    std::vector<int> sample_N{ 1000000 };
-    std::ofstream out("OUTPUT.txt");
-    for (int Ncouple : sample_Ncouple)
-    {
-        for (int N : sample_N)
-        {
-            if (Ncouple > N)
-                Ncouple = N; // For small N, use 100% coupling
-
-            // 2 billion synapses is the max since this results in ~8gb mem usage. 
-            if (N * Ncouple >= 2e9)
-                continue; // skip
-
-            try
-            {
-                std::pair<float, float> time = run_timing(N, Ncouple);
-                out << N << ',' << Ncouple << ',' << time.first << ',' << time.second << ',' << time.first + time.second << std::endl;
-                std::cout << N << ',' << Ncouple << ',' << time.first << ',' << time.second << ',' << time.first + time.second << std::endl;
-            }
-            catch (std::exception& e)
-            {
-                out << N << ',' << Ncouple << ",NaN,NaN,NaN" << std::endl;
-                std::cout << N << ',' << Ncouple << ",NaN,NaN,NaN" << std::endl;
-            }
-        }
-    }
-    out.close();
-}
-#endif
-
-std::string SampleValsToStr(int const smpl, std::vector<Float*> const& ptrs)
-{
-    Float val;
-    std::string out;
-    for (Float* ptr : ptrs)
-    {
-        cudaMemcpy(&val, ptr + smpl, sizeof(Float), cudaMemcpyDeviceToHost);
-        out += std::to_string(val) + ",";
-    }
-    out += "   ";
-    return out;
-}
-
 template<typename SimFunc>
-void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostream& fout,
-    int const N, thrust::device_vector<Float*>& sim_vars,
+void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream& fout,
+    int const N, thrust::device_vector<Float*>& sim_vars,  thrust::host_vector<Float*>& sim_vars_cpu,
     SimFunc sim_func, Float const dt,
     std::vector<CouplingStruct>& coupling_structs,
     Float* V_ptr,
@@ -509,10 +267,6 @@ void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostrea
     float* graphics_voltages_handle = nullptr, int const render_N = -1,
     ElectrodeNet* electrodes = nullptr)
 {
-    // Note, we multiply by 1000 to convert from sec to ms.
-    int const nincs = (1000 * samp_len / an_ie_params::rk4_dt);
-    int const print_incs = (int)((1000.0 / samp_freq) / an_ie_params::rk4_dt + 0.5);
-
     // If graphics handle is non-null, allocate CPU mem to copy voltages to.
     uint8_t* frame_data;
     FILE* replay_out;
@@ -528,6 +282,19 @@ void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostrea
         if (i % (nincs / 100) == 0)
             std::cout << 100 * (i / (float)nincs) << "%" << std::endl;
 
+        // Light input.
+        float t = i * hh_params::leapfrog_dt;
+        if (t > 1000 && t <= 2000 && fmod(t - 1000, 1000.0 / 50) <= 1)
+        {
+            thrust::fill_n(thrust::device_ptr<Float>(sim_vars_cpu[SIM_PARAMS_APPCUR]), N, hh_params::appcur + 3.5);
+            fout << hh_params::appcur + 3.5 << ',';
+        }
+        else
+        {
+            thrust::fill_n(thrust::device_ptr<Float>(sim_vars_cpu[SIM_PARAMS_APPCUR]), N, hh_params::appcur);
+            fout << hh_params::appcur << ',';
+        }
+
         if (i % print_incs == 0)
         {
             // Update graphics if the graphics handle is non-null
@@ -538,9 +305,10 @@ void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostrea
                 for (int k = 0; k < render_N; ++k)
                     graphics_voltages_handle[k] = avg_V_handle[k];
                                
-                fout << ElectrodeNet::MeasureAverageEntireNetwork(V_ptr, N);
 //                for(int k = 0; k < render_N; ++k)
 //                    fout << avg_V_handle[k] << ',';
+                fout << ElectrodeNet::MeasureAverageEntireNetwork(V_ptr, N);
+				fout << std::endl;
 
                 pause = Graphics::render(graphics_voltages_handle, nullptr, 0, 0, pause);
 //                Graphics::write_frame(replay_out, frame_data);
@@ -554,15 +322,12 @@ void _RunAndPrintSimulation(int const samp_freq, int const samp_len, std::ostrea
         int n_firing;
         for(auto& coup_struct: coupling_structs)
             n_firing = coup_struct();
-        fout << ',' << n_firing;
-		fout << std::endl;
 
         // Update ODE 
         sim_func << <NBLOCKS, NTHREADS>> > (thrust::raw_pointer_cast(sim_vars.data()), N, dt, thrust::raw_pointer_cast(random_states.data()));
 		gpuErrchk( cudaPeekAtLastError() );
 		gpuErrchk( cudaDeviceSynchronize() );
     }
-    fout << SampleValsToStr(0, sample_ptrs) << SampleValsToStr(1, sample_ptrs) << SampleValsToStr(2, sample_ptrs) << std::endl;
 
     if (graphics_voltages_handle)
     {
@@ -580,20 +345,11 @@ bool length_predicate(float const* p1, float const* p2)
 // N : number of neurons to simulate
 // samp_freq : sampling frequency (Hz)
 // samp_len : How long you record the activity of the model neuron (sec)
-void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_len = 10, int render_N = -1)
+void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_len = 10, int render_N = -1)
 {
     // Set up graphics and morphology
-    //UnitSquare morphology;
     FileMorphology morphology("cortex_connectivity_1m_1k_inh.h5");
     morphology.Generate(N);
-//    morphology.Translate(glm::vec3(0, 0, -1));
-//	for (int i = 0; i < 5; ++i)
-//	{
-//		UnitSquare morphology2;
-//		morphology2.Generate(N / 5);
-//		morphology2.Translate(glm::vec3(0, 0, -1 + 2 * (i + 1) / 5.0f));
-//		morphology.Union(&morphology2);
-//	}
 
     float* graphics_voltage_handle;
     Graphics::setup(graphics_voltage_handle, morphology.GetPositionsRaw(), N, render_N);
@@ -646,7 +402,7 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, int 
     // Copy pointers from CPU to GPU 
     sim_vars = sim_vars_cpu;
 
-    // Random seeds setup. We get a "state" per neuron which we you can think of as the random seed.
+    // Random seeds setup. We get a "state" per neuron which you can think of as the random seed.
     thrust::device_vector<curandState_t> random_states(N);
     init_random << <NBLOCKS, NTHREADS >> > (0, N, thrust::raw_pointer_cast(random_states.data()));
 	gpuErrchk( cudaPeekAtLastError() );
@@ -682,7 +438,7 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, int 
     std::vector<int> electrode_inds(render_N);
     for(int i = 0; i < render_N; ++i)
         electrode_inds[i] = (N / render_N) * i;
-    morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 1);
+    morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 50);
 //    morphology.GetBoundaryRegion(h_regions, h_regions_inds);
     ElectrodeNet electrode_net(h_regions, h_regions_inds);
 
@@ -699,8 +455,12 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, int 
         sim_vars_cpu[AN_IE_VAR_ICOUNT],
     };
     Float* V_ptr{ sim_vars_cpu[AN_IE_VAR_V] };
-    _RunAndPrintSimulation(samp_freq, samp_len, fout,
-        N, sim_vars,
+
+    // Note, we multiply by 1000 to convert from sec to ms.
+    int const nincs = (1000 * samp_len / an_ie_params::rk4_dt);
+    int const print_incs = (int)((1000.0 / samp_freq) / an_ie_params::rk4_dt + 0.5);
+    _RunAndPrintSimulation(nincs, print_incs, fout,
+        N, sim_vars, sim_vars_cpu,
         Euler_an_ie_model, an_ie_params::rk4_dt,
         coupling_structs,
         sim_vars_cpu[AN_IE_VAR_V],
@@ -714,15 +474,53 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, int 
         cudaFree(arr);
     fout.close();
 }
+static std::vector<glm::vec3> electrode_positions{
+	{-0.30186574,  0.68659384, 0},
+	{ 0.30186574,  0.68659384, 0},
+	{-0.30186574,  0.47586892, 0},
+	{ 0.30186574,  0.47586892, 0},
+	{-0.44360421,  0.47586892, 0},
+	{ 0.44360421,  0.47586892, 0},
+	{-0.30186574,  0.22462761, 0},
+	{ 0.30186574,  0.22462761, 0},
+	{-0.49505155,  0.22462761, 0},
+	{ 0.49505155,  0.22462761, 0},
+	{-0.35331308,  0.        , 0},
+	{ 0.35331308,  0.        , 0},
+	{-0.67005517,  0.        , 0},
+	{ 0.67005517,  0.        , 0},
+	{-0.32211409, -0.19642502, 0},
+	{ 0.32211409, -0.19642502, 0},
+	{-0.51901899, -0.19642502, 0},
+	{ 0.51901899, -0.19642502, 0},
+	{-0.7252216 , -0.19642502, 0},
+	{ 0.7252216 , -0.19642502, 0},
+	{-0.34422199, -0.44766634, 0},
+	{ 0.34422199, -0.44766634, 0},
+	{-0.55228414, -0.44766634, 0},
+	{ 0.55228414, -0.44766634, 0},
+	{-0.75828013, -0.44766634, 0},
+	{ 0.75828013, -0.44766634, 0},
+	{-0.34794107, -0.66176763, 0},
+	{ 0.34794107, -0.66176763, 0},
+	{-0.60931011, -0.66176763, 0},
+	{ 0.60931011, -0.66176763, 0},
+	{-0.8283229 , -0.66176763, 0},
+	{ 0.8283229 , -0.66176763, 0},
+	{-0.34608153, -0.93247269, 0},
+	{ 0.34608153, -0.93247269, 0},
+	{-0.54112688, -0.93247269, 0},
+	{ 0.54112688, -0.93247269, 0}};
 
 // N : number of neurons to simulate
 // samp_freq : sampling frequency (Hz)
 // samp_len : How long you record the activity of the model neuron (sec)
-void hh_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_len = 10, int render_N = -1)
+void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_len = 10, int render_N = -1)
 {
     using namespace hh_params;
 
     // Set up graphics and morphology
+//    MouseBrain2D morphology("2d_brain_region.bmp");
     FileMorphology morphology("cortex_connectivity_1m_1k_inh.h5");
     morphology.Generate(N);
 
@@ -748,9 +546,7 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_le
         cudaMemcpy(sim_vars_cpu[SIM_PARAMS_V], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
         // Set gating variables  
-        std::normal_distribution<> gating_var_dist(0, 0);
-        for (auto& val : cpu_arr)
-            val = gating_var_dist(gen);
+        std::normal_distribution<> gating_var_dist(0.0, 0.0);
         cudaMemcpy(sim_vars_cpu[SIM_PARAMS_M], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
         for (auto& val : cpu_arr)
@@ -788,7 +584,7 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_le
     AtomicCoupling loc_coupling(N), e_coupling(N), i_coupling(N);
     KNNNetwork loc_net(500, &morphology);
     FileNetwork e_net("cortex_connectivity_1m_1k_exc.h5"), i_net("cortex_connectivity_1m_1k_inh.h5");
-    e_net.Generate(N); i_net.Generate(N);
+    loc_net.Generate(N); e_net.Generate(N); i_net.Generate(N);
     ChunkedAdjacencyList loc_list{ loc_net.ToChunkedAdjacencyList(sim_vars_cpu[SIM_PARAMS_LOCAL_COUNT]) };
     ChunkedAdjacencyList e_list{ e_net.ToChunkedAdjacencyList(sim_vars_cpu[SIM_PARAMS_ECOUNT]) };
     ChunkedAdjacencyList i_list{ i_net.ToChunkedAdjacencyList(sim_vars_cpu[SIM_PARAMS_ICOUNT]) };
@@ -800,26 +596,32 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_le
     };
     
     //TODO : ADD RANDOM WHITE NOISE TO HH
-    // Random seeds setup. We get a "state" per neuron which we you can think of as the random seed.
+    // Random seeds setup. We get a "state" per neuron which you can think of as the random seed.
     thrust::device_vector<curandState_t> random_states(N);
     init_random << <NBLOCKS, NTHREADS >> > (0, N, thrust::raw_pointer_cast(random_states.data()));
 	gpuErrchk( cudaPeekAtLastError() );
 	gpuErrchk( cudaDeviceSynchronize() );
 
-    // Setup electrodes randomly distributed.
+    // Setup electrodes based on mouse 2D data from 
+    // https://gin.g-node.org/hiobeen/Mouse_hdEEG_ASSR_Hwang_et_al/src/master/montage.csv.
     thrust::host_vector<int> h_regions, h_regions_inds;
+//    morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_positions, 1000);
     std::vector<int> electrode_inds(render_N);
     for(int i = 0; i < render_N; ++i)
         electrode_inds[i] = (N / render_N) * i;
-    morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 100);
+    morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 50);
     ElectrodeNet electrode_net(h_regions, h_regions_inds);
 
     // Get pointers to data we want to write output for
     std::vector<Float*> sample_ptrs{
         sim_vars_cpu[SIM_PARAMS_V],
     };
-    _RunAndPrintSimulation(samp_freq, samp_len, fout,
-        N, sim_vars,
+
+    // Note, we multiply by 1000 to convert from sec to ms.
+    int const nincs = (1000 * samp_len / leapfrog_dt);
+    int const print_incs = (int)((1000.0 / samp_freq) / leapfrog_dt + 0.5);
+    _RunAndPrintSimulation(nincs, print_incs, fout,
+        N, sim_vars, sim_vars_cpu,
         leapfrog, leapfrog_dt,
         coupling_structs,
         sim_vars_cpu[SIM_PARAMS_V],
@@ -837,6 +639,6 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, int const samp_le
 int main()
 {
     int N_electrodes = 1e5;
-    sanmodel_inhexc_benchmark(1e5, 25000, 10, N_electrodes);
+    hh_benchmark(1e5, 2500, 3, N_electrodes);
     Graphics::terminate_graphics();
 }

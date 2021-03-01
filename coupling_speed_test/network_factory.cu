@@ -11,6 +11,12 @@ AdjacencyList Network::ToAdjacencyList(Float*& Tcount) const
 
     // Calculate numer of upstream neurons for each neuron based on synaptic coupling
 	int N = offset_in_indices.size() - 1;
+	if (N == -1)
+	{
+		std::cerr << "Connectivity is empty. Returning blank list." << std::endl;
+		return {};
+	}
+
     thrust::host_vector<Float> Tcount_cpu(N, 0);
 	for (int ind : indices)
 		++Tcount_cpu[ind];
@@ -25,6 +31,11 @@ ChunkedAdjacencyList Network::ToChunkedAdjacencyList(Float*& Tcount) const
 	// Generate coupling
 	ChunkedAdjacencyList list;
 	int N = offset_in_indices.size() - 1;
+	if (N == -1)
+	{
+		std::cerr << "Connectivity is empty. Returning blank list." << std::endl;
+		return {};
+	}
 
 	// Calculate numer of upstream neurons for each neuron based on synaptic coupling
 	thrust::host_vector<Float> Tcount_cpu(N, 0);
