@@ -1,0 +1,663 @@
+\doxysection{Graphics Namespace Reference}
+\label{namespace_graphics}\index{Graphics@{Graphics}}
+\doxysubsection*{Classes}
+\begin{DoxyCompactItemize}
+\item 
+struct \textbf{ Replay\+Buffer}
+\end{DoxyCompactItemize}
+\doxysubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+GLuint \textbf{ load\+In\+Shader} (GLenum const \&shader\+Type, char const $\ast$fname)
+\item 
+void \textbf{ init\+Shaders} (char const $\ast$vert\+Loc, char const $\ast$frag\+Loc, GLuint \&shader\+\_\+prog)
+\item 
+void \textbf{ startup} (GLfloat const \&\textbf{ width}, GLfloat const \&\textbf{ height}, const char $\ast$\textbf{ title}=\char`\"{}Untitled Window\char`\"{})
+\item 
+void \textbf{ shutdown} ()
+\item 
+bool \textbf{ render} (float const $\ast$\textbf{ voltages}, void const $\ast$slice, int const slice\+\_\+width, int const slice\+\_\+height, bool \&\textbf{ pause})
+\item 
+void \textbf{ key\+Callback} (GLFWwindow $\ast$\textbf{ window}, int key, int, int action, int)
+\item 
+void \textbf{ scroll\+Callback} (GLFWwindow $\ast$\textbf{ window}, double xoffset, double yoffset)
+\item 
+int \textbf{ setup} (float $\ast$\&\textbf{ voltages}, float const $\ast$positions, size\+\_\+t N, size\+\_\+t render\+\_\+N)
+\item 
+void \textbf{ set\+\_\+max\+\_\+raw\+\_\+video\+\_\+size} (int const size\+\_\+in\+\_\+gb)
+\begin{DoxyCompactList}\small\item\em Sets size of maximum raw video size. If we exceed this, the raw video is converted to an mp4 and overwritten. \end{DoxyCompactList}\item 
+void \textbf{ write\+\_\+frame} (FILE $\ast$out, uint8\+\_\+t $\ast$data)
+\begin{DoxyCompactList}\small\item\em Writes a frame to raw video file. If file size starts to exceed limit, it is converted to an mp4 and will be overwritten. \end{DoxyCompactList}\item 
+void \textbf{ setup\+\_\+replay} (int frame\+\_\+cache\+\_\+count)
+\begin{DoxyCompactList}\small\item\em replay utilities. Allows user to record a replay of voltages and replay it. \end{DoxyCompactList}\item 
+void \textbf{ record\+\_\+for\+\_\+replay} (float const  $\ast$\textbf{ voltages})
+\begin{DoxyCompactList}\small\item\em replay utilities. Allows user to record a replay of voltages and replay it. \end{DoxyCompactList}\item 
+void \textbf{ terminate\+\_\+graphics} ()
+\item 
+void \textbf{ set\+\_\+window\+\_\+title} (const char $\ast$\textbf{ title})
+\begin{DoxyCompactList}\small\item\em replay utilities. Allows user to record a replay of voltages and replay it. \end{DoxyCompactList}\item 
+int \textbf{ get\+\_\+width} ()
+\begin{DoxyCompactList}\small\item\em helper function \end{DoxyCompactList}\item 
+int \textbf{ get\+\_\+height} ()
+\begin{DoxyCompactList}\small\item\em helper function \end{DoxyCompactList}\item 
+int \textbf{ get\+\_\+slice\+\_\+index} ()
+\begin{DoxyCompactList}\small\item\em helper function \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+\begin{tabbing}
+xx\=xx\=xx\=xx\=xx\=xx\=xx\=xx\=xx\=\kill
+struct \{\\
+\>GLuint \textbf{ Graphics::vao}\\
+\>GLint \textbf{ Graphics::width}\\
+\>GLint \textbf{ Graphics::height}\\
+\>std::string \textbf{ Graphics::title}\\
+\>GLuint \textbf{ Graphics::shaderProgram}\\
+\>GLuint \textbf{ Graphics::tex\_shaderProgram}\\
+\>GLuint \textbf{ Graphics::texture}\\
+\>GLFWwindow $\ast$ \textbf{ Graphics::window}\\
+\>glm::vec3 \textbf{ Graphics::cam\_pos}\\
+\>glm::mat4 \textbf{ Graphics::view} \{ glm::mat4(1.0f) \}\\
+\>glm::mat4 \textbf{ Graphics::model} \{ glm::mat4(1.0f) \}\\
+\>glm::mat4 \textbf{ Graphics::projection} \{ glm::mat4(1.0f) \}\\
+\>glm::vec2 \textbf{ Graphics::mouse} \{0.0f, 0.0f\}\\
+\>glm::vec2 \textbf{ Graphics::theta} \{0.0f, 0.0f\}\\
+\>bool \textbf{ Graphics::pause} \{ false \}\\
+\>bool \textbf{ Graphics::rotate} \{ true \}\\
+\>bool \textbf{ Graphics::replay} \{ false \}\\
+\>glm::vec3 \textbf{ Graphics::world\_min}\\
+\>glm::vec3 \textbf{ Graphics::world\_max}\\
+\>\textbf{ ReplayBuffer} \textbf{ Graphics::replay\_buffer}\\
+\>GLint \textbf{ Graphics::voltage\_loc}\\
+\>GLint \textbf{ Graphics::pos\_loc}\\
+\>GLint \textbf{ Graphics::tex\_coord\_loc}\\
+\>GLint \textbf{ Graphics::p\_mat\_loc}\\
+\>GLint \textbf{ Graphics::v\_mat\_loc}\\
+\>GLint \textbf{ Graphics::m\_mat\_loc}\\
+\>GLint \textbf{ Graphics::sampler\_loc}\\
+\>GLuint \textbf{ Graphics::pos\_buff}\\
+\>GLuint \textbf{ Graphics::voltage\_buff}\\
+\>GLuint \textbf{ Graphics::tex\_coord\_buff}\\
+\>int \textbf{ Graphics::raw\_video\_frame\_idx} = 0\\
+\>int \textbf{ Graphics::max\_raw\_video\_size\_gb} = 10\\
+\>int \textbf{ Graphics::mov\_video\_idx} = 0\\
+\>vector$<$ GLfloat $>$ \textbf{ Graphics::voltages}\\
+\>vector$<$ glm::vec3 $>$ \textbf{ Graphics::points}\\
+\>int \textbf{ Graphics::slice\_index} \{ 0 \}\\
+\} \textbf{ g\_attrs}\\
+
+\end{tabbing}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Function Documentation}
+\mbox{\label{namespace_graphics_a50630ff4ac2b47955a5480967fc3e56e}} 
+\index{Graphics@{Graphics}!get\_height@{get\_height}}
+\index{get\_height@{get\_height}!Graphics@{Graphics}}
+\doxysubsubsection{get\_height()}
+{\footnotesize\ttfamily int Graphics\+::get\+\_\+height (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})}
+
+
+
+helper function 
+
+
+
+Definition at line 472 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_ab1602f2e4b7a7329cc8e11e6018427de}} 
+\index{Graphics@{Graphics}!get\_slice\_index@{get\_slice\_index}}
+\index{get\_slice\_index@{get\_slice\_index}!Graphics@{Graphics}}
+\doxysubsubsection{get\_slice\_index()}
+{\footnotesize\ttfamily int Graphics\+::get\+\_\+slice\+\_\+index (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})}
+
+
+
+helper function 
+
+
+
+Definition at line 473 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_ab386c59ec870be824ae2981180fc2936}} 
+\index{Graphics@{Graphics}!get\_width@{get\_width}}
+\index{get\_width@{get\_width}!Graphics@{Graphics}}
+\doxysubsubsection{get\_width()}
+{\footnotesize\ttfamily int Graphics\+::get\+\_\+width (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})}
+
+
+
+helper function 
+
+
+
+Definition at line 471 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a85f34bbe6b3225c4ba15bf9b5b961da8}} 
+\index{Graphics@{Graphics}!initShaders@{initShaders}}
+\index{initShaders@{initShaders}!Graphics@{Graphics}}
+\doxysubsubsection{initShaders()}
+{\footnotesize\ttfamily void Graphics\+::init\+Shaders (\begin{DoxyParamCaption}\item[{char const $\ast$}]{vert\+Loc,  }\item[{char const $\ast$}]{frag\+Loc,  }\item[{GLuint \&}]{shader\+\_\+prog }\end{DoxyParamCaption})}
+
+
+
+Definition at line 134 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_afd0dafea0bf21b26f60f77e33e5412c9}} 
+\index{Graphics@{Graphics}!keyCallback@{keyCallback}}
+\index{keyCallback@{keyCallback}!Graphics@{Graphics}}
+\doxysubsubsection{keyCallback()}
+{\footnotesize\ttfamily void Graphics\+::key\+Callback (\begin{DoxyParamCaption}\item[{GLFWwindow $\ast$}]{window,  }\item[{int}]{key,  }\item[{int}]{,  }\item[{int}]{action,  }\item[{int}]{ }\end{DoxyParamCaption})}
+
+
+
+Definition at line 276 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a3f80ec74ff32a99c69e3a1a1d58445c4}} 
+\index{Graphics@{Graphics}!loadInShader@{loadInShader}}
+\index{loadInShader@{loadInShader}!Graphics@{Graphics}}
+\doxysubsubsection{loadInShader()}
+{\footnotesize\ttfamily GLuint Graphics\+::load\+In\+Shader (\begin{DoxyParamCaption}\item[{GLenum const \&}]{shader\+Type,  }\item[{char const $\ast$}]{fname }\end{DoxyParamCaption})}
+
+
+
+Definition at line 94 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_af63c3027f1615562a427b492b388eda9}} 
+\index{Graphics@{Graphics}!record\_for\_replay@{record\_for\_replay}}
+\index{record\_for\_replay@{record\_for\_replay}!Graphics@{Graphics}}
+\doxysubsubsection{record\_for\_replay()}
+{\footnotesize\ttfamily void Graphics\+::record\+\_\+for\+\_\+replay (\begin{DoxyParamCaption}\item[{float const $\ast$}]{voltages }\end{DoxyParamCaption})}
+
+
+
+replay utilities. Allows user to record a replay of voltages and replay it. 
+
+
+
+Definition at line 460 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_af3b5a4f3a72653f853b19da001e8356e}} 
+\index{Graphics@{Graphics}!render@{render}}
+\index{render@{render}!Graphics@{Graphics}}
+\doxysubsubsection{render()}
+{\footnotesize\ttfamily bool Graphics\+::render (\begin{DoxyParamCaption}\item[{float const $\ast$}]{voltages,  }\item[{void const $\ast$}]{slice,  }\item[{int const}]{slice\+\_\+width,  }\item[{int const}]{slice\+\_\+height,  }\item[{bool \&}]{pause }\end{DoxyParamCaption})}
+
+
+
+Definition at line 186 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_ac7a006bf9e1239b93aad7ace22d31202}} 
+\index{Graphics@{Graphics}!scrollCallback@{scrollCallback}}
+\index{scrollCallback@{scrollCallback}!Graphics@{Graphics}}
+\doxysubsubsection{scrollCallback()}
+{\footnotesize\ttfamily void Graphics\+::scroll\+Callback (\begin{DoxyParamCaption}\item[{GLFWwindow $\ast$}]{window,  }\item[{double}]{xoffset,  }\item[{double}]{yoffset }\end{DoxyParamCaption})}
+
+
+
+Definition at line 338 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a04dccd6bb2b0800dee073a1478943d73}} 
+\index{Graphics@{Graphics}!set\_max\_raw\_video\_size@{set\_max\_raw\_video\_size}}
+\index{set\_max\_raw\_video\_size@{set\_max\_raw\_video\_size}!Graphics@{Graphics}}
+\doxysubsubsection{set\_max\_raw\_video\_size()}
+{\footnotesize\ttfamily void Graphics\+::set\+\_\+max\+\_\+raw\+\_\+video\+\_\+size (\begin{DoxyParamCaption}\item[{int const}]{size\+\_\+in\+\_\+gb }\end{DoxyParamCaption})}
+
+
+
+Sets size of maximum raw video size. If we exceed this, the raw video is converted to an mp4 and overwritten. 
+
+
+
+Definition at line 422 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_ae6b6f7cd59a0c2c82ae32939b7fda5be}} 
+\index{Graphics@{Graphics}!set\_window\_title@{set\_window\_title}}
+\index{set\_window\_title@{set\_window\_title}!Graphics@{Graphics}}
+\doxysubsubsection{set\_window\_title()}
+{\footnotesize\ttfamily void Graphics\+::set\+\_\+window\+\_\+title (\begin{DoxyParamCaption}\item[{const char $\ast$}]{title }\end{DoxyParamCaption})}
+
+
+
+replay utilities. Allows user to record a replay of voltages and replay it. 
+
+
+
+Definition at line 470 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_af848177c07186316af6df762e5b7409f}} 
+\index{Graphics@{Graphics}!setup@{setup}}
+\index{setup@{setup}!Graphics@{Graphics}}
+\doxysubsubsection{setup()}
+{\footnotesize\ttfamily int Graphics\+::setup (\begin{DoxyParamCaption}\item[{float $\ast$\&}]{voltages,  }\item[{float const $\ast$}]{positions,  }\item[{size\+\_\+t}]{N,  }\item[{size\+\_\+t}]{render\+\_\+N }\end{DoxyParamCaption})}
+
+
+
+Definition at line 345 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_afe02b5b7f8fc41ade780e5d6b19dff04}} 
+\index{Graphics@{Graphics}!setup\_replay@{setup\_replay}}
+\index{setup\_replay@{setup\_replay}!Graphics@{Graphics}}
+\doxysubsubsection{setup\_replay()}
+{\footnotesize\ttfamily void Graphics\+::setup\+\_\+replay (\begin{DoxyParamCaption}\item[{int}]{frame\+\_\+cache\+\_\+count }\end{DoxyParamCaption})}
+
+
+
+replay utilities. Allows user to record a replay of voltages and replay it. 
+
+
+
+Definition at line 455 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a7d5b0e2f900f864820c9e1c2bcf5f309}} 
+\index{Graphics@{Graphics}!shutdown@{shutdown}}
+\index{shutdown@{shutdown}!Graphics@{Graphics}}
+\doxysubsubsection{shutdown()}
+{\footnotesize\ttfamily void Graphics\+::shutdown (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})}
+
+
+
+Definition at line 180 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a8f249fa225e018430ea622e24c50da10}} 
+\index{Graphics@{Graphics}!startup@{startup}}
+\index{startup@{startup}!Graphics@{Graphics}}
+\doxysubsubsection{startup()}
+{\footnotesize\ttfamily void Graphics\+::startup (\begin{DoxyParamCaption}\item[{GLfloat const \&}]{width,  }\item[{GLfloat const \&}]{height,  }\item[{const char $\ast$}]{title = {\ttfamily \char`\"{}Untitled~Window\char`\"{}} }\end{DoxyParamCaption})}
+
+
+
+Definition at line 150 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a32c6c59f14635a4d5e040008333e02cb}} 
+\index{Graphics@{Graphics}!terminate\_graphics@{terminate\_graphics}}
+\index{terminate\_graphics@{terminate\_graphics}!Graphics@{Graphics}}
+\doxysubsubsection{terminate\_graphics()}
+{\footnotesize\ttfamily void Graphics\+::terminate\+\_\+graphics (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})}
+
+
+
+Definition at line 465 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_ab50e7a72d8c39bac06a7ecd9518997b2}} 
+\index{Graphics@{Graphics}!write\_frame@{write\_frame}}
+\index{write\_frame@{write\_frame}!Graphics@{Graphics}}
+\doxysubsubsection{write\_frame()}
+{\footnotesize\ttfamily void Graphics\+::write\+\_\+frame (\begin{DoxyParamCaption}\item[{FILE $\ast$}]{out,  }\item[{uint8\+\_\+t $\ast$}]{data }\end{DoxyParamCaption})}
+
+
+
+Writes a frame to raw video file. If file size starts to exceed limit, it is converted to an mp4 and will be overwritten. 
+
+
+
+Definition at line 427 of file graphics.\+cpp.
+
+
+
+\doxysubsection{Variable Documentation}
+\mbox{\label{namespace_graphics_a185ddee13790b94dd8edbb02eb0d7720}} 
+\index{Graphics@{Graphics}!cam\_pos@{cam\_pos}}
+\index{cam\_pos@{cam\_pos}!Graphics@{Graphics}}
+\doxysubsubsection{cam\_pos}
+{\footnotesize\ttfamily glm\+::vec3 Graphics\+::cam\+\_\+pos}
+
+
+
+Definition at line 69 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a73ac182774a7c6d902cc078bacd5842f}} 
+\index{Graphics@{Graphics}!g\_attrs@{g\_attrs}}
+\index{g\_attrs@{g\_attrs}!Graphics@{Graphics}}
+\doxysubsubsection{}
+{\footnotesize\ttfamily struct \{ ... \}  Graphics\+::g\+\_\+attrs}
+
+\mbox{\label{namespace_graphics_abd7a23a5907242aebce938e7f25d8742}} 
+\index{Graphics@{Graphics}!height@{height}}
+\index{height@{height}!Graphics@{Graphics}}
+\doxysubsubsection{height}
+{\footnotesize\ttfamily GLint Graphics\+::height}
+
+
+
+Definition at line 64 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_acf2724be7a18e8148883bb0629e5ca3c}} 
+\index{Graphics@{Graphics}!m\_mat\_loc@{m\_mat\_loc}}
+\index{m\_mat\_loc@{m\_mat\_loc}!Graphics@{Graphics}}
+\doxysubsubsection{m\_mat\_loc}
+{\footnotesize\ttfamily GLint Graphics\+::m\+\_\+mat\+\_\+loc}
+
+
+
+Definition at line 80 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a8cc2b613e01468cd06738e6aabfbb233}} 
+\index{Graphics@{Graphics}!max\_raw\_video\_size\_gb@{max\_raw\_video\_size\_gb}}
+\index{max\_raw\_video\_size\_gb@{max\_raw\_video\_size\_gb}!Graphics@{Graphics}}
+\doxysubsubsection{max\_raw\_video\_size\_gb}
+{\footnotesize\ttfamily int Graphics\+::max\+\_\+raw\+\_\+video\+\_\+size\+\_\+gb = 10}
+
+
+
+Definition at line 85 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_acef47ff2fb5bb5de0df186a57b236947}} 
+\index{Graphics@{Graphics}!model@{model}}
+\index{model@{model}!Graphics@{Graphics}}
+\doxysubsubsection{model}
+{\footnotesize\ttfamily glm\+::mat4 Graphics\+::model \{ glm\+::mat4(1.\+0f) \}}
+
+
+
+Definition at line 70 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_ab9b7d01516fea5a69f0082a9a7aa4602}} 
+\index{Graphics@{Graphics}!mouse@{mouse}}
+\index{mouse@{mouse}!Graphics@{Graphics}}
+\doxysubsubsection{mouse}
+{\footnotesize\ttfamily glm\+::vec2 Graphics\+::mouse \{0.\+0f, 0.\+0f\}}
+
+
+
+Definition at line 71 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_adeec2db5ee6c6115b9717d264566a7ea}} 
+\index{Graphics@{Graphics}!mov\_video\_idx@{mov\_video\_idx}}
+\index{mov\_video\_idx@{mov\_video\_idx}!Graphics@{Graphics}}
+\doxysubsubsection{mov\_video\_idx}
+{\footnotesize\ttfamily int Graphics\+::mov\+\_\+video\+\_\+idx = 0}
+
+
+
+Definition at line 86 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a1ca24fa11525e0f65df6892fedb19eee}} 
+\index{Graphics@{Graphics}!p\_mat\_loc@{p\_mat\_loc}}
+\index{p\_mat\_loc@{p\_mat\_loc}!Graphics@{Graphics}}
+\doxysubsubsection{p\_mat\_loc}
+{\footnotesize\ttfamily GLint Graphics\+::p\+\_\+mat\+\_\+loc}
+
+
+
+Definition at line 80 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_aee9d5e3358172aa7708ed2619fa13b03}} 
+\index{Graphics@{Graphics}!pause@{pause}}
+\index{pause@{pause}!Graphics@{Graphics}}
+\doxysubsubsection{pause}
+{\footnotesize\ttfamily bool Graphics\+::pause \{ false \}}
+
+
+
+Definition at line 73 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a542e7802c7ba028558c021006594dd77}} 
+\index{Graphics@{Graphics}!points@{points}}
+\index{points@{points}!Graphics@{Graphics}}
+\doxysubsubsection{points}
+{\footnotesize\ttfamily vector$<$glm\+::vec3$>$ Graphics\+::points}
+
+
+
+Definition at line 90 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a5541197fd0e01b42659f7f2594ed61de}} 
+\index{Graphics@{Graphics}!pos\_buff@{pos\_buff}}
+\index{pos\_buff@{pos\_buff}!Graphics@{Graphics}}
+\doxysubsubsection{pos\_buff}
+{\footnotesize\ttfamily GLuint Graphics\+::pos\+\_\+buff}
+
+
+
+Definition at line 82 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a708ace3d70b94657d9f603134cf99bd8}} 
+\index{Graphics@{Graphics}!pos\_loc@{pos\_loc}}
+\index{pos\_loc@{pos\_loc}!Graphics@{Graphics}}
+\doxysubsubsection{pos\_loc}
+{\footnotesize\ttfamily GLint Graphics\+::pos\+\_\+loc}
+
+
+
+Definition at line 79 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_aeb133f8d106cd2c94bcc69d2cb9f559d}} 
+\index{Graphics@{Graphics}!projection@{projection}}
+\index{projection@{projection}!Graphics@{Graphics}}
+\doxysubsubsection{projection}
+{\footnotesize\ttfamily glm\+::mat4 Graphics\+::projection \{ glm\+::mat4(1.\+0f) \}}
+
+
+
+Definition at line 70 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a07250250044387fd398c3bec897a167a}} 
+\index{Graphics@{Graphics}!raw\_video\_frame\_idx@{raw\_video\_frame\_idx}}
+\index{raw\_video\_frame\_idx@{raw\_video\_frame\_idx}!Graphics@{Graphics}}
+\doxysubsubsection{raw\_video\_frame\_idx}
+{\footnotesize\ttfamily int Graphics\+::raw\+\_\+video\+\_\+frame\+\_\+idx = 0}
+
+
+
+Definition at line 84 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a7955aba28102ad572e43724f8b368860}} 
+\index{Graphics@{Graphics}!replay@{replay}}
+\index{replay@{replay}!Graphics@{Graphics}}
+\doxysubsubsection{replay}
+{\footnotesize\ttfamily bool Graphics\+::replay \{ false \}}
+
+
+
+Definition at line 73 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a5ce068520d6baf26424579751773dadf}} 
+\index{Graphics@{Graphics}!replay\_buffer@{replay\_buffer}}
+\index{replay\_buffer@{replay\_buffer}!Graphics@{Graphics}}
+\doxysubsubsection{replay\_buffer}
+{\footnotesize\ttfamily \textbf{ Replay\+Buffer} Graphics\+::replay\+\_\+buffer}
+
+
+
+Definition at line 76 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_aee40062a09c568db2ef73f402d6c0207}} 
+\index{Graphics@{Graphics}!rotate@{rotate}}
+\index{rotate@{rotate}!Graphics@{Graphics}}
+\doxysubsubsection{rotate}
+{\footnotesize\ttfamily bool Graphics\+::rotate \{ true \}}
+
+
+
+Definition at line 73 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a298e89da0de163d5082b5cd9181afbe6}} 
+\index{Graphics@{Graphics}!sampler\_loc@{sampler\_loc}}
+\index{sampler\_loc@{sampler\_loc}!Graphics@{Graphics}}
+\doxysubsubsection{sampler\_loc}
+{\footnotesize\ttfamily GLint Graphics\+::sampler\+\_\+loc}
+
+
+
+Definition at line 80 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a0411bf5e304baaf3df72555018c26e6e}} 
+\index{Graphics@{Graphics}!shaderProgram@{shaderProgram}}
+\index{shaderProgram@{shaderProgram}!Graphics@{Graphics}}
+\doxysubsubsection{shaderProgram}
+{\footnotesize\ttfamily GLuint Graphics\+::shader\+Program}
+
+
+
+Definition at line 66 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a85781c7fcd6555318df976123c7e1531}} 
+\index{Graphics@{Graphics}!slice\_index@{slice\_index}}
+\index{slice\_index@{slice\_index}!Graphics@{Graphics}}
+\doxysubsubsection{slice\_index}
+{\footnotesize\ttfamily int Graphics\+::slice\+\_\+index \{ 0 \}}
+
+
+
+Definition at line 91 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_aeee17015cfc742e0670bae836aa799b6}} 
+\index{Graphics@{Graphics}!tex\_coord\_buff@{tex\_coord\_buff}}
+\index{tex\_coord\_buff@{tex\_coord\_buff}!Graphics@{Graphics}}
+\doxysubsubsection{tex\_coord\_buff}
+{\footnotesize\ttfamily GLuint Graphics\+::tex\+\_\+coord\+\_\+buff}
+
+
+
+Definition at line 82 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a25de7c3762e3f43795930ff04caef37a}} 
+\index{Graphics@{Graphics}!tex\_coord\_loc@{tex\_coord\_loc}}
+\index{tex\_coord\_loc@{tex\_coord\_loc}!Graphics@{Graphics}}
+\doxysubsubsection{tex\_coord\_loc}
+{\footnotesize\ttfamily GLint Graphics\+::tex\+\_\+coord\+\_\+loc}
+
+
+
+Definition at line 79 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a020afe678b17fb21faf7042a9e2e28f2}} 
+\index{Graphics@{Graphics}!tex\_shaderProgram@{tex\_shaderProgram}}
+\index{tex\_shaderProgram@{tex\_shaderProgram}!Graphics@{Graphics}}
+\doxysubsubsection{tex\_shaderProgram}
+{\footnotesize\ttfamily GLuint Graphics\+::tex\+\_\+shader\+Program}
+
+
+
+Definition at line 66 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a7add95f36038e655dea6e2213f4533ef}} 
+\index{Graphics@{Graphics}!texture@{texture}}
+\index{texture@{texture}!Graphics@{Graphics}}
+\doxysubsubsection{texture}
+{\footnotesize\ttfamily GLuint Graphics\+::texture}
+
+
+
+Definition at line 67 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a0920e10e3618cd0f9b0bc786dd02050f}} 
+\index{Graphics@{Graphics}!theta@{theta}}
+\index{theta@{theta}!Graphics@{Graphics}}
+\doxysubsubsection{theta}
+{\footnotesize\ttfamily glm\+::vec2 Graphics\+::theta \{0.\+0f, 0.\+0f\}}
+
+
+
+Definition at line 72 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_ad6a7e8662921598c7d8441ea97d19e56}} 
+\index{Graphics@{Graphics}!title@{title}}
+\index{title@{title}!Graphics@{Graphics}}
+\doxysubsubsection{title}
+{\footnotesize\ttfamily std\+::string Graphics\+::title}
+
+
+
+Definition at line 65 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_ad0df1f87f07a495f173209798489ac3c}} 
+\index{Graphics@{Graphics}!v\_mat\_loc@{v\_mat\_loc}}
+\index{v\_mat\_loc@{v\_mat\_loc}!Graphics@{Graphics}}
+\doxysubsubsection{v\_mat\_loc}
+{\footnotesize\ttfamily GLint Graphics\+::v\+\_\+mat\+\_\+loc}
+
+
+
+Definition at line 80 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a926548a0197979d6a1b32141bc150df7}} 
+\index{Graphics@{Graphics}!vao@{vao}}
+\index{vao@{vao}!Graphics@{Graphics}}
+\doxysubsubsection{vao}
+{\footnotesize\ttfamily GLuint Graphics\+::vao}
+
+
+
+Definition at line 63 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_aea7ddd4a13b7d44d6563501e86ee80cc}} 
+\index{Graphics@{Graphics}!view@{view}}
+\index{view@{view}!Graphics@{Graphics}}
+\doxysubsubsection{view}
+{\footnotesize\ttfamily glm\+::mat4 Graphics\+::view \{ glm\+::mat4(1.\+0f) \}}
+
+
+
+Definition at line 70 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_ad3011b92c61f085457eb9c325f12b8ee}} 
+\index{Graphics@{Graphics}!voltage\_buff@{voltage\_buff}}
+\index{voltage\_buff@{voltage\_buff}!Graphics@{Graphics}}
+\doxysubsubsection{voltage\_buff}
+{\footnotesize\ttfamily GLuint Graphics\+::voltage\+\_\+buff}
+
+
+
+Definition at line 82 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a9b1323ae2d49ae44378a3c5de5b5ad82}} 
+\index{Graphics@{Graphics}!voltage\_loc@{voltage\_loc}}
+\index{voltage\_loc@{voltage\_loc}!Graphics@{Graphics}}
+\doxysubsubsection{voltage\_loc}
+{\footnotesize\ttfamily GLint Graphics\+::voltage\+\_\+loc}
+
+
+
+Definition at line 79 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_aeac6d0338cc1cfdb0b4c83742bf25479}} 
+\index{Graphics@{Graphics}!voltages@{voltages}}
+\index{voltages@{voltages}!Graphics@{Graphics}}
+\doxysubsubsection{voltages}
+{\footnotesize\ttfamily vector$<$GLfloat$>$ Graphics\+::voltages}
+
+
+
+Definition at line 89 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a6fae45b0ee3e217458c0660d79df963d}} 
+\index{Graphics@{Graphics}!width@{width}}
+\index{width@{width}!Graphics@{Graphics}}
+\doxysubsubsection{width}
+{\footnotesize\ttfamily GLint Graphics\+::width}
+
+
+
+Definition at line 64 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_a2c4e01da45cd9ecd71abc55a7c465db7}} 
+\index{Graphics@{Graphics}!window@{window}}
+\index{window@{window}!Graphics@{Graphics}}
+\doxysubsubsection{window}
+{\footnotesize\ttfamily GLFWwindow$\ast$ Graphics\+::window}
+
+
+
+Definition at line 68 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_aaac526707d0445cd43be73708b318d91}} 
+\index{Graphics@{Graphics}!world\_max@{world\_max}}
+\index{world\_max@{world\_max}!Graphics@{Graphics}}
+\doxysubsubsection{world\_max}
+{\footnotesize\ttfamily glm\+::vec3 Graphics\+::world\+\_\+max}
+
+
+
+Definition at line 74 of file graphics.\+cpp.
+
+\mbox{\label{namespace_graphics_adeac8ca48fc961dc219ee5e6dbdd95f5}} 
+\index{Graphics@{Graphics}!world\_min@{world\_min}}
+\index{world\_min@{world\_min}!Graphics@{Graphics}}
+\doxysubsubsection{world\_min}
+{\footnotesize\ttfamily glm\+::vec3 Graphics\+::world\+\_\+min}
+
+
+
+Definition at line 74 of file graphics.\+cpp.
+

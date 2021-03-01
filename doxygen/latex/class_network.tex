@@ -1,0 +1,179 @@
+\doxysection{Network Class Reference}
+\label{class_network}\index{Network@{Network}}
+
+
+\doxyref{Network}{p.}{class_network} is an abstract class that supports creation of connectivity on a set of neurons and operations as union.  
+
+
+Inheritance diagram for Network\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{class_network}
+\end{center}
+\end{figure}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\textbf{ Network} ()=default
+\item 
+virtual bool \textbf{ Generate} (int const N)=0
+\begin{DoxyCompactList}\small\item\em Generates a network. Pure virtual function. \end{DoxyCompactList}\item 
+\textbf{ Adjacency\+List} \textbf{ To\+Adjacency\+List} (\textbf{ Float} $\ast$\&Tcount) const
+\begin{DoxyCompactList}\small\item\em Generates an \doxyref{Adjacency\+List}{p.}{struct_adjacency_list} on the GPU and returns it. \end{DoxyCompactList}\item 
+\textbf{ Chunked\+Adjacency\+List} \textbf{ To\+Chunked\+Adjacency\+List} (\textbf{ Float} $\ast$\&Tcount) const
+\begin{DoxyCompactList}\small\item\em Generates a \doxyref{Chunked\+Adjacency\+List}{p.}{struct_chunked_adjacency_list} on the GPU and returns it. \end{DoxyCompactList}\item 
+\textbf{ Cu\+Sparse\+Adjacency\+Matrix} \textbf{ To\+Upstream\+Sparse\+Matrix} (cusparse\+Handle\+\_\+t \&handle, \textbf{ Adjacency\+List} \&list) const
+\begin{DoxyCompactList}\small\item\em Generates a \doxyref{Cu\+Sparse\+Adjacency\+Matrix}{p.}{struct_cu_sparse_adjacency_matrix} on the GPU which gives upstream neuron connections (transpose of downstream). \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Protected Attributes}
+\begin{DoxyCompactItemize}
+\item 
+thrust\+::host\+\_\+vector$<$ int $>$ \textbf{ indices}
+\begin{DoxyCompactList}\small\item\em Connections indices for adjacency list format. \end{DoxyCompactList}\item 
+thrust\+::host\+\_\+vector$<$ int $>$ \textbf{ offset\+\_\+in\+\_\+indices}
+\begin{DoxyCompactList}\small\item\em Connections row offsets for adjacency list format. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\doxyref{Network}{p.}{class_network} is an abstract class that supports creation of connectivity on a set of neurons and operations as union. 
+
+Definition at line 6 of file network\+\_\+factory.\+cuh.
+
+
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\label{class_network_a22366a210c0fb05448d1802a0e98452a}} 
+\index{Network@{Network}!Network@{Network}}
+\index{Network@{Network}!Network@{Network}}
+\doxysubsubsection{Network()}
+{\footnotesize\ttfamily Network\+::\+Network (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [default]}}
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\label{class_network_ae8a1e4319696d998a626e8059d9c02c1}} 
+\index{Network@{Network}!Generate@{Generate}}
+\index{Generate@{Generate}!Network@{Network}}
+\doxysubsubsection{Generate()}
+{\footnotesize\ttfamily virtual bool Network\+::\+Generate (\begin{DoxyParamCaption}\item[{int const}]{N }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+
+
+Generates a network. Pure virtual function. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em N} & Number of neurons. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+If the function is successful for not. 
+\end{DoxyReturn}
+
+
+Implemented in \textbf{ File\+Network} \doxyref{}{p.}{class_file_network_a3db18e6aa176bf1ef98fe96869b440f9}, \textbf{ KNNNetwork} \doxyref{}{p.}{class_k_n_n_network_a25999cb66596284eecb327e5f3094847}, and \textbf{ Uniform\+Random\+Network} \doxyref{}{p.}{class_uniform_random_network_ac651ed09e0ce445ecdf70e6e35457b14}.
+
+\mbox{\label{class_network_a71f5f7837ef8498d0cfe0822acbd13ba}} 
+\index{Network@{Network}!ToAdjacencyList@{ToAdjacencyList}}
+\index{ToAdjacencyList@{ToAdjacencyList}!Network@{Network}}
+\doxysubsubsection{ToAdjacencyList()}
+{\footnotesize\ttfamily \textbf{ Adjacency\+List} Network\+::\+To\+Adjacency\+List (\begin{DoxyParamCaption}\item[{\textbf{ Float} $\ast$\&}]{Tcount }\end{DoxyParamCaption}) const}
+
+
+
+Generates an \doxyref{Adjacency\+List}{p.}{struct_adjacency_list} on the GPU and returns it. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em Tcount} & Number of upstream connections per neuron. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The adjacency list. 
+\end{DoxyReturn}
+
+
+Definition at line 5 of file network\+\_\+factory.\+cu.
+
+\mbox{\label{class_network_a7a621755596ebf2217dcbbf9e9b70ec9}} 
+\index{Network@{Network}!ToChunkedAdjacencyList@{ToChunkedAdjacencyList}}
+\index{ToChunkedAdjacencyList@{ToChunkedAdjacencyList}!Network@{Network}}
+\doxysubsubsection{ToChunkedAdjacencyList()}
+{\footnotesize\ttfamily \textbf{ Chunked\+Adjacency\+List} Network\+::\+To\+Chunked\+Adjacency\+List (\begin{DoxyParamCaption}\item[{\textbf{ Float} $\ast$\&}]{Tcount }\end{DoxyParamCaption}) const}
+
+
+
+Generates a \doxyref{Chunked\+Adjacency\+List}{p.}{struct_chunked_adjacency_list} on the GPU and returns it. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em Tcount} & Number of upstream connections per neuron. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The chunked adjacency list. 
+\end{DoxyReturn}
+
+
+Definition at line 23 of file network\+\_\+factory.\+cu.
+
+\mbox{\label{class_network_a82f6ed06747e808e7b5db1a29d2d000e}} 
+\index{Network@{Network}!ToUpstreamSparseMatrix@{ToUpstreamSparseMatrix}}
+\index{ToUpstreamSparseMatrix@{ToUpstreamSparseMatrix}!Network@{Network}}
+\doxysubsubsection{ToUpstreamSparseMatrix()}
+{\footnotesize\ttfamily \textbf{ Cu\+Sparse\+Adjacency\+Matrix} Network\+::\+To\+Upstream\+Sparse\+Matrix (\begin{DoxyParamCaption}\item[{cusparse\+Handle\+\_\+t \&}]{handle,  }\item[{\textbf{ Adjacency\+List} \&}]{list }\end{DoxyParamCaption}) const}
+
+
+
+Generates a \doxyref{Cu\+Sparse\+Adjacency\+Matrix}{p.}{struct_cu_sparse_adjacency_matrix} on the GPU which gives upstream neuron connections (transpose of downstream). 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in,out}}  & {\em handle} & The cusparse handle to use. \\
+\hline
+\mbox{\texttt{ in,out}}  & {\em list} & Connectivity stored in \doxyref{Adjacency\+List}{p.}{struct_adjacency_list} format. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The sparse matrix coupling. 
+\end{DoxyReturn}
+
+
+Definition at line 76 of file network\+\_\+factory.\+cu.
+
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\label{class_network_a9dc4560d873b6ba095540a8718842f8a}} 
+\index{Network@{Network}!indices@{indices}}
+\index{indices@{indices}!Network@{Network}}
+\doxysubsubsection{indices}
+{\footnotesize\ttfamily thrust\+::host\+\_\+vector$<$int$>$ Network\+::indices\hspace{0.3cm}{\ttfamily [protected]}}
+
+
+
+Connections indices for adjacency list format. 
+
+
+
+Definition at line 10 of file network\+\_\+factory.\+cuh.
+
+\mbox{\label{class_network_ab94a8ea92631fe16a460ea0b50968e3e}} 
+\index{Network@{Network}!offset\_in\_indices@{offset\_in\_indices}}
+\index{offset\_in\_indices@{offset\_in\_indices}!Network@{Network}}
+\doxysubsubsection{offset\_in\_indices}
+{\footnotesize\ttfamily thrust\+::host\+\_\+vector$<$int$>$ Network\+::offset\+\_\+in\+\_\+indices\hspace{0.3cm}{\ttfamily [protected]}}
+
+
+
+Connections row offsets for adjacency list format. 
+
+
+
+Definition at line 13 of file network\+\_\+factory.\+cuh.
+
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+C\+:/\+Users/james hazelden/\+Desktop/\+HFSP/neuronephys\+\_\+v2/coupling\+\_\+speed\+\_\+test/\textbf{ network\+\_\+factory.\+cuh}\item 
+C\+:/\+Users/james hazelden/\+Desktop/\+HFSP/neuronephys\+\_\+v2/coupling\+\_\+speed\+\_\+test/\textbf{ network\+\_\+factory.\+cu}\end{DoxyCompactItemize}

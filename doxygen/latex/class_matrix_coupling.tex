@@ -1,0 +1,95 @@
+\doxysection{Matrix\+Coupling Class Reference}
+\label{class_matrix_coupling}\index{MatrixCoupling@{MatrixCoupling}}
+
+
+Class that performs coupling using a matrix that tells us the upstream neurons per neuron. Matrix can be sparse or dense.  
+
+
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\textbf{ Matrix\+Coupling} (int const N\+\_\+)
+\item 
+int \textbf{ operator()} (\textbf{ Cu\+Sparse\+Adjacency\+Matrix} const \&connectivity, \textbf{ Float} $\ast$spikes, \textbf{ Float} const $\ast$neuron\+\_\+outputs)
+\begin{DoxyCompactList}\small\item\em (SPARSE VERSION) Perform sparse coupling given connectivity provided as an Adjaceny\+Matrix using cu\+Sparse. \end{DoxyCompactList}\item 
+int \textbf{ operator()} (\textbf{ Cu\+Blas\+Adjacency\+Matrix} const \&connectivity, \textbf{ Float} $\ast$spikes, \textbf{ Float} const $\ast$neuron\+\_\+outputs)
+\begin{DoxyCompactList}\small\item\em (DENSE VERISON) Perform sparse coupling given connectivity provided as an Adjaceny\+Matrix using cu\+Sparse. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Class that performs coupling using a matrix that tells us the upstream neurons per neuron. Matrix can be sparse or dense. 
+
+Definition at line 63 of file coupling.\+cuh.
+
+
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\label{class_matrix_coupling_aabfefb9940df7b06bd075a150673b486}} 
+\index{MatrixCoupling@{MatrixCoupling}!MatrixCoupling@{MatrixCoupling}}
+\index{MatrixCoupling@{MatrixCoupling}!MatrixCoupling@{MatrixCoupling}}
+\doxysubsubsection{MatrixCoupling()}
+{\footnotesize\ttfamily Matrix\+Coupling\+::\+Matrix\+Coupling (\begin{DoxyParamCaption}\item[{int const}]{N\+\_\+ }\end{DoxyParamCaption})}
+
+
+
+Definition at line 180 of file coupling.\+cu.
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\label{class_matrix_coupling_aa70c09f8d59f81a446b98c934ad376b5}} 
+\index{MatrixCoupling@{MatrixCoupling}!operator()@{operator()}}
+\index{operator()@{operator()}!MatrixCoupling@{MatrixCoupling}}
+\doxysubsubsection{operator()()\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily int Matrix\+Coupling\+::operator() (\begin{DoxyParamCaption}\item[{\textbf{ Cu\+Blas\+Adjacency\+Matrix} const \&}]{connectivity,  }\item[{\textbf{ Float} $\ast$}]{spikes,  }\item[{\textbf{ Float} const $\ast$}]{neuron\+\_\+outputs }\end{DoxyParamCaption})}
+
+
+
+(DENSE VERISON) Perform sparse coupling given connectivity provided as an Adjaceny\+Matrix using cu\+Sparse. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em connectivity} & \doxyref{Network}{p.}{class_network} connectivity \\
+\hline
+\mbox{\texttt{ in}}  & {\em voltages} & Voltages of neurons at current timestep \\
+\hline
+\mbox{\texttt{ out}}  & {\em spikes} & Output spikes for the neurons. For HH neurons, this is neurotramsmitter concentration for downstream neurons. \\
+\hline
+\mbox{\texttt{ in}}  & {\em neuron\+\_\+ouputs} & Neuron outputs, for HH neurons, this is the concentration of neurotransmitter outputted from the neuron. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Number of neurons firing 
+\end{DoxyReturn}
+\mbox{\label{class_matrix_coupling_a16679cef98600f783891b06d2e28e9a2}} 
+\index{MatrixCoupling@{MatrixCoupling}!operator()@{operator()}}
+\index{operator()@{operator()}!MatrixCoupling@{MatrixCoupling}}
+\doxysubsubsection{operator()()\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily int Matrix\+Coupling\+::operator() (\begin{DoxyParamCaption}\item[{\textbf{ Cu\+Sparse\+Adjacency\+Matrix} const \&}]{connectivity,  }\item[{\textbf{ Float} $\ast$}]{spikes,  }\item[{\textbf{ Float} const $\ast$}]{neuron\+\_\+outputs }\end{DoxyParamCaption})}
+
+
+
+(SPARSE VERSION) Perform sparse coupling given connectivity provided as an Adjaceny\+Matrix using cu\+Sparse. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em connectivity} & \doxyref{Network}{p.}{class_network} connectivity \\
+\hline
+\mbox{\texttt{ out}}  & {\em spikes} & Output spikes for the neurons. For HH neurons, this is neurotramsmitter concentration for downstream neurons. \\
+\hline
+\mbox{\texttt{ in}}  & {\em neuron\+\_\+ouputs} & Neuron outputs, for HH neurons, this is the concentration of neurotransmitter outputted from the neuron. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Number of neurons firing 
+\end{DoxyReturn}
+
+
+Definition at line 210 of file coupling.\+cu.
+
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+C\+:/\+Users/james hazelden/\+Desktop/\+HFSP/neuronephys\+\_\+v2/coupling\+\_\+speed\+\_\+test/\textbf{ coupling.\+cuh}\item 
+C\+:/\+Users/james hazelden/\+Desktop/\+HFSP/neuronephys\+\_\+v2/coupling\+\_\+speed\+\_\+test/\textbf{ coupling.\+cu}\end{DoxyCompactItemize}
