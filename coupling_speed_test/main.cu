@@ -9,7 +9,7 @@
 #include <curand.h>
 #include <curand_kernel.h>
 
-#define OUTPUT_ELECTRODES_FILE
+//#define OUTPUT_ELECTRODES_FILE
 
 __global__ void init_random(unsigned int seed, int const N, curandState_t* states) 
 {
@@ -443,17 +443,12 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, floa
         N, 1e5,
         length_predicate);
 
-//    Graphics::load_in_connectivity(i_net.GetCpuIndices().data(), 
-//                                  i_net.GetCpuOffsetsIntoIndices().data(), 
-//                                  N, 10);
-
     // Setup electrodes randomly distributed.
     thrust::host_vector<int> h_regions, h_regions_inds;
     std::vector<int> electrode_inds(render_N);
     for(int i = 0; i < render_N; ++i)
         electrode_inds[i] = (N / render_N) * i;
     morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 50);
-//    morphology.GetBoundaryRegion(h_regions, h_regions_inds);
     ElectrodeNet electrode_net(h_regions, h_regions_inds);
 
     // Get pointers to data we want to write output for
@@ -670,11 +665,14 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
     // Setup electrodes based on mouse 2D data from 
     // https://gin.g-node.org/hiobeen/Mouse_hdEEG_ASSR_Hwang_et_al/src/master/montage.csv.
     thrust::host_vector<int> h_regions, h_regions_inds;
+#ifdef OUTPUT_ELECTRODES_FILE
     morphology.GenSphericalRegions(h_regions, h_regions_inds, projected_electrode_positions, 100);
-//    std::vector<int> electrode_inds(render_N);
-//    for(int i = 0; i < render_N; ++i)
-//        electrode_inds[i] = (N / render_N) * i;
-//    morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 50);
+#else
+    std::vector<int> electrode_inds(render_N);
+    for(int i = 0; i < render_N; ++i)
+        electrode_inds[i] = (N / render_N) * i;
+    morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 1);
+#endif
     ElectrodeNet electrode_net(h_regions, h_regions_inds);
 
     // Get pointers to data we want to write output for
