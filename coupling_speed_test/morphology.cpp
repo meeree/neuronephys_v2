@@ -25,6 +25,13 @@ void Morphology::Scale(glm::vec3 const& scale)
         pt *= scale;
 }
 
+void Morphology::Rotate(float const angle, glm::vec3 const& axis)
+{
+    auto rot_mat = glm::rotate(glm::mat4(1.0f), angle, axis);
+    for (glm::vec3& pt : positions)
+        pt = glm::vec3(rot_mat * glm::vec4(pt, 1.0f));
+}
+
 void Morphology::KNN(int const n, int const k, std::vector<int>& knn, std::vector<ANNdist>& knn_dists)
 {
     KNN(glm::value_ptr(positions[n]), k, knn, knn_dists);
@@ -109,6 +116,37 @@ void Morphology::SetupANN ()
     for (int i = 0; i < N; ++i)
         p_vec[i] = glm::value_ptr(positions[i]);
 	kd_tree = std::make_unique<ANNkd_tree>(p_vec, N, 3);
+}
+
+std::vector<bool> Morphology::ToBinaryVoxels(glm::uvec3 const& dims) const
+{
+    std::vector<bool> grid(dims[0] * dims[1] * dims[2], false);
+    auto dims_float = glm::vec3(dims) - glm::vec3(1);
+    for (auto const& pt : positions)
+    {
+        glm::uvec3 vidx = dims_float * (pt + glm::vec3(1)) / glm::vec3(2);
+        grid[vidx.x + dims[0] * (vidx.y + dims[1] * vidx.z)] = true;
+    }
+    return grid;
+}
+
+float Morphology::GetMinimumDistance()
+{
+    if (!kd_tree)
+        SetupANN();
+
+    std::vector<int> knn(2);
+    std::vector<ANNdist> knn_dists(2);
+    float min_dist2 = FLT_MAX;
+    for (int n = 0; n < positions.size(); ++n)
+    {
+        // Get two nearest neighbors. First nearest neighor is always just the neuron itself.
+        // knn_dists[1] stores squared distance to nearest neuron.
+        KNN(n, 2, knn, knn_dists);
+        if(knn_dists[1] < min_dist2)
+            min_dist2 = knn_dists[1];
+    }
+    return sqrt(min_dist2);
 }
 
 bool HollowSphere::Generate(int const N)

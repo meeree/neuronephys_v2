@@ -9,6 +9,8 @@
 #include <curand.h>
 #include <curand_kernel.h>
 
+#define OUTPUT_ELECTRODES_FILE
+
 __global__ void init_random(unsigned int seed, int const N, curandState_t* states) 
 {
     for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < N; idx += gridDim.x * blockDim.x)
@@ -75,8 +77,8 @@ __global__ void leapfrog(Float** sim_vars, const int N, const Float timestep, cu
         const Float Ein_avg = Enum_in > 0 ? Ein / Enum_in : 0;
         const Float new_EY = (Ar * Ein_avg * timestep + (1 - timestep / 2 * (Ar * Ein_avg + Ad)) * EY) / (timestep / 2 * (Ar * Ein_avg + Ad) + 1);
 
-        const Float G = gna * new_M*new_M*new_M*new_H + gk * (powf(new_N, 4)) + gl + g_ampa * new_local_Y /*+ g_gaba * new_IY + g_ampa * new_EY*/;
-        const Float E = gna * new_M*new_M*new_M*new_H * ena + gk * (powf(new_N, 4)) * ek + gl * el + g_ampa * new_local_Y * e_ampa /*+ g_gaba * new_IY * e_gaba + g_ampa * new_EY * e_ampa*/;
+        const Float G = gna * new_M*new_M*new_M*new_H + gk * (powf(new_N, 4)) + gl + g_ampa * new_local_Y + g_gaba * new_IY + g_ampa * new_EY;
+        const Float E = gna * new_M*new_M*new_M*new_H * ena + gk * (powf(new_N, 4)) * ek + gl * el + g_ampa * new_local_Y * e_ampa + g_gaba * new_IY * e_gaba + g_ampa * new_EY * e_ampa;
 
         // Add random white noise to V.
         Float white_noise = white_noise_intensity * curand_normal(random_states + idx) + white_noise_mean;
@@ -286,7 +288,14 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
         float t = i * hh_params::leapfrog_dt;
         if (t > 1000 && t <= 2000 && fmod(t - 1000, 1000.0 / 50) <= 1)
         {
-            thrust::fill_n(thrust::device_ptr<Float>(sim_vars_cpu[SIM_PARAMS_APPCUR]), N, hh_params::appcur + 1.5);
+            static thrust::host_vector<Float> cpu_arr(N, 0);
+            std::random_device rd;
+            std::mt19937 gen(rd());
+            std::normal_distribution<> appcur_dist(2.0, 0.5);
+            for (int i = 0; i < N; ++i)
+                cpu_arr[i] = appcur_dist(gen);
+            //thrust::fill_n(thrust::device_ptr<Float>(sim_vars_cpu[SIM_PARAMS_APPCUR]), N, hh_params::appcur + 3.5);
+            cudaMemcpy(sim_vars_cpu[SIM_PARAMS_APPCUR], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
             fout << hh_params::appcur + 0.5 << ',';
         }
         else
@@ -305,18 +314,24 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
                 for (int k = 0; k < render_N; ++k)
                     graphics_voltages_handle[k] = avg_V_handle[k];
                                
-//                for(int k = 0; k < render_N; ++k)
-//                    fout << avg_V_handle[k] << ',';
+#ifdef OUTPUT_ELECTRODES_FILE
+                for(int k = 0; k < render_N; ++k)
+                    fout << avg_V_handle[k] << ',';
+#endif
                 fout << ElectrodeNet::MeasureAverageEntireNetwork(V_ptr, N);
 				fout << std::endl;
 
+#ifndef OUTPUT_ELECTRODES_FILE
                 pause = Graphics::render(graphics_voltages_handle, nullptr, 0, 0, pause);
-//                Graphics::write_frame(replay_out, frame_data);
+#endif
             }
         }
 
         if (pause)
+        {
+            i -= 1;
             continue;
+        }
 
         // Perform coupling. The number of neurons firing is returned by each of these calls. 
         int n_firing;
@@ -339,7 +354,7 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
 
 bool length_predicate(float const* p1, float const* p2)
 {
-	return glm::distance2(glm::make_vec3(p1), glm::make_vec3(p2)) > 0.8 * 0.8;
+	return true;
 }
 
 // N : number of neurons to simulate
@@ -422,7 +437,6 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, floa
     };
 
     // Send the connectivity to graphics.
-    auto const& positions{ morphology.GetPositions() };
     Graphics::load_in_connectivity(
         e_net.GetCpuIndices().data(),
         e_net.GetCpuOffsetsIntoIndices().data(),
@@ -512,6 +526,44 @@ static std::vector<glm::vec3> electrode_positions{
 	{-0.54112688, -0.93247269, 0},
 	{ 0.54112688, -0.93247269, 0}};
 
+static std::vector<glm::vec3> projected_electrode_positions{
+    {-0.301866, 0.786594, -0.421104},
+    {0.301866, 0.786594, -0.421104},
+    {-0.301866, 0.575869, -0.607844},
+    {0.301866, 0.575869, -0.533148},
+    {-0.443604, 0.575869, -0.421104},
+    {0.443604, 0.575869, -0.458452},
+    {-0.301866, 0.324628, -0.645193},
+    {0.301866, 0.324628, -0.645193},
+    {-0.495052, 0.324628, -0.533148},
+    {0.495052, 0.324628, -0.4958},
+    {-0.353313, 0.1, -0.757237},
+    {0.353313, 0.1, -0.757237},
+    {-0.670055, 0.1, -0.458452},
+    {0.670055, 0.1, -0.533148},
+    {-0.322114, -0.096425, -0.869281},
+    {0.322114, -0.096425, -0.831933},
+    {-0.519019, -0.096425, -0.757237},
+    {0.519019, -0.096425, -0.757237},
+    {-0.725222, -0.096425, -0.607844},
+    {0.725222, -0.096425, -0.570496},
+    {-0.344222, -0.347666, -0.90663},
+    {0.344222, -0.347666, -0.90663},
+    {-0.552284, -0.347666, -0.831933},
+    {0.552284, -0.347666, -0.794585},
+    {-0.75828, -0.347666, -0.570496},
+    {0.75828, -0.347666, -0.607844},
+    {-0.347941, -0.561768, -0.943978},
+    {0.347941, -0.561768, -0.943978},
+    {-0.60931, -0.561768, -0.757237},
+    {0.60931, -0.561768, -0.719889},
+    {-0.828323, -0.561768, -0.421104},
+    {0.828323, -0.561768, -0.383756},
+    {-0.346082, -0.832473, -0.831933},
+    {0.346082, -0.832473, -0.869281},
+    {-0.541127, -0.832473, -0.682541},
+    { 0.541127, -0.832473, -0.682541 }};
+
 // N : number of neurons to simulate
 // samp_freq : sampling frequency (Hz)
 // samp_len : How long you record the activity of the model neuron (sec)
@@ -520,11 +572,17 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
     using namespace hh_params;
 
     // Set up graphics and morphology
-    MouseBrain2D morphology("2d_brain_region.bmp");
+	FileMorphology morphology("cortex_connectivity_1m_1k_inh.h5");
     morphology.Generate(N);
+	morphology.Rotate(glm::radians(90.0f), glm::vec3(1, 0, 0));
+	morphology.Rotate(glm::radians(-90.0f), glm::vec3(0, 0, 1));
 
     float* graphics_voltage_handle;
+#ifdef OUTPUT_ELECTRODES_FILE
+    Graphics::setup(graphics_voltage_handle, (float*)projected_electrode_positions.data(), 36, 36);
+#else
     Graphics::setup(graphics_voltage_handle, morphology.GetPositionsRaw(), N, render_N);
+#endif
 
     // Set up simulation variables. Stored in a struct of arrays.
     thrust::host_vector<Float*> sim_vars_cpu(NUM_SIM_PARAMS);
@@ -539,10 +597,11 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
         // Set voltages randomly
         std::random_device rd;
         std::mt19937 gen(rd());
-        std::normal_distribution<> voltage_dist(0, 0);
+        std::normal_distribution<> voltage_dist(-55, 25);
         for (auto& val : cpu_arr)
             val = voltage_dist(gen);
         cudaMemcpy(sim_vars_cpu[SIM_PARAMS_V], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+        thrust::fill_n(cpu_arr.begin(), N, 0.0);
 
         // Set gating variables  
         std::normal_distribution<> gating_var_dist(0.0, 0.0);
@@ -580,35 +639,42 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
     sim_vars = sim_vars_cpu;
 
     // Generate coupling
-    AtomicCoupling loc_coupling(N), e_coupling(N), i_coupling(N);
-    KNNNetwork loc_net(500, &morphology);
-    FileNetwork e_net("cortex_connectivity_1m_1k_exc.h5"), i_net("cortex_connectivity_1m_1k_inh.h5");
-    loc_net.Generate(N); e_net.Generate(N); i_net.Generate(N);
-    ChunkedAdjacencyList loc_list{ loc_net.ToChunkedAdjacencyList(sim_vars_cpu[SIM_PARAMS_LOCAL_COUNT]) };
+    AtomicCoupling /*loc_coupling(N),*/ e_coupling(N), i_coupling(N);
+//    KNNNetwork loc_net(500, &morphology);
+//    FileNetwork e_net("cortex_connectivity_1m_1k_exc.h5"), i_net("cortex_connectivity_1m_1k_inh.h5");
+    UniformRandomNetwork e_net(800), i_net(200);
+    /*loc_net.Generate(N);*/ e_net.Generate(N); i_net.Generate(N);
+//    ChunkedAdjacencyList loc_list{ loc_net.ToChunkedAdjacencyList(sim_vars_cpu[SIM_PARAMS_LOCAL_COUNT]) };
     ChunkedAdjacencyList e_list{ e_net.ToChunkedAdjacencyList(sim_vars_cpu[SIM_PARAMS_ECOUNT]) };
     ChunkedAdjacencyList i_list{ i_net.ToChunkedAdjacencyList(sim_vars_cpu[SIM_PARAMS_ICOUNT]) };
     std::vector<CouplingStruct> coupling_structs
     {
-        {loc_list, loc_coupling, sim_vars_cpu[SIM_PARAMS_LOCAL_IN], sim_vars_cpu[SIM_PARAMS_LOCAL_OUTPUT]},
+//        {loc_list, loc_coupling, sim_vars_cpu[SIM_PARAMS_LOCAL_IN], sim_vars_cpu[SIM_PARAMS_LOCAL_OUTPUT]},
         {e_list, e_coupling, sim_vars_cpu[SIM_PARAMS_EIN], sim_vars_cpu[SIM_PARAMS_EOUTPUT]},
         {i_list, i_coupling, sim_vars_cpu[SIM_PARAMS_IIN], sim_vars_cpu[SIM_PARAMS_IOUTPUT]}
     };
-    
-    //TODO : ADD RANDOM WHITE NOISE TO HH
+
     // Random seeds setup. We get a "state" per neuron which you can think of as the random seed.
     thrust::device_vector<curandState_t> random_states(N);
     init_random << <NBLOCKS, NTHREADS >> > (0, N, thrust::raw_pointer_cast(random_states.data()));
 	gpuErrchk( cudaPeekAtLastError() );
 	gpuErrchk( cudaDeviceSynchronize() );
 
+    // Send the connectivity to graphics.
+//    Graphics::load_in_connectivity(
+//        loc_net.GetCpuIndices().data(),
+//        loc_net.GetCpuOffsetsIntoIndices().data(),
+//        N, N/10,
+//        length_predicate);
+
     // Setup electrodes based on mouse 2D data from 
     // https://gin.g-node.org/hiobeen/Mouse_hdEEG_ASSR_Hwang_et_al/src/master/montage.csv.
     thrust::host_vector<int> h_regions, h_regions_inds;
-//    morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_positions, 1000);
-    std::vector<int> electrode_inds(render_N);
-    for(int i = 0; i < render_N; ++i)
-        electrode_inds[i] = (N / render_N) * i;
-    morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 50);
+    morphology.GenSphericalRegions(h_regions, h_regions_inds, projected_electrode_positions, 100);
+//    std::vector<int> electrode_inds(render_N);
+//    for(int i = 0; i < render_N; ++i)
+//        electrode_inds[i] = (N / render_N) * i;
+//    morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 50);
     ElectrodeNet electrode_net(h_regions, h_regions_inds);
 
     // Get pointers to data we want to write output for
@@ -637,7 +703,11 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
 
 int main()
 {
+#ifdef OUTPUT_ELECTRODES_FILE
+    int N_electrodes = 36;
+#else
     int N_electrodes = 1e5;
+#endif
     hh_benchmark(1e5, 2500, 3, N_electrodes);
     Graphics::terminate_graphics();
 }
