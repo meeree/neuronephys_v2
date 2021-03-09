@@ -66,7 +66,8 @@ struct
     GLuint shaderProgram, tex_shaderProgram;
     GLuint texture;
     GLFWwindow* window;
-    glm::vec3 cam_pos;
+    glm::vec3 cam_pos, cam_forward{ 0, 0, 1 }, cam_right{ 1, 0, 0 };
+    glm::vec3 look_pos{ 0,0,0 };
     glm::mat4 view{ glm::mat4(1.0f) }, model{ glm::mat4(1.0f) }, projection{ glm::mat4(1.0f) };
     glm::vec2 mouse{0.0f, 0.0f};
     glm::vec2 theta{0.0f, 0.0f};
@@ -221,6 +222,23 @@ void load_in_connectivity(int const* connectivity_inds, int const* offset_into_i
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, g_attrs.lines.size() * sizeof(GLuint), g_attrs.lines.data(), GL_STATIC_DRAW);
 }
 
+void add_points(float const* points, int const N)
+{
+    g_attrs.points.insert(g_attrs.points.end(), (glm::vec3*)points, ((glm::vec3*)points) + N);
+	glBindBuffer(GL_ARRAY_BUFFER, g_attrs.pos_buff);
+	glBufferData(GL_ARRAY_BUFFER,
+			g_attrs.points.size() * sizeof(glm::vec3),
+			g_attrs.points.data(),
+			GL_DYNAMIC_DRAW);
+}
+
+void add_lines(int const* lines, int const N)
+{
+    g_attrs.lines.insert(g_attrs.lines.end(), lines, lines + 2*N);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_attrs.line_buff);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, g_attrs.lines.size() * sizeof(GLuint), g_attrs.lines.data(), GL_STATIC_DRAW);
+}
+
 bool render (float const* voltages, void const* slice, int const slice_width, int const slice_height, bool& pause)
 {   
     if(glfwWindowShouldClose(g_attrs.window))
@@ -242,30 +260,47 @@ bool render (float const* voltages, void const* slice, int const slice_width, in
     glClearBufferfv(GL_COLOR, 0.0f, color);
     glClear(GL_DEPTH_BUFFER_BIT);
 
-    if (pause) // if paused, allow user to rotate object around.
-    {
-        double xpos, ypos;
-        glfwGetCursorPos(g_attrs.window, &xpos, &ypos);
-        //    glfwSetCursorPos(g_attrs.window, g_attrs.width/2, g_attrs.height/2);
-        glm::vec2 mouse{
-            xpos - g_attrs.width / 2,
-            g_attrs.height / 2 - ypos
-        };
-        g_attrs.theta = 0.001f * (mouse - g_attrs.mouse);
+    // Rotation of object.
+	if (glfwGetMouseButton(g_attrs.window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+	{
+		double xpos, ypos;
+		glfwGetCursorPos(g_attrs.window, &xpos, &ypos);
+		//    glfwSetCursorPos(g_attrs.window, g_attrs.width/2, g_attrs.height/2);
+		glm::vec2 mouse{
+			xpos - g_attrs.width / 2,
+			g_attrs.height / 2 - ypos
+		};
+		g_attrs.theta = 0.001f * (mouse - g_attrs.mouse);
 
-        auto rot_mat = glm::rotate(glm::mat4(1.0f), -g_attrs.theta.x, glm::vec3(0.0f, 1.0f, 0.0f));
-        rot_mat = glm::rotate(rot_mat, -g_attrs.theta.y, glm::vec3(0.0f, 0.0f, 1.0f));
-        g_attrs.cam_pos = glm::vec3(rot_mat * glm::vec4(g_attrs.cam_pos, 1.0f));
-        
-        g_attrs.view = glm::lookAt(g_attrs.cam_pos, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        g_attrs.mouse = mouse;
-    }
+		auto rot_mat = glm::rotate(glm::mat4(1.0f), -g_attrs.theta.x, glm::vec3(0.0f, 1.0f, 0.0f));
+		rot_mat = glm::rotate(rot_mat, -g_attrs.theta.y, glm::vec3(0.0f, 0.0f, 1.0f));
+		g_attrs.cam_pos = glm::vec3(rot_mat * glm::vec4(g_attrs.cam_pos, 1.0f));
+		g_attrs.cam_forward = glm::vec3(rot_mat * glm::vec4(g_attrs.cam_forward, 1.0f));
+		g_attrs.cam_right = glm::vec3(rot_mat * glm::vec4(g_attrs.cam_right, 1.0f));
+
+		g_attrs.view = glm::lookAt(g_attrs.cam_pos, g_attrs.look_pos, glm::vec3(0.0f, 1.0f, 0.0f));
+		g_attrs.mouse = mouse;
+	}
     else if (g_attrs.rotate)
     {
         auto rot_mat = glm::rotate(glm::mat4(1.0f), 0.003f, glm::vec3(0.0, 1.0, 0.0));
         g_attrs.cam_pos = glm::vec3(rot_mat * glm::vec4(g_attrs.cam_pos, 1.0f));
         g_attrs.view *= rot_mat;
     }
+
+    // Shifting of object.
+	if (glfwGetKey(g_attrs.window, GLFW_KEY_W) == GLFW_PRESS)
+		g_attrs.model = glm::translate(g_attrs.model, 0.01f * glm::vec3(0, 0, 1));
+	else if (glfwGetKey(g_attrs.window, GLFW_KEY_S) == GLFW_PRESS)
+		g_attrs.model = glm::translate(g_attrs.model, -0.01f * glm::vec3(0, 0, 1));
+	else if (glfwGetKey(g_attrs.window, GLFW_KEY_Q) == GLFW_PRESS)
+		g_attrs.model = glm::translate(g_attrs.model, 0.01f * glm::vec3(0, 1, 0));
+	else if (glfwGetKey(g_attrs.window, GLFW_KEY_E) == GLFW_PRESS)
+		g_attrs.model = glm::translate(g_attrs.model, -0.01f * glm::vec3(0, 1, 0));
+	else if (glfwGetKey(g_attrs.window, GLFW_KEY_A) == GLFW_PRESS)
+		g_attrs.model = glm::translate(g_attrs.model, 0.01f * glm::vec3(1, 0, 0));
+	else if (glfwGetKey(g_attrs.window, GLFW_KEY_D) == GLFW_PRESS)
+		g_attrs.model = glm::translate(g_attrs.model, -0.01f * glm::vec3(1, 0, 0));
 
     // Bind voltage buffer and enable voltage attribute
     glEnableVertexAttribArray(g_attrs.pos_loc);
@@ -345,10 +380,6 @@ void keyCallback(GLFWwindow* window, int key, int, int action, int)
         glfwSetWindowShouldClose(window, 1);
     else if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
     {
-        if (!g_attrs.pause) // disable cursor
-            glfwSetInputMode(g_attrs.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-        else // enable cursor
-            glfwSetInputMode(g_attrs.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         g_attrs.pause = !g_attrs.pause; // Toggle pause
         if (!g_attrs.pause)
         {
@@ -394,7 +425,7 @@ void scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 {
     double zoom_factor{ yoffset < 0.0 ? 1.05 : 0.95 };
     g_attrs.cam_pos *= zoom_factor;
-    g_attrs.view = glm::lookAt(g_attrs.cam_pos, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    g_attrs.view = glm::lookAt(g_attrs.cam_pos, g_attrs.look_pos, glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
 int setup(float*& voltages, float const* positions, size_t N, size_t render_N)
@@ -413,7 +444,7 @@ int setup(float*& voltages, float const* positions, size_t N, size_t render_N)
         cout << "Number of points for rendering: " << render_N << endl;
 
         g_attrs.voltages.resize(g_attrs.points.size(), 0.0f);
-        startup(1200, 1080, "Neurons Viz!");
+        startup(1920, 1080, "Neuron Ephys");
      
         // Compile shaders for texture and voltages.
         initShaders("Shaders/vert.glsl", "Shaders/frag.glsl", g_attrs.shaderProgram);
@@ -456,13 +487,15 @@ int setup(float*& voltages, float const* positions, size_t N, size_t render_N)
 
         // Generate texture
         glGenTextures(1, &g_attrs.texture);
+
+		glfwSetInputMode(g_attrs.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     }
     // Init projection, view, model matrices
     g_attrs.projection = glm::perspective(glm::radians(45.0f),(GLfloat)g_attrs.width/g_attrs.height, 0.1f, 1000.0f); 
-    g_attrs.view = glm::lookAt(glm::vec3(90.0f, 0, 0), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)); 
+    g_attrs.cam_pos = glm::vec3(90, 0, 0);
+    g_attrs.view = glm::lookAt(g_attrs.cam_pos, g_attrs.look_pos, glm::vec3(0, 1, 0)); 
     float scalar{ 30.0f };
     g_attrs.model = glm::scale(glm::mat4x4(1.0f), glm::vec3(scalar));
-    g_attrs.cam_pos = glm::vec3(50, 0, 0);
 
     glfwSetKeyCallback(g_attrs.window, keyCallback);
     glfwSetScrollCallback(g_attrs.window, scrollCallback);

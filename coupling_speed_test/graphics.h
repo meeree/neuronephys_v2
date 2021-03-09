@@ -34,6 +34,12 @@ namespace Graphics
     //! helper function
     int get_slice_index();
 
+    //! Add points to be rendered.
+    void add_points(float const* points, int const N);
+
+    //! Add lines to be rendered.
+    void add_lines(int const* lines, int const N);
+
     typedef bool (*LinePredicate)(float const*, float const*);
     //! Load a connectivity as a collection of lines to be rendered.
     void load_in_connectivity(

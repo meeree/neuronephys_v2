@@ -48,6 +48,13 @@ public:
 	*/
     void Scale(glm::vec3 const& scale);
 
+	//! Rotates the positions and overrites the old positions.
+	/*!
+	  \param [in] angle Angle of rotation.
+	  \param [in] axis Axis of rotation.
+	*/
+	void Rotate(float const angle, glm::vec3 const& axis);
+
 	//! Finds the k nearest neighbros to neuron n.
 	/*!
 	  \param [in] n Index of neuron.
@@ -80,6 +87,16 @@ public:
 		\param [out] h_region_inds Row offsets for region adjacency list.
 	*/	
 	void GetBoundaryRegion(thrust::host_vector<int>& h_regions, thrust::host_vector<int>& h_region_inds) const;
+
+	//! Creates a vector of binary voxels that are true if they contain a point and false otherwise.
+	//! To access (i,j,k) voxel, index into vector is i+dims[0]*(j+dims[1]*k).
+	/*!
+		\param [in] dims Dimensions of voxel grid in X, Y, Z, respectively.
+	*/	
+	virtual std::vector<bool> ToBinaryVoxels(glm::uvec3 const& dims) const;
+
+	//! Find the minimum distance between any two adjacent points.
+	float GetMinimumDistance();
 
 	//! Getter for positions. 
 	std::vector<glm::vec3> const& GetPositions() { return positions; }

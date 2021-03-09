@@ -105,6 +105,9 @@ bool UniformRandomNetwork::Generate(int const N)
 	std::unordered_set<int> set(Ncouple);
 	for (int i = 0; i < N; ++i)
 	{
+        if (i % 1000 == 0)
+            std::cout << i / (float)N * 100 << "%\r" << std::flush;
+
 		thrust::fill_n(neuron_downstream.begin(), Ncouple, INT_MAX);
 		for (int j = 0; j < Ncouple; ++j)
 		{
@@ -122,6 +125,7 @@ bool UniformRandomNetwork::Generate(int const N)
 		offset_in_indices[i] = i * Ncouple;
 		set.clear();
 	}
+    std::cout << "100%\r" << std::endl;
 	offset_in_indices[N] = N * Ncouple;
 }
 
