@@ -4,12 +4,13 @@
 #include "electrode_net.cuh"
 #include <glm/gtx/norm.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <sstream>
 
 // we need these includes for CUDA's random number stuff
 #include <curand.h>
 #include <curand_kernel.h>
 
-//#define OUTPUT_ELECTRODES_FILE
+#define OUTPUT_ELECTRODES_FILE
 
 __global__ void init_random(unsigned int seed, int const N, curandState_t* states) 
 {
@@ -27,7 +28,7 @@ __global__ void get_random_test(curandState_t* states, int const N, int* numbers
     }
 }
 
-__global__ void leapfrog(Float** sim_vars, const int N, const Float timestep, curandState_t* random_states)
+__global__ void leapfrog(Float** sim_vars, const int N, const Float timestep, curandState_t* random_states, float* eeg_per_region)
 {
     using namespace hh_params;
     for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < N; idx += gridDim.x * blockDim.x)
@@ -81,10 +82,14 @@ __global__ void leapfrog(Float** sim_vars, const int N, const Float timestep, cu
         const Float E = gna * new_M*new_M*new_M*new_H * ena + gk * (powf(new_N, 4)) * ek + gl * el + g_ampa * new_local_Y * e_ampa + g_gaba * new_IY * e_gaba + g_ampa * new_EY * e_ampa;
 
         // Add random white noise to V.
-        Float white_noise = white_noise_intensity * curand_normal(random_states + idx) + white_noise_mean;
+        Float white_noise = white_noise_intensity * curand_normal(random_states + idx);
+
+        // EEG injected current.
+        const int region_idx = sim_vars[SIM_PARAMS_REGION_IDX][idx];
+        Float EEG_in = region_idx < 0 ? 0 : 20 * (eeg_per_region[region_idx] / 200 + 1);
 
         // Copy back to sim_vars
-        *V_ptr = ((white_noise + appcur) * timestep + E * timestep + (1 - timestep / 2 * G)*V) / (1 + timestep / 2 * G);
+        *V_ptr = ((appcur + white_noise) * timestep + E * timestep + (1 - timestep / 2 * G)*V) / (1 + timestep / 2 * G);
         *M_ptr = new_M;
         *N_ptr = new_N;
         *H_ptr = new_H;
@@ -163,7 +168,7 @@ __global__ void RK4_an_ie_model(Float** sim_vars, const int N, const float times
         Float const Yi = *Yi_ptr;
 
         // Add random white noise to V.
-        Float white_noise = white_noise_intensity * curand_normal(random_states + idx) + white_noise_mean;
+        Float white_noise = white_noise_intensity * curand_normal(random_states + idx);
 
         // k1 = f(X)
         dxdt_an_ie_model(idx, V, nK, Ca, Ye, Yi, e_Tinavg, i_Tinavg, white_noise, &dvdt1, &dnKdt1, &dCadt1, &dYedt1, &dYidt1);
@@ -220,7 +225,7 @@ __global__ void Euler_an_ie_model(Float** sim_vars, const int N, const float tim
         Float const Yi = *Yi_ptr;
 
         // Add random white noise to V.
-        Float white_noise = white_noise_intensity * curand_normal(random_states + idx) + white_noise_mean;
+        Float white_noise = white_noise_intensity * curand_normal(random_states + idx);
 
         dxdt_an_ie_model(idx, V, nK, Ca, Ye, Yi, e_Tinavg, i_Tinavg, white_noise, &dvdt, &dnKdt, &dCadt, &dYedt, &dYidt);
         
@@ -259,16 +264,18 @@ struct CouplingStruct
 };
 
 template<typename SimFunc>
-void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream& fout,
+Float _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream& fout,
     int const N, thrust::device_vector<Float*>& sim_vars,  thrust::host_vector<Float*>& sim_vars_cpu,
     SimFunc sim_func, Float const dt,
     std::vector<CouplingStruct>& coupling_structs,
     Float* V_ptr,
     thrust::device_vector<curandState_t>& random_states,
-    std::vector<Float*> const& sample_ptrs,
     float* graphics_voltages_handle = nullptr, int const render_N = -1,
-    ElectrodeNet* electrodes = nullptr)
+    ElectrodeNet* electrodes = nullptr,
+    std::vector<std::vector<Float>> const& eeg_time_trace = {})
 {
+    Float loss = 0;
+
     // If graphics handle is non-null, allocate CPU mem to copy voltages to.
     uint8_t* frame_data;
     FILE* replay_out;
@@ -279,6 +286,8 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
         replay_out = fopen("REPLAY.raw", "wb");
     }
 
+    thrust::host_vector<Float> h_eeg_per_region(36, 0);
+    thrust::device_vector<Float> d_eeg_per_region(36, 0);
     for (int i = 0; i < nincs; ++i)
     {
         if (i % (nincs / 100) == 0)
@@ -286,24 +295,18 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
 
         // Light input.
         float t = i * hh_params::leapfrog_dt;
+        int eeg_idx = t * 2; // EEG data is 2kHz sampled.
+        for (int i = 0; i < h_eeg_per_region.size(); ++i)
+            h_eeg_per_region[i] = eeg_time_trace[i][eeg_idx];
+        d_eeg_per_region = h_eeg_per_region;
         if (t > 1000 && t <= 2000 && fmod(t - 1000, 1000.0 / 50) <= 1)
         {
-            static thrust::host_vector<Float> cpu_arr(N, 0);
-            std::random_device rd;
-            std::mt19937 gen(rd());
-            std::normal_distribution<> appcur_dist(2.0, 0.5);
-            for (int i = 0; i < N; ++i)
-                cpu_arr[i] = appcur_dist(gen);
-            //thrust::fill_n(thrust::device_ptr<Float>(sim_vars_cpu[SIM_PARAMS_APPCUR]), N, hh_params::appcur + 3.5);
-            cudaMemcpy(sim_vars_cpu[SIM_PARAMS_APPCUR], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-            fout << hh_params::appcur + 0.5 << ',';
+            thrust::fill_n(thrust::device_ptr<Float>(sim_vars_cpu[SIM_PARAMS_APPCUR]), N, hh_params::appcur + hh_params::light_inc);
         }
         else
         {
             thrust::fill_n(thrust::device_ptr<Float>(sim_vars_cpu[SIM_PARAMS_APPCUR]), N, hh_params::appcur);
-            fout << hh_params::appcur << ',';
         }
-
         if (i % print_incs == 0)
         {
             // Update graphics if the graphics handle is non-null
@@ -315,11 +318,22 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
                     graphics_voltages_handle[k] = avg_V_handle[k];
                                
 #ifdef OUTPUT_ELECTRODES_FILE
-                for(int k = 0; k < render_N; ++k)
-                    fout << avg_V_handle[k] << ',';
+                if (i > 200) // Skip transient
+                {
+                    for(int k = 0; k < render_N; ++k)
+                        fout << avg_V_handle[k] << ',';
+
+                    fout << ElectrodeNet::MeasureAverageEntireNetwork(V_ptr, N);
+
+                    Float loss_inc = 0;
+                    for (int i = 0; i < h_eeg_per_region.size(); ++i)
+                        loss_inc += std::pow(h_eeg_per_region[i] - (150 * (avg_V_handle[i] + 60) / 100 - 100), 2);
+                    std::cout << loss << ',' << loss_inc / (nincs * h_eeg_per_region.size()) << std::endl;
+
+                    loss += loss_inc / (nincs * h_eeg_per_region.size());
+                    fout << std::endl;
+                }
 #endif
-                fout << ElectrodeNet::MeasureAverageEntireNetwork(V_ptr, N);
-				fout << std::endl;
 
 #ifndef OUTPUT_ELECTRODES_FILE
                 pause = Graphics::render(graphics_voltages_handle, nullptr, 0, 0, pause);
@@ -339,7 +353,7 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
             n_firing = coup_struct();
 
         // Update ODE 
-        sim_func << <NBLOCKS, NTHREADS>> > (thrust::raw_pointer_cast(sim_vars.data()), N, dt, thrust::raw_pointer_cast(random_states.data()));
+        sim_func << <NBLOCKS, NTHREADS>> > (thrust::raw_pointer_cast(sim_vars.data()), N, dt, thrust::raw_pointer_cast(random_states.data()), thrust::raw_pointer_cast(d_eeg_per_region.data()));
 		gpuErrchk( cudaPeekAtLastError() );
 		gpuErrchk( cudaDeviceSynchronize() );
     }
@@ -349,6 +363,7 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
         free(frame_data);
         fclose(replay_out);
     }
+    return loss;
 }
 
 
@@ -451,33 +466,18 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, floa
     morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 50);
     ElectrodeNet electrode_net(h_regions, h_regions_inds);
 
-    // Get pointers to data we want to write output for
-    std::vector<Float*> sample_ptrs{
-        sim_vars_cpu[AN_IE_VAR_V],
-        sim_vars_cpu[AN_IE_VAR_CA],
-        sim_vars_cpu[AN_IE_VAR_NK],
-        sim_vars_cpu[AN_IE_VAR_EOUTPUT],
-        sim_vars_cpu[AN_IE_VAR_EIN],
-        sim_vars_cpu[AN_IE_VAR_ECOUNT],
-        sim_vars_cpu[AN_IE_VAR_IOUTPUT],
-        sim_vars_cpu[AN_IE_VAR_IIN],
-        sim_vars_cpu[AN_IE_VAR_ICOUNT],
-    };
-    Float* V_ptr{ sim_vars_cpu[AN_IE_VAR_V] };
-
     // Note, we multiply by 1000 to convert from sec to ms.
     int const nincs = (1000 * samp_len / an_ie_params::rk4_dt);
     int const print_incs = (int)((1000.0 / samp_freq) / an_ie_params::rk4_dt + 0.5);
-    _RunAndPrintSimulation(nincs, print_incs, fout,
-        N, sim_vars, sim_vars_cpu,
-        Euler_an_ie_model, an_ie_params::rk4_dt,
-        coupling_structs,
-        sim_vars_cpu[AN_IE_VAR_V],
-        random_states,
-        sample_ptrs,
-        graphics_voltage_handle,
-        render_N,
-        &electrode_net);
+//    _RunAndPrintSimulation(nincs, print_incs, fout,
+//        N, sim_vars, sim_vars_cpu,
+//        Euler_an_ie_model, an_ie_params::rk4_dt,
+//        coupling_structs,
+//        sim_vars_cpu[AN_IE_VAR_V],
+//        random_states,
+//        graphics_voltage_handle,
+//        render_N,
+//        &electrode_net);
 
     for (Float*& arr : sim_vars_cpu)
         cudaFree(arr);
@@ -558,6 +558,27 @@ static std::vector<glm::vec3> projected_electrode_positions{
     {0.346082, -0.832473, -0.869281},
     {-0.541127, -0.832473, -0.682541},
     { 0.541127, -0.832473, -0.682541 }};
+
+std::vector<std::vector<Float>> read_eeg_time_trace(std::string const& fl_name)
+{
+    std::vector<std::vector<Float>> time_trace;
+    std::ifstream fl(fl_name);
+    while (fl)
+    {
+        time_trace.push_back({});
+        auto& row = time_trace.back();
+        std::string line;
+        std::getline(fl, line);
+        std::stringstream st(line);
+        char delim;
+        while (st)
+        {
+            row.push_back(0);
+            st >> row.back() >> delim;
+        }
+    }
+    return time_trace;
+}
 
 // N : number of neurons to simulate
 // samp_freq : sampling frequency (Hz)
@@ -666,7 +687,7 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
     // https://gin.g-node.org/hiobeen/Mouse_hdEEG_ASSR_Hwang_et_al/src/master/montage.csv.
     thrust::host_vector<int> h_regions, h_regions_inds;
 #ifdef OUTPUT_ELECTRODES_FILE
-    morphology.GenSphericalRegions(h_regions, h_regions_inds, projected_electrode_positions, 100);
+    morphology.GenSphericalRegions(h_regions, h_regions_inds, projected_electrode_positions, 1);
 #else
     std::vector<int> electrode_inds(render_N);
     for(int i = 0; i < render_N; ++i)
@@ -675,37 +696,61 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
 #endif
     ElectrodeNet electrode_net(h_regions, h_regions_inds);
 
-    // Get pointers to data we want to write output for
-    std::vector<Float*> sample_ptrs{
-        sim_vars_cpu[SIM_PARAMS_V],
-    };
+    // Inform neurons of which region they are in.
+    {
+        thrust::host_vector<Float> cpu_arr(N, -1);
+        for (int i = 1; i < h_regions_inds.size(); ++i)
+            for (int j = h_regions_inds[i - 1]; j < h_regions_inds[i]; ++j)
+                cpu_arr[j] = i - 1;
+        cudaMemcpy(sim_vars_cpu[SIM_PARAMS_REGION_IDX], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    }
+
+    std::vector<std::vector<Float>> eeg_trace(read_eeg_time_trace("../time_trace.csv"));
 
     // Note, we multiply by 1000 to convert from sec to ms.
     int const nincs = (1000 * samp_len / leapfrog_dt);
     int const print_incs = (int)((1000.0 / samp_freq) / leapfrog_dt + 0.5);
-    _RunAndPrintSimulation(nincs, print_incs, fout,
+    Float const loss = _RunAndPrintSimulation(nincs, print_incs, fout,
         N, sim_vars, sim_vars_cpu,
         leapfrog, leapfrog_dt,
         coupling_structs,
         sim_vars_cpu[SIM_PARAMS_V],
         random_states,
-        sample_ptrs,
         graphics_voltage_handle,
         render_N,
-        &electrode_net);
+        &electrode_net,
+        eeg_trace);
+
+    std::ofstream loss_out("LOSS.txt");
+    loss_out << loss;
+    loss_out.close();
 
     for (Float*& arr : sim_vars_cpu)
         cudaFree(arr);
     fout.close();
 }
 
-int main()
+int main(int argc, char** argv)
 {
+    Float h_white_noise_intensity;
+
+    hh_params::appcur = std::atof(argv[1]);
+    hh_params::light_inc = std::atof(argv[2]);
+
+    h_white_noise_intensity = std::atof(argv[3]);
+    cudaMemcpyToSymbol(hh_params::white_noise_intensity, &h_white_noise_intensity, sizeof(Float));
+
+    std::cout 
+        << "Appcur : " << hh_params::appcur
+        << ", Light inc : " << hh_params::light_inc
+        << ", White noise intensity : " << h_white_noise_intensity
+        << std::endl;
+
 #ifdef OUTPUT_ELECTRODES_FILE
     int N_electrodes = 36;
 #else
     int N_electrodes = 1e5;
 #endif
-    hh_benchmark(1e5, 2500, 3, N_electrodes);
+    hh_benchmark(1e5, 2500, 2.5, N_electrodes);
     Graphics::terminate_graphics();
 }

@@ -58,7 +58,8 @@ typedef float Float;
 #define SIM_PARAMS_ICOUNT 15//count of presynaptic neurons
 
 #define SIM_PARAMS_APPCUR 16
-#define NUM_SIM_PARAMS 17//Dimension of state space
+#define SIM_PARAMS_REGION_IDX 17//index of region the neuron is in. If not in a recorded region, it is -1.
+#define NUM_SIM_PARAMS 18//Dimension of state space
 
 // TODO : SET NUMBER OF THREADS DYNAMICALLY BASED ON CARD USED
 #define NTHREADS 64 
@@ -79,9 +80,9 @@ namespace hh_params {
     constexpr const static Float Ar = 5.0; constexpr const static Float Ad = 0.18;                       // alpha and beta for GABA gating variable
     constexpr static const Float g_ampa = 0.1; constexpr static const Float e_ampa = 0.0; // Coupling conductance and potential for AMPA
     constexpr static const Float g_gaba = 0.1; constexpr static const Float e_gaba = -70.0; // Coupling conductance and potential for GABA
-    constexpr static const Float appcur = 0.0;                                                            // Base current to apply when we only apply a constant current. 
-    constexpr static const Float white_noise_mean = 3.0f;
-    constexpr static const Float white_noise_intensity = 1.5f; // Controls stddev of white noise.
+   static Float appcur = 0.0;                                                            // Base current to apply when we only apply a constant current. 
+   static Float light_inc = 0.0;                                                         // What to increment neuron currents by when light input is applied.
+    __device__ Float white_noise_intensity = 0.0f; // Controls stddev of white noise.
 }
 
 
