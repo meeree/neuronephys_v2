@@ -1,7 +1,5 @@
 #pragma once
 #include "defines.cuh"
-#include <cusparse.h>
-#include <cublas.h>
 
 struct AdjacencyList
 {
@@ -36,6 +34,7 @@ public:
 	*/
 	int operator()(AdjacencyList const& connectivity, Float* spikes, Float const* neuron_outputs);
 	int operator()(ChunkedAdjacencyList const& connectivity, Float* spikes, Float const* neuron_outputs);
+	thrust::device_vector<int> const& GetFiringNeurons() const { return firing_neurons; }
 };
 
 //! Stored in CSC format!

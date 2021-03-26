@@ -2,6 +2,7 @@
 #include "graphics.h"
 #include "morphology.h"
 #include "ephys.cuh"
+#include "paracrine.cuh"
 #include "electrode_net.cuh"
 #include <glm/gtx/norm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -84,8 +85,10 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
     std::vector<CouplingStruct>& coupling_structs,
     Float* V_ptr,
     float* graphics_voltages_handle = nullptr, int const render_N = -1,
-    ElectrodeNet* electrodes = nullptr)
+    ElectrodeNet* electrodes = nullptr,
+    ParacrineModule* paracrine = nullptr)
 {
+    std::cout << " HI" << std::endl;
     // If graphics handle is non-null, allocate CPU mem to copy voltages to.
     uint8_t* frame_data;
     FILE* replay_out;
@@ -132,6 +135,15 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
         int n_firing;
         for(auto& coup_struct: coupling_structs)
             n_firing = coup_struct();
+
+        if (paracrine)
+        {
+            if(i% paracrine->timescale == 0)
+                paracrine->update_on_own_timescale();
+            else 
+                paracrine->update_on_fine_timescale(coupling_structs[0].coupling);
+        }
+
 
         // Update electrophysiology.
         ephys->SimulateEphys(thrust::raw_pointer_cast(sim_vars.data()));
@@ -386,11 +398,10 @@ void diekman_benchmark(int const N = 1, int const samp_freq = 1000, float const 
     morphology.Generate(N);
 
     float* graphics_voltage_handle;
-    Graphics::setup(graphics_voltage_handle, morphology.GetPositionsRaw(), N, render_N);
+ //   Graphics::setup(graphics_voltage_handle, morphology.GetPositionsRaw(), N, render_N);
 
     // Set up simulation variables. Stored in a struct of arrays.
     thrust::host_vector<Float*> sim_vars_cpu(NUM_DIEKMAN_VAR);
-    thrust::device_vector<Float*> sim_vars;
     std::ofstream fout("OUT_DIEKMAN.txt");
     {
         thrust::host_vector<Float> cpu_arr(N, 0);
@@ -406,7 +417,7 @@ void diekman_benchmark(int const N = 1, int const samp_freq = 1000, float const 
     set_scn_egaba(sim_vars_cpu[DIEKMAN_VAR_EGABA], &morphology, N, true, true);
 
     // Copy pointers from CPU to GPU 
-    sim_vars = sim_vars_cpu;
+    thrust::device_vector<Float*> sim_vars = sim_vars_cpu;
 
     // Setup Ephys.
     DiekmanEphys ephys(N);
@@ -420,6 +431,26 @@ void diekman_benchmark(int const N = 1, int const samp_freq = 1000, float const 
     {
         {i_list, i_coupling, sim_vars_cpu[DIEKMAN_VAR_IIN], sim_vars_cpu[DIEKMAN_VAR_IOUTPUT]}
     };
+
+    // Initialize paracrine signalling. 
+    Float min_dist = morphology.GetMinimumDistance();
+    Float voxel_size = 10 * min_dist;
+    int x_count, y_count, z_count;
+    x_count = y_count = z_count = 2 / voxel_size;
+    thrust::device_vector<Float> d_coords[3]; 
+    auto const& positions{ morphology.GetPositions() };
+
+    {
+        thrust::host_vector<Float> h_coords[3]; 
+        for (int i = 0; i < 3; ++i)
+        {
+            h_coords[i].resize(N);
+            for (int j = 0; j < N; ++j)
+                h_coords[i][j] = positions[j][i];
+            d_coords[i] = h_coords[i];
+        }
+    }
+    ParacrineModule paracrine(sim_vars_cpu[DIEKMAN_VAR_PARACRINE], 0, 0, 0, 0, diekman_params::leapfrog_dt, 1, 1, 2, 1, 0.1, {}, {}, {});
 
     // Send the connectivity to graphics.
 //    Graphics::load_in_connectivity(
@@ -440,6 +471,7 @@ void diekman_benchmark(int const N = 1, int const samp_freq = 1000, float const 
     // Note, we multiply by 1000 to convert from sec to ms.
     int const nincs = (1000 * samp_len / diekman_params::leapfrog_dt);
     int const print_incs = (int)((1000.0 / samp_freq) / diekman_params::leapfrog_dt + 0.5);
+    std::cout << " HI" << std::endl;
     _RunAndPrintSimulation(nincs, print_incs, fout,
         N, sim_vars, sim_vars_cpu,
         &ephys, 
@@ -456,6 +488,7 @@ void diekman_benchmark(int const N = 1, int const samp_freq = 1000, float const 
 
 int main()
 {
+    cusparseCreate(&Csr_matrix::handle);
     int N = 14638;
     int N_electrodes = N;
     diekman_benchmark(N, 2500, 3, N_electrodes);

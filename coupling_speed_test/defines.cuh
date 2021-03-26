@@ -1,4 +1,5 @@
 #pragma once
+
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include <thrust/device_vector.h>
@@ -12,6 +13,8 @@
 #include <H5Cpp.h>
 #include <chrono>
 #include <vector>
+#include <cusparse.h>
+#include <cublas.h>
 
 // we need these includes for CUDA's random number stuff
 #include <curand.h>
@@ -153,7 +156,8 @@ namespace an_ie_params {
 #define DIEKMAN_VAR_ICOUNT 13
 #define DIEKMAN_VAR_IOUTPUT 14
 #define DIEKMAN_VAR_EGABA 15 // GABA reversal potential
-#define NUM_DIEKMAN_VAR 16 
+#define DIEKMAN_VAR_PARACRINE 16 // Paracrine signalling input
+#define NUM_DIEKMAN_VAR 17
 namespace diekman_params {
     constexpr static const Float leapfrog_dt = 0.4;// ms Timestep to use.
     constexpr static const Float Cm = 5.7;         // pF/um^2  membrane capacitance per unit area

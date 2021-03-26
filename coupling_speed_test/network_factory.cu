@@ -127,6 +127,7 @@ bool UniformRandomNetwork::Generate(int const N)
 	}
     std::cout << "100%\r" << std::endl;
 	offset_in_indices[N] = N * Ncouple;
+	return true;
 }
 
 bool KNNNetwork::Generate(int const N)
@@ -148,6 +149,7 @@ bool KNNNetwork::Generate(int const N)
         offset_in_indices[n + 1] = offset_in_indices[n] + k;
     }
     std::cout << "100%\r" << std::endl;
+	return true;
 }
 
 FileNetwork::FileNetwork(std::string const& fl_name_)
