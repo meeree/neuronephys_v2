@@ -31,6 +31,7 @@ ChunkedAdjacencyList Network::ToChunkedAdjacencyList(Float*& Tcount) const
 	// Generate coupling
 	ChunkedAdjacencyList list;
 	int N = offset_in_indices.size() - 1;
+	std::cout << N << std::endl;
 	if (N == -1)
 	{
 		std::cerr << "Connectivity is empty. Returning blank list." << std::endl;
@@ -41,7 +42,7 @@ ChunkedAdjacencyList Network::ToChunkedAdjacencyList(Float*& Tcount) const
 	thrust::host_vector<Float> Tcount_cpu(N, 0);
 	for (int ind : indices)
 		++Tcount_cpu[ind];
-	cudaMemcpy(Tcount, Tcount_cpu.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+	gpuErrchk(cudaMemcpy(Tcount, thrust::raw_pointer_cast(Tcount_cpu.data()), N * sizeof(Float), cudaMemcpyHostToDevice));
 
 	// Copy indices into chunks.
 	thrust::host_vector<thrust::host_vector<int>>
@@ -69,12 +70,12 @@ ChunkedAdjacencyList Network::ToChunkedAdjacencyList(Float*& Tcount) const
 	for (int i = 0; i < NCHUNKS; ++i)
 	{
 		int sz = indices_chunked[i].size() * sizeof(int);
-		cudaMalloc(&(raw_indices_chunked[i]), sz);
-		cudaMemcpy(raw_indices_chunked[i], indices_chunked[i].data(), sz, cudaMemcpyHostToDevice);
+		gpuErrchk(cudaMalloc(&(raw_indices_chunked[i]), sz));
+		gpuErrchk(cudaMemcpy(raw_indices_chunked[i], indices_chunked[i].data(), sz, cudaMemcpyHostToDevice));
 
 		sz = offset_in_indices_chunked[i].size() * sizeof(int);
-		cudaMalloc(&(raw_offset_in_indices_chunked[i]), sz);
-		cudaMemcpy(raw_offset_in_indices_chunked[i], offset_in_indices_chunked[i].data(), sz, cudaMemcpyHostToDevice);
+		gpuErrchk(cudaMalloc(&(raw_offset_in_indices_chunked[i]), sz));
+		gpuErrchk(cudaMemcpy(raw_offset_in_indices_chunked[i], offset_in_indices_chunked[i].data(), sz, cudaMemcpyHostToDevice));
 	}
 
 	// Second, copy outer host_vector to device_vector on GPU.
@@ -150,6 +151,50 @@ bool KNNNetwork::Generate(int const N)
     std::cout << "100%\r" << std::endl;
 }
 
+bool NormalNetwork::Generate(int const N)
+{
+    std::cout << "Generating connections... " << std::endl;
+    std::vector<int> ball(N); 
+    std::vector<ANNdist> ball_dists(N);
+    auto& gen{ Utility::UnseededRandomEngine() };
+
+    indices.reserve(N * 100);
+    offset_in_indices.resize(N + 1, 0);
+    ANNdist const variance = stddev * stddev;
+	ANNdist const normal_dist_scalar = 1.0 / (stddev * sqrt(2.0 * 3.14159265359));
+    std::uniform_real_distribution<ANNdist> unit_dist(0.0, normal_dist_scalar);
+    int ball_sz_sum{ 0 };
+    for (int from_idx = 0; from_idx < N; ++from_idx)
+    {
+        if (from_idx % 1000 == 0)
+        {
+            std::cout << from_idx / (float)N * 100 << "%\r";
+            std::cout.flush();
+        }	
+
+		int ball_sz{ morphology_handle->WithinBall(from_idx, n_stddevs * stddev, N, ball, ball_dists) };
+        ball_sz_sum += ball_sz;
+
+		int n_inds_prev = indices.size();
+        for (int i = 1; i < ball_sz; ++i)
+        {
+            // Calculate normal distribution weight
+            ANNdist prob{ normal_dist_scalar * std::exp(-ball_dists[i] / (2 * variance)) };
+            ANNdist unit_sample = unit_dist(gen);
+
+			// We have prob chance of this condition being true, so the distribution of points will be normal.
+            if (unit_sample < prob)
+                indices.push_back(ball[i]);
+        }
+        offset_in_indices[from_idx + 1] = indices.size();
+    }
+    std::cout << "100%\r" << std::endl;
+
+    indices.shrink_to_fit(); // Shrink capacity
+    std::cout << "Average number of connections: " << indices.size() / (float)N << std::endl;
+    std::cout << "Average ball size: " << ball_sz_sum / (float)N << std::endl;
+}
+
 FileNetwork::FileNetwork(std::string const& fl_name_)
     : fl_name{ "../" + fl_name_ }, format{ fl_name_.substr(fl_name_.find_last_of('.') + 1) }
 {
@@ -196,15 +241,16 @@ bool FileNetwork::GenerateFromHDF(int const N)
 		           + std::to_string(numpnts) + " points available." << std::endl;
 
 	int sparsity{ numpnts / N };
-	indices.resize(numconns);
-	offset_in_indices.resize(numpnts + 1, 0);
+	indices.reserve(numconns);
+	offset_in_indices.resize(N + 1, 0);
 	auto it = indices.begin();
 	for (int from_idx = 0; from_idx < N; ++from_idx)
 	{
 		int const lookup_idx{ from_idx * sparsity };
 		for (int to_idx = row_ptr[lookup_idx]; to_idx < row_ptr[lookup_idx + 1]; ++to_idx)
 			if (col_idx[to_idx] % sparsity == 0)
-				*it++ = col_idx[to_idx] / sparsity;
+				indices.push_back(col_idx[to_idx] / sparsity);
 		offset_in_indices[from_idx + 1] = it - indices.begin();
 	}
+	indices.shrink_to_fit();
 }
