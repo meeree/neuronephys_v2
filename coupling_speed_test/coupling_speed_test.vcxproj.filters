@@ -15,6 +15,16 @@
     <CudaCompile Include="network_factory.cu">
       <Filter>Source</Filter>
     </CudaCompile>
+    <CudaCompile Include="ephys.cu">
+      <Filter>Source</Filter>
+    </CudaCompile>
+    <CudaCompile Include="defines.cu">
+      <Filter>Source</Filter>
+    </CudaCompile>
+    <CudaCompile Include="electrode_net.cu">
+      <Filter>Source</Filter>
+    </CudaCompile>
+    <CudaCompile Include="paracrine.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="coupling.cuh">
@@ -32,6 +42,13 @@
     <ClInclude Include="morphology.h">
       <Filter>Source</Filter>
     </ClInclude>
+    <ClInclude Include="ephys.cuh">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="electrode_net.cuh">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="paracrine.cuh" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="graphics.cpp">

@@ -88,7 +88,7 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
     ElectrodeNet* electrodes = nullptr,
     ParacrineModule* paracrine = nullptr)
 {
-    std::cout << " HI" << std::endl;
+    std::cout << " HI2" << std::endl;
     // If graphics handle is non-null, allocate CPU mem to copy voltages to.
     uint8_t* frame_data;
     FILE* replay_out;
@@ -98,6 +98,8 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
         frame_data = (uint8_t*)malloc(3 * sizeof(uint8_t) * Graphics::get_width() * Graphics::get_height());
         replay_out = fopen("REPLAY.raw", "wb");
     }
+    float* slice = nullptr;
+    int slice_index;
 
     for (int i = 0; i < nincs; ++i)
     {
@@ -120,8 +122,11 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
 #endif
                 fout << ElectrodeNet::MeasureAverageEntireNetwork(V_ptr, N);
 				fout << std::endl;
+                slice_index = Graphics::get_slice_index();
+                if (paracrine)
+                    paracrine->get_grid().density().slice(slice_index % paracrine->z_gridcount).as(f32).host(slice);
 
-                pause = Graphics::render(graphics_voltages_handle, nullptr, 0, 0, pause);
+                pause = Graphics::render(graphics_voltages_handle, slice, 0, 0, pause);
             }
         }
 
@@ -398,7 +403,7 @@ void diekman_benchmark(int const N = 1, int const samp_freq = 1000, float const 
     morphology.Generate(N);
 
     float* graphics_voltage_handle;
- //   Graphics::setup(graphics_voltage_handle, morphology.GetPositionsRaw(), N, render_N);
+    Graphics::setup(graphics_voltage_handle, morphology.GetPositionsRaw(), N, render_N);
 
     // Set up simulation variables. Stored in a struct of arrays.
     thrust::host_vector<Float*> sim_vars_cpu(NUM_DIEKMAN_VAR);
@@ -450,7 +455,10 @@ void diekman_benchmark(int const N = 1, int const samp_freq = 1000, float const 
             d_coords[i] = h_coords[i];
         }
     }
-    ParacrineModule paracrine(sim_vars_cpu[DIEKMAN_VAR_PARACRINE], 0, 0, 0, 0, diekman_params::leapfrog_dt, 1, 1, 2, 1, 0.1, {}, {}, {});
+
+    //ParacrineModule paracrine(sim_vars_cpu[DIEKMAN_VAR_PARACRINE], 0, 0, 0, 0, diekman_params::leapfrog_dt, 1, 1, 2, 1, 0.1, {}, {}, {});
+    std::cout << x_count;
+    ParacrineModule paracrine(sim_vars_cpu[DIEKMAN_VAR_PARACRINE],N,x_count,y_count,z_count,100*diekman_params::leapfrog_dt,100,0.5,voxel_size,2e-5,3e-4,d_coords[0], d_coords[1], d_coords[2]);
 
     // Send the connectivity to graphics.
 //    Graphics::load_in_connectivity(
