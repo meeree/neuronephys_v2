@@ -116,35 +116,6 @@ public:
 };
 
 //Finite difference for heat eqn:
-struct Density_on_grid_2d {
-    af::array data;
-    void initialize_data();
-    const Float spatial_gridsize;
-    const int y_count;
-    const int x_count;
-    const Float diffusion_coefficient;
-    const Float decay_coefficient;
-    Density_on_grid_2d(int width, int height, Float spatial_gridsize, Float diffusion_coefficient, Float decay_coefficient):
-        spatial_gridsize(spatial_gridsize),
-        x_count(width),
-        y_count(height),
-        diffusion_coefficient(diffusion_coefficient),
-        decay_coefficient(decay_coefficient)
-    {
-        initialize_data();
-    }
-    //convolution with 5 point stencil laplacian:
-    void update_density(const Float timestep, const Float error_bound = 1e-6);
-    //Testing functionality:
-    void set_delta() {
-        data(x_count / 2, y_count / 2) = 1.0;
-        return;
-    }
-    const af::array& density() const{
-        return data;
-    }
-};
-
 //3D version: Note in this version, we consider the grid point extends to the boundary, so that boundary conditions can be imposed later. Whereas currently
 // 2D version uses only "interior grid points". 
 struct Density_on_grid_3d {
@@ -156,16 +127,18 @@ struct Density_on_grid_3d {
     int z_count;//depth
     Float diffusion_coefficient;
     Float decay_coefficient;
+    Float* raw_data_d_ptr;
     af::array data;
     Density_on_grid_3d(int x_count, int y_count, int z_count, Float spatial_gridsize, Float diffusion_coefficient, Float decay_coefficient) :
-        
+
         spatial_gridsize(spatial_gridsize),
         x_count(x_count),
         y_count(y_count),
         z_count(z_count),
         diffusion_coefficient(diffusion_coefficient),
         decay_coefficient(decay_coefficient),
-        data()
+        data(),
+        raw_data_d_ptr(NULL)
     {
         initialize_data();
     }
@@ -243,11 +216,14 @@ public:
         grid(x_grid_count, y_grid_count, z_grid_count, spatial_gridsize, diffusion_coef, decay_coef), 
         grid_converter(grid, neuron_count, d_x_coords, d_y_coords, d_z_coords)
     {
-        grid.data.eval();
+        //grid.data.eval();
         grid.data.lock();
         grid_converter.interpolate_at_location(density_at_neurons, grid);
-        af::sync();
+        //af::sync();
+        std::cout << "Tree.\n";
+        cudaDeviceSynchronize();
         thrust::copy(density_at_neurons.begin(), density_at_neurons.end(), thrust::device_ptr<Float>(d_g_paracrine));
+        std::cout << "Tree2.\n";
     }
 
     virtual void update_on_fine_timescale(AtomicCoupling const& coupling) 

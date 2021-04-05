@@ -11,82 +11,58 @@ cusparseHandle_t Csr_matrix::handle;
 //Helper function
 thrust::device_vector<Float> af_array_to_thrust_vector(const af::array& af_array) {
     //refer to http://arrayfire.org/docs/interop_cuda.htm
-    af_array.eval();
-    af::sync();
     Float* data_ptr_on_device = af_array.device<Float>();
     const thrust::device_vector<Float> rval(data_ptr_on_device, data_ptr_on_device + af_array.elements());
     cudaDeviceSynchronize();
-    af_array.unlock();
     return rval;
 }
-
-void Density_on_grid_2d::initialize_data() {
-    if(sizeof(Float) < sizeof(double))
-        data = af::constant(0.0, x_count, y_count, f32);
-    else
-        data = af::constant(0.0, x_count, y_count, f64);
-}
 void Density_on_grid_3d::initialize_data() {
-    if(sizeof(Float) < sizeof(double))
-        data = af::constant(0.0, x_count, y_count, z_count, f32);
-    else
-        data = af::constant(0.0, x_count, y_count, z_count, f64);
+    std::vector<Float> zero_vector(x_count * y_count * z_count, 0.0f);
+    cudaMalloc((void**)raw_data_d_ptr, x_count * y_count * z_count * sizeof(Float));
+    cudaMemcpy(raw_data_d_ptr, zero_vector.data(), x_count * y_count * z_count * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaDeviceSynchronize();
+    data = af::array(x_count, y_count, z_count, raw_data_d_ptr, afDevice);
+    data.eval();
+    af::sync();
+    data.device<Float>();
 }
 
-void Density_on_grid_2d::update_density(const Float timestep, const Float error_bound) {
-    // 1/dt(u^{n+1}-u^n)
-    const Float laplace_stencil_h[] = { 1, 4, 1, 4, -20, 4, 1, 4, 1 };//9 point stencil known as High-Order compact FD Schemes
-    //Ref: https://www.researchgate.net/publication/2591103_High-Order_Compact_Finite_Difference_Schemes_for_Computational_Mechanics/link/00463524456e49822a000000/download page 33(48)
-    const af::array laplace_stencil = af::array(3, 3, laplace_stencil_h) * (1 / (spatial_gridsize*spatial_gridsize * 6.0));
-    //Initial guess, using explicit method:
-    const af::array laplacian_u = af::convolve2(data, laplace_stencil, af::convMode::AF_CONV_DEFAULT, af::convDomain::AF_CONV_SPATIAL);
-    af::array data_next_step = (1 - timestep * decay_coefficient) * data + timestep * diffusion_coefficient * laplacian_u;
-    //Eqn to solve: 
-    //D*: diffusion coeff. k: decay coeff.
-    //(1 + \Delta T k / 2) I - \Delta T D*/2 \nabla^9) u^(n+1) = u^n + \Delta T D* \nabla^9 u^n / 2 - \Delta T k u^n / 2
-    //Rewrite as Ax = b. 
-    const Float identity_stencil_h[] = { 0, 0, 0, 0, 1, 0, 0, 0, 0 };
-    const af::array identity_stencil = af::array(3, 3, identity_stencil_h);
-    const af::array A = -0.5*diffusion_coefficient*timestep * laplace_stencil + (1 + 0.5 * timestep * decay_coefficient) * identity_stencil;
-    //af::print("A", A);
-    const af::array b = (1 - spatial_gridsize * decay_coefficient / 2)*data + spatial_gridsize * diffusion_coefficient / 2 * laplacian_u;
-    const int max_iteration = 20;
-    //Solving Ax = b using conjugate gradient descent: 
-    //refer to page on wikipedia: https://en.wikipedia.org/wiki/Conjugate_gradient_method
-    af::array r = b - af::convolve2(data_next_step, A, af::convMode::AF_CONV_DEFAULT, af::convDomain::AF_CONV_SPATIAL);
-    af::array p = r;
-    Float r_normsquare_old = pow(af::norm(r, af::normType::AF_NORM_VECTOR_2), 2);
-    for (int i = 0; i < max_iteration; i++) {
-        const af::array Ap = af::convolve2(p, A, af::convMode::AF_CONV_DEFAULT, af::convDomain::AF_CONV_SPATIAL);//A*p
-        const Float pAp = af::sum<Float>(p*Ap);
-        const Float alpha = r_normsquare_old / pAp; // (r'*r)/(p'*A*p)
-        data_next_step = data_next_step + alpha * p;
-        r = r - alpha * Ap;
-        Float r_normsquare_new = pow(af::norm(r, af::normType::AF_NORM_VECTOR_2), 2);
-        if (r_normsquare_new < error_bound)
-            break;
-        p = r + (r_normsquare_new / r_normsquare_old) * p;
-        r_normsquare_old = r_normsquare_new;
-    }
-    data = data_next_step;
-}
+
 void Density_on_grid_3d::update_density(const Float timestep, const Float error_bound) {
     //NOTE: AF_CONV_FREQ is the less optimal method for the size of input. However, since the convolve3 with 
     //AF_CONV_SPATIAL seems broken with the current version of arrayfire, this is the workaround to take now.
     // 1/dt(u^{n+1}-u^n)
+    cudaDeviceSynchronize();
     const Float laplace_stencil_h[] = { 1,3,1,3,14,3,1,3,1,3,14,3,14,-128,14,3,14,3,1,3,1,3,14,3,1,3,1 };//27 point stencil known as High-Order compact FD Schemes
                                                                        //Ref: https://www.researchgate.net/publication/2591103_High-Order_Compact_Finite_Difference_Schemes_for_Computational_Mechanics/link/00463524456e49822a000000/download page 110(125)
-    const af::array laplace_stencil = af::array(3, 3, 3, laplace_stencil_h) * (1 / (spatial_gridsize*spatial_gridsize * 30.0));
+    Float* d_stencil;
+    Float* d_A;
+    Float* d_b;
+    Float* d_laplacian_u;
+    Float* d_data_next;
+    cudaMalloc((void**)d_stencil, 27 * sizeof(Float));
+    cudaMalloc((void**)d_A, 27 * sizeof(Float));
+    cudaMalloc((void**)d_b, x_count * y_count * z_count * sizeof(Float));
+    cudaMalloc((void**)d_laplacian_u, x_count * y_count * z_count * sizeof(Float));
+    cudaMalloc((void**)d_data_next, x_count * y_count * z_count * sizeof(Float));
+    cudaMemcpy(d_stencil, laplace_stencil_h, 27 * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaDeviceSynchronize();
+    af::array laplace_stencil(3, 3, 3, d_stencil, afDevice);
+    laplace_stencil = laplace_stencil * (1 / (spatial_gridsize * spatial_gridsize * 30.0));
     //Initial guess, using explicit method:
-    const af::array laplacian_u = af::convolve3(data, laplace_stencil, af::convMode::AF_CONV_DEFAULT, af::convDomain::AF_CONV_FREQ);
-    af::array data_next_step = (1 - timestep * decay_coefficient) * data + timestep * diffusion_coefficient * laplacian_u;
+    af::array laplacian_u(x_count,y_count,z_count,d_laplacian_u,afDevice); 
+    laplacian_u = af::convolve3(data, laplace_stencil, af::convMode::AF_CONV_DEFAULT, af::convDomain::AF_CONV_SPATIAL);
+    af::array data_next_step(x_count, y_count, z_count, d_data_next, afDevice);
+    data_next_step = (1 - timestep * decay_coefficient) * data + timestep * diffusion_coefficient * laplacian_u;
     //Eqn to solve: 
     //D*: diffusion coeff. k: decay coeff.
     //(1 + \Delta T k / 2) I - \Delta T D*/2 \nabla^27) u^(n+1) = u^n + \Delta T D* \nabla^27 u^n / 2 - \Delta T k u^n / 2
     //Rewrite as Ax = b. 
-    const Float identity_stencil_h[] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0 };
-    const af::array identity_stencil = af::array(3, 3, 3, identity_stencil_h);
-    const af::array A = -0.5*diffusion_coefficient*timestep * laplace_stencil + (1 + 0.5 * timestep * decay_coefficient) * identity_stencil;
+    //const Float identity_stencil_h[] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0 };
+    //const af::array identity_stencil = af::array(3, 3, 3, identity_stencil_h);
+    af::array A(3, 3, 3, d_A, afDevice);
+    A = -0.5 * diffusion_coefficient * timestep * laplace_stencil;// +(1 + 0.5 * timestep * decay_coefficient) *identity_stencil;
+    A(1, 1, 1) = A(1, 1, 1) + 1 + 0.5 * timestep * decay_coefficient;
 #ifdef SOME_SANITY_CHECK_CODE
     af::print("A", A);
     const int test_shape_side_length = 7;
@@ -109,11 +85,12 @@ void Density_on_grid_3d::update_density(const Float timestep, const Float error_
     std::cout << "Shape of test_array: [" << data_shape[0] << ", " << data_shape[1] << ", " << data_shape[2] << ", " << data_shape[3] << "]\n";
     std::cout << "Sum of values: expect " << af::sum<Float>(data) * af::sum<Float>(A) << ", actual " << af::sum<Float>(test_array);
 #endif // SOME_SANITY_CHECK_CODE
-    const af::array b = (1 - spatial_gridsize * decay_coefficient / 2)*data + spatial_gridsize * diffusion_coefficient / 2 * laplacian_u;
+    af::array b(x_count,y_count,z_count,d_b,afDevice); 
+    b = (1 - spatial_gridsize * decay_coefficient / 2) * data + spatial_gridsize * diffusion_coefficient / 2 * laplacian_u;
     const int max_iteration = 20;
     //Solving Ax = b using conjugate gradient descent: 
     //refer to page on wikipedia: https://en.wikipedia.org/wiki/Conjugate_gradient_method
-    af::array r = b - af::convolve3(data_next_step, A, af::convMode::AF_CONV_DEFAULT, af::convDomain::AF_CONV_FREQ);
+    af::array r = b - af::convolve3(data_next_step, A, af::convMode::AF_CONV_DEFAULT, af::convDomain::AF_CONV_SPATIAL);
     af::array p = r;
     Float r_normsquare_old = pow(af::norm(af::flat(r), af::normType::AF_NORM_VECTOR_2), 2);
     if (r_normsquare_old < error_bound) {
@@ -134,6 +111,8 @@ void Density_on_grid_3d::update_density(const Float timestep, const Float error_
     }
     data = data_next_step;
     data.eval();
+    af::sync();
+    data.lock();
 }
 
 void Scatter_grid_converter_3d::initialize_distribute_private(const thrust::device_vector<Float> x_coordinate, const thrust::device_vector<Float> y_coordinate, const thrust::device_vector<Float> z_coordinate) {
