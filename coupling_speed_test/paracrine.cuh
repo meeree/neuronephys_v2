@@ -217,11 +217,10 @@ public:
         grid_converter(grid, neuron_count, d_x_coords, d_y_coords, d_z_coords)
     {
         //grid.data.eval();
-        grid.data.lock();
         grid_converter.interpolate_at_location(density_at_neurons, grid);
         //af::sync();
         std::cout << "Tree.\n";
-        cudaDeviceSynchronize();
+        gpuErrchk(cudaDeviceSynchronize());
         thrust::copy(density_at_neurons.begin(), density_at_neurons.end(), thrust::device_ptr<Float>(d_g_paracrine));
         std::cout << "Tree2.\n";
     }

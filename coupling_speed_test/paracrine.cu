@@ -18,13 +18,14 @@ thrust::device_vector<Float> af_array_to_thrust_vector(const af::array& af_array
 }
 void Density_on_grid_3d::initialize_data() {
     std::vector<Float> zero_vector(x_count * y_count * z_count, 0.0f);
-    cudaMalloc((void**)raw_data_d_ptr, x_count * y_count * z_count * sizeof(Float));
-    cudaMemcpy(raw_data_d_ptr, zero_vector.data(), x_count * y_count * z_count * sizeof(Float), cudaMemcpyHostToDevice);
+    gpuErrchk(cudaMalloc(&raw_data_d_ptr, x_count * y_count * z_count * sizeof(Float)));
+    gpuErrchk(cudaMemcpy(raw_data_d_ptr, zero_vector.data(), x_count * y_count * z_count * sizeof(Float), cudaMemcpyHostToDevice));
     cudaDeviceSynchronize();
     data = af::array(x_count, y_count, z_count, raw_data_d_ptr, afDevice);
     data.eval();
     af::sync();
     data.device<Float>();
+    gpuErrchk(cudaDeviceSynchronize());
 }
 
 
@@ -40,11 +41,11 @@ void Density_on_grid_3d::update_density(const Float timestep, const Float error_
     Float* d_b;
     Float* d_laplacian_u;
     Float* d_data_next;
-    cudaMalloc((void**)d_stencil, 27 * sizeof(Float));
-    cudaMalloc((void**)d_A, 27 * sizeof(Float));
-    cudaMalloc((void**)d_b, x_count * y_count * z_count * sizeof(Float));
-    cudaMalloc((void**)d_laplacian_u, x_count * y_count * z_count * sizeof(Float));
-    cudaMalloc((void**)d_data_next, x_count * y_count * z_count * sizeof(Float));
+    cudaMalloc(&d_stencil, 27 * sizeof(Float));
+    cudaMalloc(&d_A, 27 * sizeof(Float));
+    cudaMalloc(&d_b, x_count * y_count * z_count * sizeof(Float));
+    cudaMalloc(&d_laplacian_u, x_count * y_count * z_count * sizeof(Float));
+    cudaMalloc(&d_data_next, x_count * y_count * z_count * sizeof(Float));
     cudaMemcpy(d_stencil, laplace_stencil_h, 27 * sizeof(Float), cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
     af::array laplace_stencil(3, 3, 3, d_stencil, afDevice);
@@ -250,6 +251,7 @@ void Scatter_grid_converter_3d::initialize_distribute_private(const thrust::devi
         thrust::copy(neuron_to_gridpoint_weight[i].begin(), neuron_to_gridpoint_weight[i].end(), thrust::make_permutation_iterator(grid_to_scatter_interpolation_matrix.value_begin(), index_vector.begin()));
         thrust::transform(index_vector.begin(), index_vector.end(), index_vector.begin(), thrust::placeholders::_1 + 1);
     }
+    std::cout << "Enter transpose:\n";
     scatter_to_grid_distribution_matrix = grid_to_scatter_interpolation_matrix.get_transpose();
     return;
 }
@@ -272,8 +274,8 @@ void Scatter_grid_converter_3d::interpolate_at_location(thrust::device_vector<Fl
     const Float* data_ptr_on_device = grid.data.device<Float>();
     Float* scatter_ptr = thrust::raw_pointer_cast(scatter.data());
     grid_to_scatter_interpolation_matrix.dense_vector_multiplication(data_ptr_on_device, scatter_ptr);
-    cudaDeviceSynchronize();
-    grid.data.unlock();
+    gpuErrchk(cudaDeviceSynchronize());
+    //grid.data.unlock();
 }
 
 #if USE_DOUBLE_PRECISION
@@ -297,7 +299,7 @@ void Csr_matrix::dense_vector_multiplication(const Float* x_ptr, Float* Ax_ptr) 
     auto type = (sizeof(Float) < sizeof(double)) ? CUDA_R_32F : CUDA_R_64F;
 
     cusparseSpMatDescr_t mat_desc;
-    cusparseCreateCsr(&mat_desc, row_count, col_count, nnz,
+    cusparseErrchk(cusparseCreateCsr(&mat_desc, row_count, col_count, nnz,
         (void*)thrust::raw_pointer_cast(d_row_entrycount.data()),
         (void*)thrust::raw_pointer_cast(d_col_index.data()),
         (void*)thrust::raw_pointer_cast(d_value.data()),
@@ -305,16 +307,21 @@ void Csr_matrix::dense_vector_multiplication(const Float* x_ptr, Float* Ax_ptr) 
         CUSPARSE_INDEX_32I,
         CUSPARSE_INDEX_BASE_ZERO,
         type
-    );
-
+    ));
+    gpuErrchk(cudaDeviceSynchronize());
     cusparseDnVecDescr_t x_vec, Ax_vec;
-    cusparseCreateDnVec(&x_vec, col_count, (void*)x_ptr, CUDA_R_32F);
-    cusparseCreateDnVec(&Ax_vec, row_count, (void*)Ax_ptr, CUDA_R_32F);
-
+    cusparseErrchk(cusparseCreateDnVec(&x_vec, col_count, (void*)x_ptr, CUDA_R_32F));
+    cusparseErrchk(cusparseCreateDnVec(&Ax_vec, row_count, (void*)Ax_ptr, CUDA_R_32F));
+    gpuErrchk(cudaDeviceSynchronize());
     size_t buffer_size;
-    cusparseSpMV_bufferSize(handle, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, mat_desc, x_vec, &beta, Ax_vec, type, CUSPARSE_CSRMV_ALG1, &buffer_size);
+    Float* d_mv_buffer;
+    cusparseErrchk(cusparseSpMV_bufferSize(handle, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, mat_desc, x_vec, &beta, Ax_vec, type, CUSPARSE_CSRMV_ALG1, &buffer_size));
+    gpuErrchk(cudaDeviceSynchronize());
+    cudaMalloc(&d_mv_buffer, buffer_size);
     std::wcout << "BUF SIZE " << buffer_size << std::endl;
-    cusparseSpMV(handle, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, mat_desc, x_vec, &beta, Ax_vec, type, CUSPARSE_CSRMV_ALG1, nullptr);
+    cusparseErrchk(cusparseSpMV(handle, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, mat_desc, x_vec, &beta, Ax_vec, type, CUSPARSE_CSRMV_ALG1, d_mv_buffer));
+    gpuErrchk(cudaDeviceSynchronize());
+    cudaFree(d_mv_buffer);
 }
 
 void Csr_matrix::sparse_vector_transpose_multiplication(const thrust::device_vector<Float> x, thrust::device_vector<Float>& Ax) {

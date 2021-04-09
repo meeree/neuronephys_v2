@@ -99,7 +99,10 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
         replay_out = fopen("REPLAY.raw", "wb");
     }
     float* slice = nullptr;
-    int slice_index;
+    if (paracrine) // If using paracrine signalling, display slice.
+        slice = paracrine->get_grid().density().slice(Graphics::get_slice_index()).as(f32).host<float>();
+
+    
 
     for (int i = 0; i < nincs; ++i)
     {
@@ -122,10 +125,10 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
 #endif
                 fout << ElectrodeNet::MeasureAverageEntireNetwork(V_ptr, N);
 				fout << std::endl;
+                int slice_index;
                 slice_index = Graphics::get_slice_index();
                 if (paracrine)
                     paracrine->get_grid().density().slice(slice_index % paracrine->z_gridcount).as(f32).host(slice);
-
                 pause = Graphics::render(graphics_voltages_handle, slice, 0, 0, pause);
             }
         }
