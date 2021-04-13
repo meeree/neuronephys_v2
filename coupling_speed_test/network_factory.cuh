@@ -82,6 +82,27 @@ public:
 	virtual bool Generate(int const N) override;
 };
 
+//! Localized coupling where a neuron is connected to a fixed number of neighbors within a certain radius with probability 
+//! given by normal distribution. NOT the same as KNNNetwork! 
+class NormalNetwork : public Network
+{
+protected:
+	Morphology* morphology_handle;
+	Float stddev;
+    int n_stddevs; 
+
+public:
+	/*!
+	  \param [in] morphology_handle_ A pointer to the morphology which handles finding neighbors.
+	  \param [in] stddev_ Standard deviation in world coordinates for normal blobs.
+	  \param [in] max_n_conns_ Number of neurons to couple to per neuron.
+	  \param [in] n_stddevs_ Number of standard deviations to use for connections. Since 95% is within 2 stddevs, this defaults to 2.
+	*/
+	NormalNetwork(Morphology* morphology_handle_, Float stddev_, int n_stddevs_=2) 
+		: morphology_handle{ morphology_handle_ }, stddev{ stddev_ }, n_stddevs{ n_stddevs_ } {}
+	virtual bool Generate(int const N) override;
+};
+
 //! Network read in from a file with the format inferred in constructor.
 class FileNetwork : public Network
 {
