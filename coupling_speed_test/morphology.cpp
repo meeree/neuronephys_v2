@@ -1,5 +1,6 @@
 #define _USE_MATH_DEFINES
 #include "morphology.h"
+#include <set>
 #include <glm/ext.hpp>
 #include <glm/gtx/norm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -42,6 +43,18 @@ void Morphology::KNN(ANNpoint pos , int const k, std::vector<int>& knn, std::vec
     if (!kd_tree)
         SetupANN();
 	kd_tree->annkSearch(pos, k, knn.data(), knn_dists.data());
+}
+
+int Morphology::WithinBall(int const n, Float dist_not_sqr, int max_n_conns, std::vector<int>& ball, std::vector<ANNdist>& ball_dists)
+{
+    return WithinBall(glm::value_ptr(positions[n]), dist_not_sqr, max_n_conns, ball, ball_dists);
+}
+
+int Morphology::WithinBall(ANNpoint pos, Float dist_not_sqr, int max_n_conns, std::vector<int>& ball, std::vector<ANNdist>& ball_dists)
+{
+    if (!kd_tree)
+        SetupANN();
+    return kd_tree->annkFRSearch(pos, dist_not_sqr * dist_not_sqr, max_n_conns, ball.data(), ball_dists.data());
 }
 
 void Morphology::GenSphericalRegions(
@@ -128,6 +141,12 @@ std::vector<bool> Morphology::ToBinaryVoxels(glm::uvec3 const& dims) const
         grid[vidx.x + dims[0] * (vidx.y + dims[1] * vidx.z)] = true;
     }
     return grid;
+}
+
+void Morphology::ProjectNeuronsToPlane(int dim)
+{
+    for (auto& pos : positions)
+        pos[dim] = 0;
 }
 
 float Morphology::GetMinimumDistance()
@@ -232,8 +251,8 @@ Float SimpleWrinkledSolidSphere::F(glm::vec3 const& p) const
     return r - cos(phi) * (0.15 * cos(20 * theta) + 0.85);
 }
 
-FileMorphology::FileMorphology(std::string const& fl_name_)
-    : fl_name{ "../" + fl_name_ }, format{ fl_name_.substr(fl_name_.find_last_of('.') + 1) }
+FileMorphology::FileMorphology(std::string const& fl_name_, bool read_regions_)
+    : fl_name{ "../" + fl_name_ }, format{ fl_name_.substr(fl_name_.find_last_of('.') + 1) }, read_regions{ read_regions_ }
 {
 }
 
@@ -252,13 +271,14 @@ bool FileMorphology::GenerateFromHDF(int const N)
 {
     // First read in three individual axes, then put into positions,
     // finally scale and transform into range [-1, 1].
-    std::vector<float> axes[3];
-    static const char* coord_ids[3]{ "/x", "/y", "/z" };
+    std::vector<float> axes[4];
+    const char* coord_ids[4]{ "/x", "/y", "/z", "/region_id" };
     int numpnts;
+    int n_dims = read_regions ? 4 : 3;
     try
     {
         H5File file(fl_name, H5F_ACC_RDONLY);
-        for (int i = 0; i < 3; ++i)
+        for (int i = 0; i < n_dims; ++i)
         {
             DataSet axis = file.openDataSet(coord_ids[i]);
             numpnts = (int)(axis.getStorageSize() / sizeof(float));
@@ -297,6 +317,25 @@ bool FileMorphology::GenerateFromHDF(int const N)
         positions[i] = { axes[0][j], axes[1][j], axes[2][j] };
     }
 
+    if (read_regions)
+    {
+        regions.resize(N);
+        for (int i = 0; i < N; ++i)
+        {
+            int const j{ stride * i };
+            regions[i] = axes[n_dims - 1][j];
+        }
+        std::set<int> unique_regions_set(regions.begin(), regions.end());
+        std::vector<int> unique_regions(unique_regions_set.begin(), unique_regions_set.end());
+        for (int i = 0; i < N; ++i)
+            regions[i] = std::find(unique_regions.begin(), unique_regions.end(), regions[i]) - unique_regions.begin();
+
+        std::vector<int> occurences(unique_regions.size(), 0);
+        for (int i = 0; i < N; ++i)
+            occurences[regions[i]] += 1;
+        std::cout << std::max_element(occurences.begin(), occurences.end()) - occurences.begin() << std::endl;
+    }
+
     // Translate so that min is zero.
     Translate(-wmin);
 
@@ -307,6 +346,36 @@ bool FileMorphology::GenerateFromHDF(int const N)
     Translate(glm::vec3(-1));
 
 	return true;
+}
+
+void FileMorphology::GenRegionsFromIDs(thrust::host_vector<int>& h_regions, thrust::host_vector<int>& h_region_inds)
+{
+    if (!kd_tree)
+        SetupANN();
+
+    std::cout << "Generating regions from IDs..." << std::endl;
+    int const N = positions.size();
+	int const N_regions = std::set<int>(regions.begin(), regions.end()).size();
+    h_regions.resize(N);
+    h_region_inds.resize(N_regions + 1, 0);
+    auto it = h_regions.begin();
+    std::vector<int> sizes;
+    for (int n = 0; n < N_regions; ++n)
+    {
+        for (int j = 0; j < N; ++j)
+        {
+            if (regions[j] == n)
+                *it++ = j;
+            if (it - h_regions.begin() - h_region_inds[n] == 100)
+            {
+                std::cout << n << ',';
+                break;
+            }
+        }
+
+        h_region_inds[n + 1] = (it - h_regions.begin());
+        sizes.push_back(h_region_inds[n + 1] - h_region_inds[n]);
+    }
 }
 
 MouseBrain2D::MouseBrain2D(std::string const& bmp_scan_)
