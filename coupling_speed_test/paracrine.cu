@@ -30,12 +30,33 @@ void Density_on_grid_3d::initialize_data() {
     cudaMalloc(&d_A, 27 * sizeof(Float));
     cudaMalloc(&d_b, x_count * y_count * z_count * sizeof(Float));
     cudaMalloc(&d_p, x_count * y_count * z_count * sizeof(Float));
+    cudaMalloc(&d_Ap, x_count * y_count * z_count * sizeof(Float));
     cudaMalloc(&d_r, x_count * y_count * z_count * sizeof(Float));
     cudaMalloc(&d_laplacian_u, x_count * y_count * z_count * sizeof(Float));
     cudaMalloc(&d_data_next, x_count * y_count * z_count * sizeof(Float));
-    //cudaMemcpy(d_stencil, laplace_stencil_h, 27 * sizeof(Float), cudaMemcpyHostToDevice);
-    cudaDeviceSynchronize();
     gpuErrchk(cudaDeviceSynchronize());
+    laplace_stencil = af::array(3, 3, 3, d_stencil, afDevice);
+    laplace_stencil.device<Float>();
+    const Float laplace_stencil_h[] = { 1,3,1,3,14,3,1,3,1,3,14,3,14,-128,14,3,14,3,1,3,1,3,14,3,1,3,1 };//27 point stencil known as High-Order compact FD Schemes
+                                                                  //Ref: https://www.researchgate.net/publication/2591103_High-Order_Compact_Finite_Difference_Schemes_for_Computational_Mechanics/link/00463524456e49822a000000/download page 110(125)
+    cudaMemcpy(d_stencil, laplace_stencil_h, 27 * sizeof(Float), cudaMemcpyHostToDevice);
+    laplace_stencil = laplace_stencil * (1 / (spatial_gridsize * spatial_gridsize * 30.0));
+    laplacian_u = af::array(x_count, y_count, z_count, d_laplacian_u, afDevice);
+    data_next_step = af::array(x_count, y_count, z_count, d_data_next, afDevice);
+    A = af::array(3, 3, 3, d_A, afDevice);
+    b = af::array(x_count, y_count, z_count, d_b, afDevice);
+    p = af::array(x_count, y_count, z_count, d_p, afDevice);
+    Ap = af::array(x_count, y_count, z_count, d_Ap, afDevice);
+    r = af::array(x_count, y_count, z_count, d_r, afDevice);
+    laplace_stencil.lock();
+    laplacian_u.lock();
+    data_next_step.lock();
+    A.lock();
+    b.lock();
+    p.lock();
+    Ap.lock();
+    r.lock();
+    af::sync();
 }
 
 
@@ -44,20 +65,11 @@ void Density_on_grid_3d::update_density(const Float timestep, const Float error_
     //AF_CONV_SPATIAL seems broken with the current version of arrayfire, this is the workaround to take now.
     // 1/dt(u^{n+1}-u^n)
     gpuErrchk(cudaDeviceSynchronize());
-    af::array laplace_stencil(3, 3, 3, d_stencil, afDevice);
-    const Float laplace_stencil_h[] = { 1,3,1,3,14,3,1,3,1,3,14,3,14,-128,14,3,14,3,1,3,1,3,14,3,1,3,1 };//27 point stencil known as High-Order compact FD Schemes
-                                                                      //Ref: https://www.researchgate.net/publication/2591103_High-Order_Compact_Finite_Difference_Schemes_for_Computational_Mechanics/link/00463524456e49822a000000/download page 110(125)
-    cudaMemcpy(d_stencil, laplace_stencil_h, 27 * sizeof(Float), cudaMemcpyHostToDevice);
-    laplace_stencil = laplace_stencil * (1 / (spatial_gridsize * spatial_gridsize * 30.0));
-    Float* h_stencil;
-    h_stencil = (Float*)malloc(27 * sizeof(Float));
     af::sync();
-    cudaMemcpy(h_stencil, d_stencil, 27, cudaMemcpyDeviceToHost);
     //Initial guess, using explicit method:
-    af::array laplacian_u(x_count,y_count,z_count,d_laplacian_u,afDevice); 
     laplacian_u = af::convolve3(data, laplace_stencil, af::convMode::AF_CONV_DEFAULT, af::convDomain::AF_CONV_FREQ);
     af::sync();
-    af::array data_next_step(x_count, y_count, z_count, d_data_next, afDevice);
+    
     data_next_step = (1 - timestep * decay_coefficient) * data + timestep * diffusion_coefficient * laplacian_u;
     //Eqn to solve: 
     //D*: diffusion coeff. k: decay coeff.
@@ -65,7 +77,6 @@ void Density_on_grid_3d::update_density(const Float timestep, const Float error_
     //Rewrite as Ax = b. 
     //const Float identity_stencil_h[] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0 };
     //const af::array identity_stencil = af::array(3, 3, 3, identity_stencil_h);
-    af::array A(3, 3, 3, d_A, afDevice);
     A = -0.5 * diffusion_coefficient * timestep * laplace_stencil;// +(1 + 0.5 * timestep * decay_coefficient) *identity_stencil;
     A(1, 1, 1) = A(1, 1, 1) + 1 + 0.5 * timestep * decay_coefficient;
 #ifdef SOME_SANITY_CHECK_CODE
@@ -90,7 +101,7 @@ void Density_on_grid_3d::update_density(const Float timestep, const Float error_
     std::cout << "Shape of test_array: [" << data_shape[0] << ", " << data_shape[1] << ", " << data_shape[2] << ", " << data_shape[3] << "]\n";
     std::cout << "Sum of values: expect " << af::sum<Float>(data) * af::sum<Float>(A) << ", actual " << af::sum<Float>(test_array);
 #endif // SOME_SANITY_CHECK_CODE
-    af::array b(x_count,y_count,z_count,d_b,afDevice); 
+    
     b = (1 - spatial_gridsize * decay_coefficient / 2) * data + spatial_gridsize * diffusion_coefficient / 2 * laplacian_u;
     const int max_iteration = 20;
     //Solving Ax = b using conjugate gradient descent: 
