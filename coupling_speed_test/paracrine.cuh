@@ -129,6 +129,13 @@ struct Density_on_grid_3d {
     Float decay_coefficient;
     Float* raw_data_d_ptr;
     af::array data;
+    Float* d_stencil;
+    Float* d_A;
+    Float* d_b;
+    Float* d_r;
+    Float* d_p;
+    Float* d_laplacian_u;
+    Float* d_data_next;
     Density_on_grid_3d(int x_count, int y_count, int z_count, Float spatial_gridsize, Float diffusion_coefficient, Float decay_coefficient) :
 
         spatial_gridsize(spatial_gridsize),

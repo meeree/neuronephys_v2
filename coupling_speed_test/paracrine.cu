@@ -25,6 +25,17 @@ void Density_on_grid_3d::initialize_data() {
     data.eval();
     af::sync();
     data.device<Float>();
+    const Float laplace_stencil_h[] = { 1,3,1,3,14,3,1,3,1,3,14,3,14,-128,14,3,14,3,1,3,1,3,14,3,1,3,1 };//27 point stencil known as High-Order compact FD Schemes
+                                                                       //Ref: https://www.researchgate.net/publication/2591103_High-Order_Compact_Finite_Difference_Schemes_for_Computational_Mechanics/link/00463524456e49822a000000/download page 110(125)
+    cudaMalloc(&d_stencil, 27 * sizeof(Float));
+    cudaMalloc(&d_A, 27 * sizeof(Float));
+    cudaMalloc(&d_b, x_count * y_count * z_count * sizeof(Float));
+    cudaMalloc(&d_p, x_count * y_count * z_count * sizeof(Float));
+    cudaMalloc(&d_r, x_count * y_count * z_count * sizeof(Float));
+    cudaMalloc(&d_laplacian_u, x_count * y_count * z_count * sizeof(Float));
+    cudaMalloc(&d_data_next, x_count * y_count * z_count * sizeof(Float));
+    cudaMemcpy(d_stencil, laplace_stencil_h, 27 * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaDeviceSynchronize();
     gpuErrchk(cudaDeviceSynchronize());
 }
 
@@ -33,21 +44,7 @@ void Density_on_grid_3d::update_density(const Float timestep, const Float error_
     //NOTE: AF_CONV_FREQ is the less optimal method for the size of input. However, since the convolve3 with 
     //AF_CONV_SPATIAL seems broken with the current version of arrayfire, this is the workaround to take now.
     // 1/dt(u^{n+1}-u^n)
-    cudaDeviceSynchronize();
-    const Float laplace_stencil_h[] = { 1,3,1,3,14,3,1,3,1,3,14,3,14,-128,14,3,14,3,1,3,1,3,14,3,1,3,1 };//27 point stencil known as High-Order compact FD Schemes
-                                                                       //Ref: https://www.researchgate.net/publication/2591103_High-Order_Compact_Finite_Difference_Schemes_for_Computational_Mechanics/link/00463524456e49822a000000/download page 110(125)
-    Float* d_stencil;
-    Float* d_A;
-    Float* d_b;
-    Float* d_laplacian_u;
-    Float* d_data_next;
-    cudaMalloc(&d_stencil, 27 * sizeof(Float));
-    cudaMalloc(&d_A, 27 * sizeof(Float));
-    cudaMalloc(&d_b, x_count * y_count * z_count * sizeof(Float));
-    cudaMalloc(&d_laplacian_u, x_count * y_count * z_count * sizeof(Float));
-    cudaMalloc(&d_data_next, x_count * y_count * z_count * sizeof(Float));
-    cudaMemcpy(d_stencil, laplace_stencil_h, 27 * sizeof(Float), cudaMemcpyHostToDevice);
-    cudaDeviceSynchronize();
+
     af::array laplace_stencil(3, 3, 3, d_stencil, afDevice);
     laplace_stencil = laplace_stencil * (1 / (spatial_gridsize * spatial_gridsize * 30.0));
     //Initial guess, using explicit method:
@@ -91,8 +88,10 @@ void Density_on_grid_3d::update_density(const Float timestep, const Float error_
     const int max_iteration = 20;
     //Solving Ax = b using conjugate gradient descent: 
     //refer to page on wikipedia: https://en.wikipedia.org/wiki/Conjugate_gradient_method
-    af::array r = b - af::convolve3(data_next_step, A, af::convMode::AF_CONV_DEFAULT, af::convDomain::AF_CONV_SPATIAL);
-    af::array p = r;
+    af::array r(x_count, y_count, z_count, d_r, afDevice);
+    r = b - af::convolve3(data_next_step, A, af::convMode::AF_CONV_DEFAULT, af::convDomain::AF_CONV_SPATIAL);
+    af::array p(x_count, y_count, z_count, d_p, afDevice);
+    p = r;
     Float r_normsquare_old = pow(af::norm(af::flat(r), af::normType::AF_NORM_VECTOR_2), 2);
     if (r_normsquare_old < error_bound) {
         data.eval();
