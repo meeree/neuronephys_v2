@@ -25,8 +25,7 @@ void Density_on_grid_3d::initialize_data() {
     data.eval();
     af::sync();
     data.device<Float>();
-    const Float laplace_stencil_h[] = { 1,3,1,3,14,3,1,3,1,3,14,3,14,-128,14,3,14,3,1,3,1,3,14,3,1,3,1 };//27 point stencil known as High-Order compact FD Schemes
-                                                                       //Ref: https://www.researchgate.net/publication/2591103_High-Order_Compact_Finite_Difference_Schemes_for_Computational_Mechanics/link/00463524456e49822a000000/download page 110(125)
+   
     cudaMalloc(&d_stencil, 27 * sizeof(Float));
     cudaMalloc(&d_A, 27 * sizeof(Float));
     cudaMalloc(&d_b, x_count * y_count * z_count * sizeof(Float));
@@ -34,7 +33,7 @@ void Density_on_grid_3d::initialize_data() {
     cudaMalloc(&d_r, x_count * y_count * z_count * sizeof(Float));
     cudaMalloc(&d_laplacian_u, x_count * y_count * z_count * sizeof(Float));
     cudaMalloc(&d_data_next, x_count * y_count * z_count * sizeof(Float));
-    cudaMemcpy(d_stencil, laplace_stencil_h, 27 * sizeof(Float), cudaMemcpyHostToDevice);
+    //cudaMemcpy(d_stencil, laplace_stencil_h, 27 * sizeof(Float), cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
     gpuErrchk(cudaDeviceSynchronize());
 }
@@ -44,12 +43,20 @@ void Density_on_grid_3d::update_density(const Float timestep, const Float error_
     //NOTE: AF_CONV_FREQ is the less optimal method for the size of input. However, since the convolve3 with 
     //AF_CONV_SPATIAL seems broken with the current version of arrayfire, this is the workaround to take now.
     // 1/dt(u^{n+1}-u^n)
-
+    gpuErrchk(cudaDeviceSynchronize());
     af::array laplace_stencil(3, 3, 3, d_stencil, afDevice);
+    const Float laplace_stencil_h[] = { 1,3,1,3,14,3,1,3,1,3,14,3,14,-128,14,3,14,3,1,3,1,3,14,3,1,3,1 };//27 point stencil known as High-Order compact FD Schemes
+                                                                      //Ref: https://www.researchgate.net/publication/2591103_High-Order_Compact_Finite_Difference_Schemes_for_Computational_Mechanics/link/00463524456e49822a000000/download page 110(125)
+    cudaMemcpy(d_stencil, laplace_stencil_h, 27 * sizeof(Float), cudaMemcpyHostToDevice);
     laplace_stencil = laplace_stencil * (1 / (spatial_gridsize * spatial_gridsize * 30.0));
+    Float* h_stencil;
+    h_stencil = (Float*)malloc(27 * sizeof(Float));
+    af::sync();
+    cudaMemcpy(h_stencil, d_stencil, 27, cudaMemcpyDeviceToHost);
     //Initial guess, using explicit method:
     af::array laplacian_u(x_count,y_count,z_count,d_laplacian_u,afDevice); 
-    laplacian_u = af::convolve3(data, laplace_stencil, af::convMode::AF_CONV_DEFAULT, af::convDomain::AF_CONV_SPATIAL);
+    laplacian_u = af::convolve3(data, laplace_stencil, af::convMode::AF_CONV_DEFAULT, af::convDomain::AF_CONV_FREQ);
+    af::sync();
     af::array data_next_step(x_count, y_count, z_count, d_data_next, afDevice);
     data_next_step = (1 - timestep * decay_coefficient) * data + timestep * diffusion_coefficient * laplacian_u;
     //Eqn to solve: 
@@ -89,7 +96,7 @@ void Density_on_grid_3d::update_density(const Float timestep, const Float error_
     //Solving Ax = b using conjugate gradient descent: 
     //refer to page on wikipedia: https://en.wikipedia.org/wiki/Conjugate_gradient_method
     af::array r(x_count, y_count, z_count, d_r, afDevice);
-    r = b - af::convolve3(data_next_step, A, af::convMode::AF_CONV_DEFAULT, af::convDomain::AF_CONV_SPATIAL);
+    r = b - af::convolve3(data_next_step, A, af::convMode::AF_CONV_DEFAULT, af::convDomain::AF_CONV_FREQ);
     af::array p(x_count, y_count, z_count, d_p, afDevice);
     p = r;
     Float r_normsquare_old = pow(af::norm(af::flat(r), af::normType::AF_NORM_VECTOR_2), 2);
@@ -261,16 +268,16 @@ void Scatter_grid_converter_3d::scatter_to_grid(const thrust::device_vector<Floa
     //Add newly generated density to grid (of af::array): 
     grid.data.eval();
     af::sync();
-    thrust::device_ptr<Float> density_data_ptr = thrust::device_pointer_cast(grid.data.device<Float>());
+    thrust::device_ptr<Float> density_data_ptr = thrust::device_pointer_cast(grid.raw_data_d_ptr);
     thrust::transform(Ax.begin(), Ax.end(), density_data_ptr, density_data_ptr, thrust::plus<Float>());
     cudaDeviceSynchronize();
-    grid.data.unlock();
+    //grid.data.unlock();
     return;
 }
 void Scatter_grid_converter_3d::interpolate_at_location(thrust::device_vector<Float>& scatter, const Density_on_grid_3d& grid) {
     grid.data.eval();
     af::sync();
-    const Float* data_ptr_on_device = grid.data.device<Float>();
+    const Float* data_ptr_on_device = grid.raw_data_d_ptr;
     Float* scatter_ptr = thrust::raw_pointer_cast(scatter.data());
     grid_to_scatter_interpolation_matrix.dense_vector_multiplication(data_ptr_on_device, scatter_ptr);
     gpuErrchk(cudaDeviceSynchronize());

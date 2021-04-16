@@ -146,9 +146,9 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
 
         if (paracrine)
         {
-           // if(i% paracrine->timescale == 0)
-           //     paracrine->update_on_own_timescale();
-            //else 
+            if(i% paracrine->timescale == 0)
+                paracrine->update_on_own_timescale();
+            else 
                 paracrine->update_on_fine_timescale(coupling_structs[0].coupling);
         }
 

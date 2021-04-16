@@ -12,7 +12,7 @@ in VS_OUT
 void main(void)
 {
     float paracrine = texture(tex, fs_in.tex_coords).r;
-    if(paracrine < 0.01)
-        discard;
+   // if(paracrine < 0.01)
+   //     discard;
     color = mix(vec4(1.0,0.0,0.0,1.0), vec4(0.0, 0.0, 1.0, 1.0), paracrine); 
 }

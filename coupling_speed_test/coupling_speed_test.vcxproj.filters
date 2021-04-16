@@ -65,5 +65,11 @@
     <None Include="Shaders\vert.glsl">
       <Filter>Source</Filter>
     </None>
+    <None Include="Shaders\tex_frag.glsl">
+      <Filter>Source</Filter>
+    </None>
+    <None Include="Shaders\tex_vert.glsl">
+      <Filter>Source</Filter>
+    </None>
   </ItemGroup>
 </Project>
