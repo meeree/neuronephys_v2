@@ -212,7 +212,7 @@ public:
     ParacrineModule (Float*& d_g_paracrine_, int const neuron_count, int const x_grid_count, int const y_grid_count, int const z_grid_count, Float const par_dt_, int const timescale_, Float const coup_strength_, Float const spatial_gridsize, Float const diffusion_coef, Float const decay_coef,
             thrust::device_vector<Float> const& d_x_coords, thrust::device_vector<Float> const& d_y_coords, thrust::device_vector<Float> const& d_z_coords) 
         : d_g_paracrine{d_g_paracrine_}, par_dt{par_dt_}, coup_strength{coup_strength_}, density_at_neurons(neuron_count, 0.0), 
-        x_gridcount(x_grid_count),y_gridcount(y_grid_count),z_gridcount(z_grid_count), density_generated_at_neurons(neuron_count, 0.0), 
+        x_gridcount(x_grid_count), y_gridcount(y_grid_count), z_gridcount(z_grid_count), timescale{timescale_},density_generated_at_neurons(neuron_count, 0.0),
         grid(x_grid_count, y_grid_count, z_grid_count, spatial_gridsize, diffusion_coef, decay_coef), 
         grid_converter(grid, neuron_count, d_x_coords, d_y_coords, d_z_coords)
     {

@@ -129,7 +129,7 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
                 slice_index = Graphics::get_slice_index();
                 if (paracrine)
                     paracrine->get_grid().density().slice(slice_index % paracrine->z_gridcount).as(f32).host(slice);
-                pause = Graphics::render(graphics_voltages_handle, slice, 0, 0, pause);
+                pause = Graphics::render(graphics_voltages_handle, slice, paracrine->x_gridcount, paracrine->y_gridcount, pause);
             }
         }
 
@@ -146,9 +146,9 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
 
         if (paracrine)
         {
-            if(i% paracrine->timescale == 0)
-                paracrine->update_on_own_timescale();
-            else 
+           // if(i% paracrine->timescale == 0)
+           //     paracrine->update_on_own_timescale();
+            //else 
                 paracrine->update_on_fine_timescale(coupling_structs[0].coupling);
         }
 
@@ -460,8 +460,9 @@ void diekman_benchmark(int const N = 1, int const samp_freq = 1000, float const 
     }
 
     //ParacrineModule paracrine(sim_vars_cpu[DIEKMAN_VAR_PARACRINE], 0, 0, 0, 0, diekman_params::leapfrog_dt, 1, 1, 2, 1, 0.1, {}, {}, {});
-    std::cout << x_count;
+    
     ParacrineModule paracrine(sim_vars_cpu[DIEKMAN_VAR_PARACRINE],N,x_count,y_count,z_count,100*diekman_params::leapfrog_dt,100,0.5,voxel_size,2e-5,3e-4,d_coords[0], d_coords[1], d_coords[2]);
+    std::cout << paracrine.timescale << std::endl;
 
     // Send the connectivity to graphics.
 //    Graphics::load_in_connectivity(
@@ -490,7 +491,8 @@ void diekman_benchmark(int const N = 1, int const samp_freq = 1000, float const 
         sim_vars_cpu[DIEKMAN_VAR_V],
         graphics_voltage_handle,
         render_N,
-        &electrode_net);
+        &electrode_net,
+        &paracrine);
 
     for (Float*& arr : sim_vars_cpu)
         cudaFree(arr);
