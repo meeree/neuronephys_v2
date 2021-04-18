@@ -31,12 +31,16 @@ ChunkedAdjacencyList Network::ToChunkedAdjacencyList(Float*& Tcount) const
 	// Generate coupling
 	ChunkedAdjacencyList list;
 	int N = offset_in_indices.size() - 1;
-	std::cout << N << std::endl;
 	if (N == -1)
 	{
 		std::cerr << "Connectivity is empty. Returning blank list." << std::endl;
 		return {};
 	}
+
+	double avg_num_conns = 0;
+	for (int i = 1; i < offset_in_indices.size(); ++i)
+		avg_num_conns += offset_in_indices[i] - offset_in_indices[i - 1];
+	std::cout << "Average number of connections: " << avg_num_conns / (offset_in_indices.size() - 1) << std::endl;
 
 	// Calculate numer of upstream neurons for each neuron based on synaptic coupling
 	thrust::host_vector<Float> Tcount_cpu(N, 0);
@@ -243,14 +247,16 @@ bool FileNetwork::GenerateFromHDF(int const N)
 	int sparsity{ numpnts / N };
 	indices.reserve(numconns);
 	offset_in_indices.resize(N + 1, 0);
-	auto it = indices.begin();
 	for (int from_idx = 0; from_idx < N; ++from_idx)
 	{
 		int const lookup_idx{ from_idx * sparsity };
+		offset_in_indices[from_idx + 1] = offset_in_indices[from_idx];
 		for (int to_idx = row_ptr[lookup_idx]; to_idx < row_ptr[lookup_idx + 1]; ++to_idx)
 			if (col_idx[to_idx] % sparsity == 0)
+			{
 				indices.push_back(col_idx[to_idx] / sparsity);
-		offset_in_indices[from_idx + 1] = it - indices.begin();
+				offset_in_indices[from_idx + 1] += 1;
+			}
 	}
 	indices.shrink_to_fit();
 }
