@@ -1,6 +1,7 @@
 #include "network_factory.cuh"
 #include "graphics.h"
 #include "morphology.h"
+#include <set>
 #include "electrode_net.cuh"
 #include <glm/gtx/norm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -9,7 +10,7 @@
 #include <curand.h>
 #include <curand_kernel.h>
 
-//#define OUTPUT_ELECTRODES_FILE
+#define OUTPUT_ELECTRODES_FILE
 
 __global__ void init_random(unsigned int seed, int const N, curandState_t* states) 
 {
@@ -77,8 +78,8 @@ __global__ void leapfrog(Float** sim_vars, const int N, const Float timestep, cu
         const Float Ein_avg = Enum_in > 0 ? Ein / Enum_in : 0;
         const Float new_EY = (Ar * Ein_avg * timestep + (1 - timestep / 2 * (Ar * Ein_avg + Ad)) * EY) / (timestep / 2 * (Ar * Ein_avg + Ad) + 1);
 
-        const Float G = gna * new_M*new_M*new_M*new_H + gk * (powf(new_N, 4)) + gl + g_ampa * new_local_Y + g_gaba * new_IY + g_ampa * new_EY;
-        const Float E = gna * new_M*new_M*new_M*new_H * ena + gk * (powf(new_N, 4)) * ek + gl * el + g_ampa * new_local_Y * e_ampa + g_gaba * new_IY * e_gaba + g_ampa * new_EY * e_ampa;
+        const Float G = gna * new_M*new_M*new_M*new_H + gk * (powf(new_N, 4)) + gl + g_ampa_grey * new_local_Y + g_gaba * new_IY + g_ampa_white * new_EY;
+        const Float E = gna * new_M*new_M*new_M*new_H * ena + gk * (powf(new_N, 4)) * ek + gl * el + g_ampa_grey * new_local_Y * e_ampa + g_gaba * new_IY * e_gaba + g_ampa_white * new_EY * e_ampa;
 
         // Add random white noise to V.
         Float white_noise = white_noise_intensity * curand_normal(random_states + idx) + white_noise_mean;
@@ -98,10 +99,10 @@ __global__ void leapfrog(Float** sim_vars, const int N, const Float timestep, cu
 }
 
 __device__ void dxdt_an_ie_model(const int idx,
-    Float const V, Float const nK, Float const Ca, Float const Ye, Float const Yi,
-    Float const e_Tinavg, Float const i_Tinavg,//e/i_Tinavg: excitatory/inhibitory neurotransmitter input
+    Float const V, Float const nK, Float const Ca, Float const Ye, Float const Yi, Float const Y_loc,
+    Float const e_Tinavg, Float const i_Tinavg, Float const loc_Tinavg,
     Float const white_noise,
-    Float* dvdt, Float* dnKdt, Float* dCadt, Float* dYedt, Float* dYidt)
+    Float* dvdt, Float* dnKdt, Float* dCadt, Float* dYedt, Float* dYidt, Float* dY_loc_dt)
 {
     using namespace an_ie_params;
     // Calculate intermediate quantities
@@ -114,7 +115,8 @@ __device__ void dxdt_an_ie_model(const int idx,
 
     // Calculate gating variable derivatives
     *dnKdt = 4 * (alpha_n * (1 - nK) - beta_n * nK);
-    *dYedt = 3.48 * e_Tinavg - Ye / tauAMPA;
+    *dYedt = 3.48 * e_Tinavg - Ye / tauAMPA_white;
+    *dY_loc_dt = 3.48 * loc_Tinavg - Y_loc / tauAMPA_grey;
     *dYidt = i_Tinavg - Yi / tauGABA;
 
     // Calculate Ca2+ derivative 
@@ -124,13 +126,14 @@ __device__ void dxdt_an_ie_model(const int idx,
     // Calculate voltage derivative
     *dvdt = 
         white_noise
-        -gK * powf(nK, 4) * (V - vK)
+        - gK * powf(nK, 4) * (V - vK)
         - ICa
         - gKCa * mKCa_inf * (V - vK)
         - gNaP * mNaP_inf * mNaP_inf * mNaP_inf * (V - vNa)
         - gL * (V - vL)
-        - an_ie_params::gAMPA * Ye * (V - an_ie_params::vAMPA)//TODO: Check value
-        - an_ie_params::gGABA * Yi * (V - an_ie_params::vGABA);//TODO: Set right value
+    -an_ie_params::gAMPA_white * Ye * (V - an_ie_params::vAMPA)
+        - an_ie_params::gAMPA_grey * Y_loc * (V - an_ie_params::vGABA)
+        - an_ie_params::gGABA * Yi * (V - an_ie_params::vGABA);
 
     *dvdt /= C;
 }
@@ -138,10 +141,10 @@ __device__ void dxdt_an_ie_model(const int idx,
 __global__ void RK4_an_ie_model(Float** sim_vars, const int N, const float timestep, curandState_t* random_states)
 {
     using namespace an_ie_params;
-    Float dvdt1, dnKdt1, dCadt1, dYedt1, dYidt1;
-    Float dvdt2, dnKdt2, dCadt2, dYedt2, dYidt2;
-    Float dvdt3, dnKdt3, dCadt3, dYedt3, dYidt3;
-    Float dvdt4, dnKdt4, dCadt4, dYedt4, dYidt4;
+    Float dvdt1, dnKdt1, dCadt1, dYedt1, dYidt1, dY_loc_dt1;
+    Float dvdt2, dnKdt2, dCadt2, dYedt2, dYidt2, dY_loc_dt2;
+    Float dvdt3, dnKdt3, dCadt3, dYedt3, dYidt3, dY_loc_dt3;
+    Float dvdt4, dnKdt4, dCadt4, dYedt4, dYidt4, dY_loc_dt4;
     for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < N; idx += gridDim.x * blockDim.x)
     {
         Float* V_ptr = sim_vars[AN_IE_VAR_V] + idx;
@@ -149,10 +152,13 @@ __global__ void RK4_an_ie_model(Float** sim_vars, const int N, const float times
         Float* Ca_ptr = sim_vars[AN_IE_VAR_CA] + idx;
         Float* Ye_ptr = sim_vars[AN_IE_VAR_YE] + idx;
         Float* Yi_ptr = sim_vars[AN_IE_VAR_YI] + idx;
+        Float* Y_loc_ptr = sim_vars[AN_IE_VAR_LOCAL_Y] + idx;
 
         // Calculate average neurotransmitter input
         Float e_Tinavg = sim_vars[AN_IE_VAR_ECOUNT][idx];
         e_Tinavg = e_Tinavg == 0 ? 0 : sim_vars[AN_IE_VAR_EIN][idx] / e_Tinavg;
+        Float loc_Tinavg = sim_vars[AN_IE_VAR_LOCAL_COUNT][idx];
+        loc_Tinavg = loc_Tinavg == 0 ? 0 : sim_vars[AN_IE_VAR_LOCAL_IN][idx] / loc_Tinavg;
         Float i_Tinavg = sim_vars[AN_IE_VAR_ICOUNT][idx];
         i_Tinavg = i_Tinavg == 0 ? 0 : sim_vars[AN_IE_VAR_IIN][idx] / i_Tinavg;
 
@@ -161,27 +167,28 @@ __global__ void RK4_an_ie_model(Float** sim_vars, const int N, const float times
         Float const Ca = *Ca_ptr;
         Float const Ye = *Ye_ptr;
         Float const Yi = *Yi_ptr;
+        Float const Y_loc = *Y_loc_ptr;
 
         // Add random white noise to V.
         Float white_noise = white_noise_intensity * curand_normal(random_states + idx) + white_noise_mean;
 
         // k1 = f(X)
-        dxdt_an_ie_model(idx, V, nK, Ca, Ye, Yi, e_Tinavg, i_Tinavg, white_noise, &dvdt1, &dnKdt1, &dCadt1, &dYedt1, &dYidt1);
+        dxdt_an_ie_model(idx, V, nK, Ca, Ye, Yi, Y_loc, e_Tinavg, i_Tinavg, loc_Tinavg, white_noise, &dvdt1, &dnKdt1, &dCadt1, &dYedt1, &dYidt1, &dY_loc_dt1);
 
         // k2 = f(X + dt/2 * k1)
         dxdt_an_ie_model(idx,
-            V + dvdt1 * timestep / 2, nK + dnKdt1 * timestep / 2, Ca + dCadt1 * timestep / 2, Ye + dYedt1 * timestep / 2, Yi + dYidt1 * timestep / 2, white_noise, 
-            e_Tinavg, i_Tinavg, &dvdt2, &dnKdt2, &dCadt2, &dYedt2, &dYidt2);
+            V + dvdt1 * timestep / 2, nK + dnKdt1 * timestep / 2, Ca + dCadt1 * timestep / 2, Ye + dYedt1 * timestep / 2, Yi + dYidt1 * timestep / 2, Y_loc + dY_loc_dt1 * timestep / 2, white_noise, 
+            e_Tinavg, i_Tinavg, loc_Tinavg, &dvdt2, &dnKdt2, &dCadt2, &dYedt2, &dYidt2, &dY_loc_dt2);
 
         // k3 = f(X + dt/2 * k2)
         dxdt_an_ie_model(idx,
-            V + dvdt2 * timestep / 2, nK + dnKdt2 * timestep / 2, Ca + dCadt2 * timestep / 2, Ye + dYedt2 * timestep / 2, Yi + dYidt2 * timestep / 2,  white_noise, 
-            e_Tinavg, i_Tinavg, &dvdt3, &dnKdt3, &dCadt3, &dYedt3, &dYidt3);
+            V + dvdt2 * timestep / 2, nK + dnKdt2 * timestep / 2, Ca + dCadt2 * timestep / 2, Ye + dYedt2 * timestep / 2, Yi + dYidt2 * timestep / 2, Y_loc + dY_loc_dt2 * timestep / 2, white_noise, 
+            e_Tinavg, i_Tinavg, loc_Tinavg, &dvdt3, &dnKdt3, &dCadt3, &dYedt3, &dYidt3, &dY_loc_dt3);
 
         // k4 = f(X + dt * k3)
         dxdt_an_ie_model(idx,
-            V + dvdt3 * timestep, nK + dnKdt3 * timestep, Ca + dCadt3 * timestep, Ye + dYedt3 * timestep, Yi + dYidt3 * timestep / 2, white_noise, 
-            e_Tinavg, i_Tinavg, &dvdt4, &dnKdt4, &dCadt4, &dYedt4, &dYidt4);
+            V + dvdt3 * timestep, nK + dnKdt3 * timestep, Ca + dCadt3 * timestep, Ye + dYedt3 * timestep, Yi + dYidt3 * timestep, Y_loc + dY_loc_dt3 * timestep, white_noise, 
+            e_Tinavg, i_Tinavg, loc_Tinavg, &dvdt4, &dnKdt4, &dCadt4, &dYedt4, &dYidt4, &dY_loc_dt4);
 
         // X(t + dt) = X(t) + dt * (k1 + 2k2 + 2k3 + k4)/6
         *V_ptr = V + timestep * (dvdt1 + dvdt2 * 2 + dvdt3 * 2 + dvdt4) / 6;
@@ -189,6 +196,7 @@ __global__ void RK4_an_ie_model(Float** sim_vars, const int N, const float times
         *Ca_ptr = Ca + timestep * (dCadt1 + dCadt2 * 2 + dCadt3 * 2 + dCadt4) / 6;
         *Ye_ptr = Ye + timestep * (dYedt1 + dYedt2 * 2 + dYedt3 * 2 + dYedt4) / 6;
         *Yi_ptr = Yi + timestep * (dYidt1 + dYidt2 * 2 + dYidt3 * 2 + dYidt4) / 6;
+        *Y_loc_ptr = Y_loc + timestep * (dY_loc_dt1 + dY_loc_dt2 * 2 + dY_loc_dt3 * 2 + dY_loc_dt4) / 6;
 
         // Calculate amount of neurotransmitter outputted AFTER update
         sim_vars[AN_IE_VAR_IOUTPUT][idx] = sim_vars[AN_IE_VAR_EOUTPUT][idx] = Tmax / (1.0 + exp(-(*V_ptr - an_Vt) / an_Kp));
@@ -198,7 +206,7 @@ __global__ void RK4_an_ie_model(Float** sim_vars, const int N, const float times
 __global__ void Euler_an_ie_model(Float** sim_vars, const int N, const float timestep, curandState_t* random_states)
 {
     using namespace an_ie_params;
-    Float dvdt, dnKdt, dCadt, dYedt, dYidt;
+    Float dvdt, dnKdt, dCadt, dYedt, dYidt, dY_loc_dt;
     for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < N; idx += gridDim.x * blockDim.x)
     {
         Float* V_ptr = sim_vars[AN_IE_VAR_V] + idx;
@@ -206,10 +214,13 @@ __global__ void Euler_an_ie_model(Float** sim_vars, const int N, const float tim
         Float* Ca_ptr = sim_vars[AN_IE_VAR_CA] + idx;
         Float* Ye_ptr = sim_vars[AN_IE_VAR_YE] + idx;
         Float* Yi_ptr = sim_vars[AN_IE_VAR_YI] + idx;
+        Float* Y_loc_ptr = sim_vars[AN_IE_VAR_LOCAL_Y] + idx;
 
         // Calculate average neurotransmitter input
         Float e_Tinavg = sim_vars[AN_IE_VAR_ECOUNT][idx];
         e_Tinavg = e_Tinavg == 0 ? 0 : sim_vars[AN_IE_VAR_EIN][idx] / e_Tinavg;
+        Float loc_Tinavg = sim_vars[AN_IE_VAR_LOCAL_COUNT][idx];
+        loc_Tinavg = loc_Tinavg == 0 ? 0 : sim_vars[AN_IE_VAR_LOCAL_IN][idx] / loc_Tinavg;
         Float i_Tinavg = sim_vars[AN_IE_VAR_ICOUNT][idx];
         i_Tinavg = i_Tinavg == 0 ? 0 : sim_vars[AN_IE_VAR_IIN][idx] / i_Tinavg;
 
@@ -218,11 +229,12 @@ __global__ void Euler_an_ie_model(Float** sim_vars, const int N, const float tim
         Float const Ca = *Ca_ptr;
         Float const Ye = *Ye_ptr;
         Float const Yi = *Yi_ptr;
+        Float const Y_loc = *Y_loc_ptr;
 
         // Add random white noise to V.
         Float white_noise = white_noise_intensity * curand_normal(random_states + idx) + white_noise_mean;
 
-        dxdt_an_ie_model(idx, V, nK, Ca, Ye, Yi, e_Tinavg, i_Tinavg, white_noise, &dvdt, &dnKdt, &dCadt, &dYedt, &dYidt);
+        dxdt_an_ie_model(idx, V, nK, Ca, Ye, Yi, Y_loc, e_Tinavg, i_Tinavg, loc_Tinavg, white_noise, &dvdt, &dnKdt, &dCadt, &dYedt, &dYidt, &dY_loc_dt);
         
         // X(t + dt) = X(t) + dt * dxdt
         *V_ptr = V + timestep * dvdt;
@@ -230,6 +242,7 @@ __global__ void Euler_an_ie_model(Float** sim_vars, const int N, const float tim
         *Ca_ptr = Ca + timestep * dCadt;
         *Ye_ptr = Ye + timestep * dYedt;
         *Yi_ptr = Yi + timestep * dYidt;
+        *Y_loc_ptr = Y_loc + timestep * dY_loc_dt;
 
         // Calculate amount of neurotransmitter outputted AFTER update
         sim_vars[AN_IE_VAR_IOUTPUT][idx] = sim_vars[AN_IE_VAR_EOUTPUT][idx] = Tmax / (1.0 + exp(-(*V_ptr - an_Vt) / an_Kp));
@@ -265,44 +278,44 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
     std::vector<CouplingStruct>& coupling_structs,
     Float* V_ptr,
     thrust::device_vector<curandState_t>& random_states,
-    std::vector<Float*> const& sample_ptrs,
     float* graphics_voltages_handle = nullptr, int const render_N = -1,
-    ElectrodeNet* electrodes = nullptr)
+    ElectrodeNet* electrodes = nullptr,
+    Morphology* morphology = nullptr,
+    std::vector<int> electrode_inds = {})
 {
     // If graphics handle is non-null, allocate CPU mem to copy voltages to.
     uint8_t* frame_data;
     FILE* replay_out;
     bool pause{ false };
+    float* tex;
+    int tex_dim = 100;
     if (graphics_voltages_handle)
     {
         frame_data = (uint8_t*)malloc(3 * sizeof(uint8_t) * Graphics::get_width() * Graphics::get_height());
         replay_out = fopen("REPLAY.raw", "wb");
+        tex = (float*)malloc(tex_dim * tex_dim * sizeof(float));
     }
 
+    thrust::host_vector<Float> h_appcur(N);
     for (int i = 0; i < nincs; ++i)
     {
         if (i % (nincs / 100) == 0)
             std::cout << 100 * (i / (float)nincs) << "%" << std::endl;
 
         // Light input.
-        float t = i * hh_params::leapfrog_dt;
-        if (t > 1000 && t <= 2000 && fmod(t - 1000, 1000.0 / 50) <= 1)
-        {
-            static thrust::host_vector<Float> cpu_arr(N, 0);
-            std::random_device rd;
-            std::mt19937 gen(rd());
-            std::normal_distribution<> appcur_dist(2.0, 0.5);
-            for (int i = 0; i < N; ++i)
-                cpu_arr[i] = appcur_dist(gen);
-            //thrust::fill_n(thrust::device_ptr<Float>(sim_vars_cpu[SIM_PARAMS_APPCUR]), N, hh_params::appcur + 3.5);
-            cudaMemcpy(sim_vars_cpu[SIM_PARAMS_APPCUR], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-            fout << hh_params::appcur + 0.5 << ',';
-        }
-        else
-        {
-            thrust::fill_n(thrust::device_ptr<Float>(sim_vars_cpu[SIM_PARAMS_APPCUR]), N, hh_params::appcur);
-            fout << hh_params::appcur << ',';
-        }
+        float t = i * dt;
+//        for (int i = 0; i < N; ++i)
+//            if (morphology->GetRegions()[i] == 118 && fmod(t, 1000.0 / 50) <= 1)
+//                h_appcur[i] = 8.5;
+//            else
+//                h_appcur[i] = 2.5;
+//        cudaMemcpy(sim_vars_cpu[SIM_PARAMS_APPCUR], h_appcur.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+//        // Periodic input
+//        if (fmod(t, 2000) > 1000 && fmod(t - 1000, 1000.0 / 50) <= 1)
+//            thrust::fill_n(thrust::device_ptr<Float>(sim_vars_cpu[SIM_PARAMS_APPCUR]), N, hh_params::appcur + 3.0f);
+//        else
+//            thrust::fill_n(thrust::device_ptr<Float>(sim_vars_cpu[SIM_PARAMS_APPCUR]), N, hh_params::appcur);
 
         if (i % print_incs == 0)
         {
@@ -311,6 +324,7 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
             {
                 electrodes->DoElectrodeMeasurements(V_ptr);
                 Float const* avg_V_handle = electrodes->ElectrodeOutputHandle();
+
                 for (int k = 0; k < render_N; ++k)
                     graphics_voltages_handle[k] = avg_V_handle[k];
                                
@@ -318,11 +332,23 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
                 for(int k = 0; k < render_N; ++k)
                     fout << avg_V_handle[k] << ',';
 #endif
-                fout << ElectrodeNet::MeasureAverageEntireNetwork(V_ptr, N);
-				fout << std::endl;
+                fout << ElectrodeNet::MeasureAverageEntireNetwork(V_ptr, N) << std::endl;
 
 #ifndef OUTPUT_ELECTRODES_FILE
-                pause = Graphics::render(graphics_voltages_handle, nullptr, 0, 0, pause);
+//                std::fill_n(tex, tex_dim * tex_dim, 0);
+//                for (int k = 0; k < render_N; ++k)
+//                {
+//                    auto& pos{ morphology->GetPositions()[electrode_inds[k]] };
+//                    int tex_i = tex_dim * (pos.x + 1) / 2;
+//                    int tex_j = tex_dim * (pos.y + 1) / 2;
+//                    tex[tex_i + tex_j * tex_dim] += (avg_V_handle[k] - Graphics::get_color_offset()) / Graphics::get_color_divisor();
+//                }
+//                // div is average number of neurons per grid cell (assuming uniformality).
+//                float div = render_N / (float)(tex_dim * tex_dim);
+//                div = *std::max_element(tex, tex + tex_dim * tex_dim);
+//                for (int k = 0; k < tex_dim * tex_dim; ++k)
+//                    tex[k] /= div;
+                pause = Graphics::render(graphics_voltages_handle, nullptr, tex_dim, tex_dim, pause);
 #endif
             }
         }
@@ -338,9 +364,11 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
         for(auto& coup_struct: coupling_structs)
             n_firing = coup_struct();
 
+ //       fout << n_firing << std::endl;
+
         // Update ODE 
+		gpuErrchk( cudaDeviceSynchronize() );
         sim_func << <NBLOCKS, NTHREADS>> > (thrust::raw_pointer_cast(sim_vars.data()), N, dt, thrust::raw_pointer_cast(random_states.data()));
-		gpuErrchk( cudaPeekAtLastError() );
 		gpuErrchk( cudaDeviceSynchronize() );
     }
 
@@ -348,6 +376,7 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
     {
         free(frame_data);
         fclose(replay_out);
+        free(tex);
     }
 }
 
@@ -357,132 +386,6 @@ bool length_predicate(float const* p1, float const* p2)
 	return true;
 }
 
-// N : number of neurons to simulate
-// samp_freq : sampling frequency (Hz)
-// samp_len : How long you record the activity of the model neuron (sec)
-void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_len = 10, int render_N = -1)
-{
-    // Set up graphics and morphology
-    FileMorphology morphology("cortex_connectivity_1m_1k_inh.h5");
-    morphology.Generate(N);
-
-    float* graphics_voltage_handle;
-    Graphics::setup(graphics_voltage_handle, morphology.GetPositionsRaw(), N, render_N);
-
-    // Set up simulation variables. Stored in a struct of arrays.
-    thrust::host_vector<Float*> sim_vars_cpu(NUM_AN_IE_VAR);
-    thrust::device_vector<Float*> sim_vars;
-    std::ofstream fout("OUT_AN.txt");
-    {
-        thrust::host_vector<Float> cpu_arr(N, 0);
-
-        for (Float*& arr : sim_vars_cpu)
-            cudaMalloc(&arr, N * sizeof(Float));
-
-        // Set voltages randomly
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::normal_distribution<> voltage_dist(-80, 20);
-        for (auto& val : cpu_arr)
-            val = voltage_dist(gen);
-        cudaMemcpy(sim_vars_cpu[AN_IE_VAR_V], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-
-        // Set Ca 
-        std::uniform_real_distribution<> Ca_dist(0.1, 0.5);
-        for (auto& val : cpu_arr)
-            val = Ca_dist(gen);
-        cudaMemcpy(sim_vars_cpu[AN_IE_VAR_CA], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-
-        // Set potasium gating variable 
-        std::uniform_real_distribution<> nK_dist(0.0, 0.5);
-        for (auto& val : cpu_arr)
-            val = nK_dist(gen);
-        cudaMemcpy(sim_vars_cpu[AN_IE_VAR_NK], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-        thrust::fill_n(cpu_arr.begin(), N, 0.0);
-        // AMPA/NMDA gating variable
-        cudaMemcpy(sim_vars_cpu[AN_IE_VAR_YE], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-
-        // GABA gating variable
-
-        cudaMemcpy(sim_vars_cpu[AN_IE_VAR_YI], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-
-        // No neurotransmitter input/output. Connection counts are set to zero for now and edited below. 
-        cudaMemcpy(sim_vars_cpu[AN_IE_VAR_EOUTPUT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-        cudaMemcpy(sim_vars_cpu[AN_IE_VAR_EIN], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-        cudaMemcpy(sim_vars_cpu[AN_IE_VAR_ECOUNT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-        cudaMemcpy(sim_vars_cpu[AN_IE_VAR_IOUTPUT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-        cudaMemcpy(sim_vars_cpu[AN_IE_VAR_IIN], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-        cudaMemcpy(sim_vars_cpu[AN_IE_VAR_ICOUNT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-    }
-    // Copy pointers from CPU to GPU 
-    sim_vars = sim_vars_cpu;
-
-    // Random seeds setup. We get a "state" per neuron which you can think of as the random seed.
-    thrust::device_vector<curandState_t> random_states(N);
-    init_random << <NBLOCKS, NTHREADS >> > (0, N, thrust::raw_pointer_cast(random_states.data()));
-	gpuErrchk( cudaPeekAtLastError() );
-	gpuErrchk( cudaDeviceSynchronize() );
-
-    // Generate coupling 
-    AtomicCoupling e_coupling(N), i_coupling(N);
-    FileNetwork e_net("cortex_connectivity_1m_1k_exc.h5");
-    KNNNetwork  i_net(30, &morphology);
-    e_net.Generate(N); i_net.Generate(N);
-    ChunkedAdjacencyList e_list{ e_net.ToChunkedAdjacencyList(sim_vars_cpu[AN_IE_VAR_ECOUNT]) };
-    ChunkedAdjacencyList i_list{ i_net.ToChunkedAdjacencyList(sim_vars_cpu[AN_IE_VAR_ICOUNT]) };
-    std::vector<CouplingStruct> coupling_structs
-    {
-        {e_list, e_coupling, sim_vars_cpu[AN_IE_VAR_EIN], sim_vars_cpu[AN_IE_VAR_EOUTPUT]},
-        {i_list, i_coupling, sim_vars_cpu[AN_IE_VAR_IIN], sim_vars_cpu[AN_IE_VAR_IOUTPUT]},
-    };
-
-    // Send the connectivity to graphics.
-    Graphics::load_in_connectivity(
-        e_net.GetCpuIndices().data(),
-        e_net.GetCpuOffsetsIntoIndices().data(),
-        N, 1e5,
-        length_predicate);
-
-    // Setup electrodes randomly distributed.
-    thrust::host_vector<int> h_regions, h_regions_inds;
-    std::vector<int> electrode_inds(render_N);
-    for(int i = 0; i < render_N; ++i)
-        electrode_inds[i] = (N / render_N) * i;
-    morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 50);
-    ElectrodeNet electrode_net(h_regions, h_regions_inds);
-
-    // Get pointers to data we want to write output for
-    std::vector<Float*> sample_ptrs{
-        sim_vars_cpu[AN_IE_VAR_V],
-        sim_vars_cpu[AN_IE_VAR_CA],
-        sim_vars_cpu[AN_IE_VAR_NK],
-        sim_vars_cpu[AN_IE_VAR_EOUTPUT],
-        sim_vars_cpu[AN_IE_VAR_EIN],
-        sim_vars_cpu[AN_IE_VAR_ECOUNT],
-        sim_vars_cpu[AN_IE_VAR_IOUTPUT],
-        sim_vars_cpu[AN_IE_VAR_IIN],
-        sim_vars_cpu[AN_IE_VAR_ICOUNT],
-    };
-    Float* V_ptr{ sim_vars_cpu[AN_IE_VAR_V] };
-
-    // Note, we multiply by 1000 to convert from sec to ms.
-    int const nincs = (1000 * samp_len / an_ie_params::rk4_dt);
-    int const print_incs = (int)((1000.0 / samp_freq) / an_ie_params::rk4_dt + 0.5);
-    _RunAndPrintSimulation(nincs, print_incs, fout,
-        N, sim_vars, sim_vars_cpu,
-        Euler_an_ie_model, an_ie_params::rk4_dt,
-        coupling_structs,
-        sim_vars_cpu[AN_IE_VAR_V],
-        random_states,
-        sample_ptrs,
-        graphics_voltage_handle,
-        render_N,
-        &electrode_net);
-
-    for (Float*& arr : sim_vars_cpu)
-        cudaFree(arr);
-    fout.close();
-}
 static std::vector<glm::vec3> electrode_positions{
 	{-0.30186574,  0.68659384, 0},
 	{ 0.30186574,  0.68659384, 0},
@@ -562,15 +465,154 @@ static std::vector<glm::vec3> projected_electrode_positions{
 // N : number of neurons to simulate
 // samp_freq : sampling frequency (Hz)
 // samp_len : How long you record the activity of the model neuron (sec)
+void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_len = 10, int render_N = -1)
+{
+    // Set up graphics and morphology
+//	FileMorphology morphology("cortex_connectivity_1m_1k_inh.h5", true);
+//    morphology.Generate(N);
+//	morphology.Rotate(glm::radians(90.0f), glm::vec3(1, 0, 0));
+//	morphology.Rotate(glm::radians(-90.0f), glm::vec3(0, 0, 1));
+//    morphology.ProjectNeuronsToPlane(1);
+//	morphology.Rotate(glm::radians(90.0f), glm::vec3(0, 0, 1));
+    UnitSquare morphology;
+    morphology.Generate(N);
+
+    UserPointCloud electrodes_cloud(projected_electrode_positions);
+    electrodes_cloud.ProjectNeuronsToPlane(1);
+
+    float* graphics_voltage_handle;
+    Graphics::setup(graphics_voltage_handle, morphology.GetPositionsRaw(), N, render_N);
+    Graphics::set_color_params(2, -65, 0.8);
+
+    // Set up simulation variables. Stored in a struct of arrays.
+    thrust::host_vector<Float*> sim_vars_cpu(NUM_AN_IE_VAR);
+    thrust::device_vector<Float*> sim_vars;
+    std::ofstream fout("OUT_AN.txt");
+    {
+        thrust::host_vector<Float> cpu_arr(N, 0);
+
+        for (Float*& arr : sim_vars_cpu)
+            cudaMalloc(&arr, N * sizeof(Float));
+
+        // Set voltages randomly
+        auto& gen{ Utility::UnseededRandomEngine() };
+        std::normal_distribution<> voltage_dist(-80, 20);
+        for (auto& val : cpu_arr)
+            val = voltage_dist(gen);
+        cudaMemcpy(sim_vars_cpu[AN_IE_VAR_V], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+        // Set Ca 
+        std::uniform_real_distribution<> Ca_dist(0.1, 0.5);
+        for (auto& val : cpu_arr)
+            val = Ca_dist(gen);
+        cudaMemcpy(sim_vars_cpu[AN_IE_VAR_CA], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+        // Set potasium gating variable 
+        std::uniform_real_distribution<> nK_dist(0.0, 0.5);
+        for (auto& val : cpu_arr)
+            val = nK_dist(gen);
+        cudaMemcpy(sim_vars_cpu[AN_IE_VAR_NK], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+        thrust::fill_n(cpu_arr.begin(), N, 0.0);
+        // AMPA/NMDA gating variable
+        cudaMemcpy(sim_vars_cpu[AN_IE_VAR_YE], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+        // GABA gating variable
+
+        cudaMemcpy(sim_vars_cpu[AN_IE_VAR_YI], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+        // No neurotransmitter input/output. Connection counts are set to zero for now and edited below. 
+        cudaMemcpy(sim_vars_cpu[AN_IE_VAR_EOUTPUT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+        cudaMemcpy(sim_vars_cpu[AN_IE_VAR_EIN], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+        cudaMemcpy(sim_vars_cpu[AN_IE_VAR_ECOUNT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+        cudaMemcpy(sim_vars_cpu[AN_IE_VAR_IOUTPUT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+        cudaMemcpy(sim_vars_cpu[AN_IE_VAR_IIN], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+        cudaMemcpy(sim_vars_cpu[AN_IE_VAR_ICOUNT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    }
+    // Copy pointers from CPU to GPU 
+    sim_vars = sim_vars_cpu;
+
+    // Random seeds setup. We get a "state" per neuron which you can think of as the random seed.
+    thrust::device_vector<curandState_t> random_states(N);
+    init_random << <NBLOCKS, NTHREADS >> > (0, N, thrust::raw_pointer_cast(random_states.data()));
+	gpuErrchk( cudaPeekAtLastError() );
+	gpuErrchk( cudaDeviceSynchronize() );
+
+    // Generate coupling
+    AtomicCoupling loc_coupling(N), e_coupling(N), i_coupling(N);
+//    NormalNetwork loc_net(&morphology, 0.06);
+    KNNNetwork loc_net(50, &morphology);
+    FileNetwork e_net("cortex_connectivity_1m_1k_exc.h5"), i_net("cortex_connectivity_1m_1k_inh.h5");
+    loc_net.Generate(N); e_net.Generate(N); i_net.Generate(N);
+    ChunkedAdjacencyList e_list{ e_net.ToChunkedAdjacencyList(sim_vars_cpu[AN_IE_VAR_ECOUNT]) };
+    ChunkedAdjacencyList loc_list{ loc_net.ToChunkedAdjacencyList(sim_vars_cpu[AN_IE_VAR_LOCAL_COUNT]) };
+    ChunkedAdjacencyList i_list{ i_net.ToChunkedAdjacencyList(sim_vars_cpu[AN_IE_VAR_ICOUNT]) };
+
+    std::vector<CouplingStruct> coupling_structs
+    {
+        {loc_list, loc_coupling, sim_vars_cpu[AN_IE_VAR_LOCAL_IN], sim_vars_cpu[AN_IE_VAR_LOCAL_OUTPUT]},
+        {e_list, e_coupling, sim_vars_cpu[AN_IE_VAR_EIN], sim_vars_cpu[AN_IE_VAR_EOUTPUT]},
+        {i_list, i_coupling, sim_vars_cpu[AN_IE_VAR_IIN], sim_vars_cpu[AN_IE_VAR_IOUTPUT]}
+    };
+
+    // Setup electrodes randomly distributed.
+    thrust::host_vector<int> h_regions, h_regions_inds;
+    std::vector<int> electrode_inds(render_N);
+    for(int i = 0; i < render_N; ++i)
+        electrode_inds[i] = (N / render_N) * i;
+
+#ifdef OUTPUT_ELECTRODES_FILE
+//    morphology.GenSphericalRegions(h_regions, h_regions_inds, electrodes_cloud.GetPositions(), 1600);
+    morphology.GenSphericalRegions(h_regions, h_regions_inds, { {-0.5, -0.5, 0.0}, {-0.5, 0.5, 0.0}, {0.5, -0.5, 0.0}, {0.5, 0.5, 0.0} }, N/4);
+#else
+    morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 500);
+
+    // Send the connectivity to graphics.
+    Graphics::load_in_connectivity(
+        loc_net.GetCpuIndices().data(),
+        loc_net.GetCpuOffsetsIntoIndices().data(),
+        N, 1000,
+        length_predicate);
+#endif
+
+    ElectrodeNet electrode_net(h_regions, h_regions_inds);
+
+    // Note, we multiply by 1000 to convert from sec to ms.
+    int const nincs = (1000 * samp_len / an_ie_params::rk4_dt);
+    int const print_incs = (int)((1000.0 / samp_freq) / an_ie_params::rk4_dt + 0.5);
+    _RunAndPrintSimulation(nincs, print_incs, fout,
+        N, sim_vars, sim_vars_cpu,
+        RK4_an_ie_model, an_ie_params::rk4_dt,
+        coupling_structs,
+        sim_vars_cpu[AN_IE_VAR_V],
+        random_states,
+        graphics_voltage_handle,
+        render_N,
+        &electrode_net,
+        &morphology,
+        electrode_inds);
+
+    for (Float*& arr : sim_vars_cpu)
+        cudaFree(arr);
+    fout.close();
+}
+
+// N : number of neurons to simulate
+// samp_freq : sampling frequency (Hz)
+// samp_len : How long you record the activity of the model neuron (sec)
 void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_len = 10, int render_N = -1)
 {
     using namespace hh_params;
 
     // Set up graphics and morphology
-	FileMorphology morphology("cortex_connectivity_1m_1k_inh.h5");
+	FileMorphology morphology("cortex_connectivity_1m_1k_inh.h5", true);
     morphology.Generate(N);
 	morphology.Rotate(glm::radians(90.0f), glm::vec3(1, 0, 0));
 	morphology.Rotate(glm::radians(-90.0f), glm::vec3(0, 0, 1));
+//    morphology.ProjectNeuronsToPlane(1);
+//	morphology.Rotate(glm::radians(90.0f), glm::vec3(0, 0, 1));
+
+    UserPointCloud electrodes_cloud(projected_electrode_positions);
+//    electrodes_cloud.ProjectNeuronsToPlane(1);
 
     float* graphics_voltage_handle;
 #ifdef OUTPUT_ELECTRODES_FILE
@@ -578,6 +620,7 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
 #else
     Graphics::setup(graphics_voltage_handle, morphology.GetPositionsRaw(), N, render_N);
 #endif
+    Graphics::set_color_params(15, -60, 0.0);
 
     // Set up simulation variables. Stored in a struct of arrays.
     thrust::host_vector<Float*> sim_vars_cpu(NUM_SIM_PARAMS);
@@ -590,11 +633,11 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
             cudaMalloc(&arr, N * sizeof(Float));
 
         // Set voltages randomly
-        std::random_device rd;
-        std::mt19937 gen(rd());
+        auto& gen{ Utility::UnseededRandomEngine() };
         std::normal_distribution<> voltage_dist(-55, 25);
         for (auto& val : cpu_arr)
             val = voltage_dist(gen);
+        thrust::fill_n(cpu_arr.begin(), N, -55);
         cudaMemcpy(sim_vars_cpu[SIM_PARAMS_V], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
         thrust::fill_n(cpu_arr.begin(), N, 0.0);
 
@@ -634,17 +677,17 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
     sim_vars = sim_vars_cpu;
 
     // Generate coupling
-    AtomicCoupling /*loc_coupling(N),*/ e_coupling(N), i_coupling(N);
-//    KNNNetwork loc_net(500, &morphology);
-//    FileNetwork e_net("cortex_connectivity_1m_1k_exc.h5"), i_net("cortex_connectivity_1m_1k_inh.h5");
-    UniformRandomNetwork e_net(800), i_net(200);
-    /*loc_net.Generate(N);*/ e_net.Generate(N); i_net.Generate(N);
-//    ChunkedAdjacencyList loc_list{ loc_net.ToChunkedAdjacencyList(sim_vars_cpu[SIM_PARAMS_LOCAL_COUNT]) };
+    AtomicCoupling loc_coupling(N), e_coupling(N), i_coupling(N);
+    NormalNetwork loc_net(&morphology, 0.03);
+    FileNetwork e_net("cortex_connectivity_1m_1k_exc.h5"), i_net("cortex_connectivity_1m_1k_inh.h5");
+    loc_net.Generate(N); e_net.Generate(N); i_net.Generate(N);
     ChunkedAdjacencyList e_list{ e_net.ToChunkedAdjacencyList(sim_vars_cpu[SIM_PARAMS_ECOUNT]) };
+    ChunkedAdjacencyList loc_list{ loc_net.ToChunkedAdjacencyList(sim_vars_cpu[SIM_PARAMS_LOCAL_COUNT]) };
     ChunkedAdjacencyList i_list{ i_net.ToChunkedAdjacencyList(sim_vars_cpu[SIM_PARAMS_ICOUNT]) };
+
     std::vector<CouplingStruct> coupling_structs
     {
-//        {loc_list, loc_coupling, sim_vars_cpu[SIM_PARAMS_LOCAL_IN], sim_vars_cpu[SIM_PARAMS_LOCAL_OUTPUT]},
+        {loc_list, loc_coupling, sim_vars_cpu[SIM_PARAMS_LOCAL_IN], sim_vars_cpu[SIM_PARAMS_LOCAL_OUTPUT]},
         {e_list, e_coupling, sim_vars_cpu[SIM_PARAMS_EIN], sim_vars_cpu[SIM_PARAMS_EOUTPUT]},
         {i_list, i_coupling, sim_vars_cpu[SIM_PARAMS_IIN], sim_vars_cpu[SIM_PARAMS_IOUTPUT]}
     };
@@ -655,30 +698,29 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
 	gpuErrchk( cudaPeekAtLastError() );
 	gpuErrchk( cudaDeviceSynchronize() );
 
-    // Send the connectivity to graphics.
-//    Graphics::load_in_connectivity(
-//        loc_net.GetCpuIndices().data(),
-//        loc_net.GetCpuOffsetsIntoIndices().data(),
-//        N, N/10,
-//        length_predicate);
-
     // Setup electrodes based on mouse 2D data from 
     // https://gin.g-node.org/hiobeen/Mouse_hdEEG_ASSR_Hwang_et_al/src/master/montage.csv.
     thrust::host_vector<int> h_regions, h_regions_inds;
 #ifdef OUTPUT_ELECTRODES_FILE
-    morphology.GenSphericalRegions(h_regions, h_regions_inds, projected_electrode_positions, 100);
+    morphology.GenSphericalRegions(h_regions, h_regions_inds, electrodes_cloud.GetPositions(), 1000);
+ //   morphology.GenRegionsFromIDs(h_regions, h_regions_inds);
+//    morphology.GenCustomRegions([](glm::vec3 const& pos) {return int(2 * (pos.x + 1)); }, 4, h_regions, h_regions_inds);
 #else
     std::vector<int> electrode_inds(render_N);
     for(int i = 0; i < render_N; ++i)
         electrode_inds[i] = (N / render_N) * i;
     morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 1);
-#endif
-    ElectrodeNet electrode_net(h_regions, h_regions_inds);
+//    morphology.GenRegionsFromIDs(h_regions, h_regions_inds);
 
-    // Get pointers to data we want to write output for
-    std::vector<Float*> sample_ptrs{
-        sim_vars_cpu[SIM_PARAMS_V],
-    };
+    // Send the connectivity to graphics.
+    Graphics::load_in_connectivity(
+        i_net.GetCpuIndices().data(),
+        i_net.GetCpuOffsetsIntoIndices().data(),
+        N, 1000,
+        length_predicate);
+#endif
+    std::cout << h_regions_inds.size() << std::endl;
+    ElectrodeNet electrode_net(h_regions, h_regions_inds);
 
     // Note, we multiply by 1000 to convert from sec to ms.
     int const nincs = (1000 * samp_len / leapfrog_dt);
@@ -689,10 +731,10 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
         coupling_structs,
         sim_vars_cpu[SIM_PARAMS_V],
         random_states,
-        sample_ptrs,
         graphics_voltage_handle,
         render_N,
-        &electrode_net);
+        &electrode_net,
+        &morphology);
 
     for (Float*& arr : sim_vars_cpu)
         cudaFree(arr);
@@ -702,10 +744,10 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
 int main()
 {
 #ifdef OUTPUT_ELECTRODES_FILE
-    int N_electrodes = 36;
+    int N_electrodes = 4; // 239;
 #else
     int N_electrodes = 1e5;
 #endif
-    hh_benchmark(1e5, 2500, 3, N_electrodes);
+    sanmodel_inhexc_benchmark(1e5, 25000, 12, N_electrodes);
     Graphics::terminate_graphics();
 }
