@@ -17,10 +17,15 @@ AdjacencyList Network::ToAdjacencyList(Float*& Tcount) const
 		return {};
 	}
 
+	double avg_num_conns = 0;
+	for (int i = 1; i < offset_in_indices.size(); ++i)
+		avg_num_conns += offset_in_indices[i] - offset_in_indices[i - 1];
+	std::cout << "Average number of connections: " << avg_num_conns / (offset_in_indices.size() - 1) << std::endl;
+
     thrust::host_vector<Float> Tcount_cpu(N, 0);
 	for (int ind : indices)
 		++Tcount_cpu[ind];
-	cudaMemcpy(Tcount, Tcount_cpu.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+	gpuErrchk(cudaMemcpy(Tcount, Tcount_cpu.data(), N * sizeof(Float), cudaMemcpyHostToDevice));
 
     std::cout << "Converted connectivity to adjacency list" << std::endl;
     return list;
