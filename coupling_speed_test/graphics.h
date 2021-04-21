@@ -1,7 +1,6 @@
 #pragma once
 #include <stddef.h>
 #include <cstdio>
-#pragma once
 #include <cstdint>
 
 namespace Graphics
@@ -45,7 +44,7 @@ namespace Graphics
     void load_in_connectivity(
         int const* connectivity_inds, int const* offset_into_inds,
         int const N, int const N_pts_to_use,
-        LinePredicate pred);
+        LinePredicate pred = nullptr);
 
     //! Set color divisor, offset, and cutoff (the latter being in the range 0 to 1).
     //! Color is computed as t = (voltage - offset) / divisor where if t < cutoff it is not shown.
