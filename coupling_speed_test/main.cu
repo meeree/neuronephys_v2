@@ -7,7 +7,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "ephys.cuh"
 
-//#define OUTPUT_ELECTRODES_FILE
+#define OUTPUT_ELECTRODES_FILE
 
 // This is simply a struct that contains all the relevant stuff for coupling. 
 // It can be called which will perform coupling and store it. 
@@ -38,7 +38,8 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
     float* graphics_voltages_handle = nullptr, int const render_N = -1,
     ElectrodeNet* electrodes = nullptr,
     Morphology* morphology = nullptr,
-    std::vector<int> electrode_inds = {})
+    std::vector<int> electrode_inds = {},
+    SynchronyNet* synchrony_net = nullptr)
 {
     auto sim_vars = ephys->SimVars();
     auto sim_vars_cpu = ephys->SimVarsCpu();
@@ -63,7 +64,7 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
             std::cout << 100 * (i / (float)nincs) << "%" << std::endl;
 
         // Light input.
-//        float t = i * ephys->Dt();
+        float t = i * ephys->Dt();
 //        for (int i = 0; i < N; ++i)
 //            if (morphology->GetRegions()[i] == 118 && fmod(t, 1000.0 / 50) <= 1)
 //                h_appcur[i] = 8.5;
@@ -82,6 +83,8 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
             // Update graphics if the graphics handle is non-null
             if (graphics_voltages_handle)
             {
+                if(t > 1000) // Skip transient of 1 second.
+                    synchrony_net->MeasureVariances(V_ptr);
                 electrodes->DoElectrodeMeasurements(V_ptr);
                 Float const* avg_V_handle = electrodes->ElectrodeOutputHandle();
 
@@ -129,6 +132,9 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
         // Update ODE 
         ephys->SimulateEphys();
     }
+    std::vector<double> chi_sub = synchrony_net->GetSynchronyMeasures();
+    for (auto& chi : chi_sub)
+        std::cout << chi << std::endl;
 
     if (graphics_voltages_handle)
     {
@@ -246,7 +252,6 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, floa
     std::ofstream fout("OUT_AN.txt");
     SANEphys ephys(N);
     auto sim_vars_cpu = ephys.SimVarsCpu();
-    std::cout << "SIZE " << sim_vars_cpu.size() << std::endl;
 
     // Generate coupling
     AtomicCoupling loc_coupling(N), e_coupling(N), i_coupling(N);
@@ -284,8 +289,12 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, floa
         N, 1000,
         length_predicate);
 #endif
-
     ElectrodeNet electrode_net(h_regions, h_regions_inds);
+
+    thrust::host_vector<int> synchrony_region_inds(32768);
+    for(int i = 0; i < synchrony_region_inds.size(); ++i)
+        synchrony_region_inds[i] = (N / synchrony_region_inds.size()) * i;
+    SynchronyNet synchrony_net(std::move(synchrony_region_inds), { 32768, 16384, 8192, 4096, 2048, 1024, 512, 256, 128, 64 });
 
     // Note, we multiply by 1000 to convert from sec to ms.
     int const nincs = (1000 * samp_len / rk4_dt);
@@ -298,7 +307,8 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, floa
         render_N,
         &electrode_net,
         &morphology,
-        electrode_inds);
+        electrode_inds, 
+        &synchrony_net);
 
     for (Float*& arr : sim_vars_cpu)
         cudaFree(arr);
@@ -399,6 +409,6 @@ int main()
 #else
     int N_electrodes = 1e5;
 #endif
-    sanmodel_inhexc_benchmark(1e5, 25000, 12, N_electrodes);
+    sanmodel_inhexc_benchmark(1e5, 25000, 2, N_electrodes);
     Graphics::terminate_graphics();
 }
