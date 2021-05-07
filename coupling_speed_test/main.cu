@@ -7,7 +7,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "ephys.cuh"
 
-#define OUTPUT_ELECTRODES_FILE
+//#define OUTPUT_ELECTRODES_FILE
 
 // This is simply a struct that contains all the relevant stuff for coupling. 
 // It can be called which will perform coupling and store it. 
@@ -65,12 +65,12 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
 
         // Light input.
         float t = i * ephys->Dt();
-//        for (int i = 0; i < N; ++i)
-//            if (morphology->GetRegions()[i] == 118 && fmod(t, 1000.0 / 50) <= 1)
-//                h_appcur[i] = 8.5;
-//            else
-//                h_appcur[i] = 2.5;
-//        cudaMemcpy(sim_vars_cpu[Params::APPCUR], h_appcur.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+        for (int i = 0; i < N; ++i)
+            if (static_cast<FileMorphology*>(morphology)->GetRegions()[i] == 118 && fmod(t, 1000.0 / 50) <= 1)
+                h_appcur[i] = 8.5;
+            else
+                h_appcur[i] = 2.5;
+//        cudaMemcpy(sim_vars_cpu[HH::Params::APPCUR], h_appcur.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
 //        // Periodic input
 //        if (fmod(t, 2000) > 1000 && fmod(t - 1000, 1000.0 / 50) <= 1)
@@ -123,11 +123,13 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
         }
 
         // Perform coupling. The number of neurons firing is returned by each of these calls. 
+        // Coupling is performed on a slower timescale.
         int n_firing;
-        for(auto& coup_struct: coupling_structs)
-            n_firing = coup_struct();
-
- //       fout << n_firing << std::endl;
+        if (i % 10 == 0)
+        {
+            for(auto& coup_struct: coupling_structs)
+                n_firing = coup_struct();
+        }
 
         // Update ODE 
         ephys->SimulateEphys();
@@ -291,10 +293,10 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, floa
 #endif
     ElectrodeNet electrode_net(h_regions, h_regions_inds);
 
-    thrust::host_vector<int> synchrony_region_inds(32768);
+    thrust::host_vector<int> synchrony_region_inds(4096);
     for(int i = 0; i < synchrony_region_inds.size(); ++i)
         synchrony_region_inds[i] = (N / synchrony_region_inds.size()) * i;
-    SynchronyNet synchrony_net(std::move(synchrony_region_inds), { 32768, 16384, 8192, 4096, 2048, 1024, 512, 256, 128, 64 });
+    SynchronyNet synchrony_net(std::move(synchrony_region_inds), { 4096, 2048, 1024, 512, 256, 128, 64 });
 
     // Note, we multiply by 1000 to convert from sec to ms.
     int const nincs = (1000 * samp_len / rk4_dt);
@@ -349,6 +351,7 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
     AtomicCoupling loc_coupling(N), e_coupling(N), i_coupling(N);
     NormalNetwork loc_net(&morphology, 0.03);
     FileNetwork e_net("cortex_connectivity_1m_1k_exc.h5"), i_net("cortex_connectivity_1m_1k_inh.h5");
+//    UniformRandomNetwork e_net(100), i_net(30);
     loc_net.Generate(N); e_net.Generate(N); i_net.Generate(N);
     AdjacencyList e_list{ e_net.ToAdjacencyList(sim_vars_cpu[Params::ECOUNT]) };
     AdjacencyList loc_list{ loc_net.ToAdjacencyList(sim_vars_cpu[Params::LOCAL_COUNT]) };
@@ -364,12 +367,12 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
     // Setup electrodes based on mouse 2D data from 
     // https://gin.g-node.org/hiobeen/Mouse_hdEEG_ASSR_Hwang_et_al/src/master/montage.csv.
     thrust::host_vector<int> h_regions, h_regions_inds;
+    std::vector<int> electrode_inds(render_N);
 #ifdef OUTPUT_ELECTRODES_FILE
-    morphology.GenSphericalRegions(h_regions, h_regions_inds, electrodes_cloud.GetPositions(), 1000);
- //   morphology.GenRegionsFromIDs(h_regions, h_regions_inds);
+ //   morphology.GenSphericalRegions(h_regions, h_regions_inds, electrodes_cloud.GetPositions(), 1000);
+    morphology.GenRegionsFromIDs(h_regions, h_regions_inds);
 //    morphology.GenCustomRegions([](glm::vec3 const& pos) {return int(2 * (pos.x + 1)); }, 4, h_regions, h_regions_inds);
 #else
-    std::vector<int> electrode_inds(render_N);
     for(int i = 0; i < render_N; ++i)
         electrode_inds[i] = (N / render_N) * i;
     morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 1);
@@ -385,6 +388,11 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
     std::cout << h_regions_inds.size() << std::endl;
     ElectrodeNet electrode_net(h_regions, h_regions_inds);
 
+    thrust::host_vector<int> synchrony_region_inds(65536);
+    for(int i = 0; i < synchrony_region_inds.size(); ++i)
+        synchrony_region_inds[i] = (N / synchrony_region_inds.size()) * i;
+    SynchronyNet synchrony_net(std::move(synchrony_region_inds), { 65536, 8*4096, 4*4096, 2*4096, 4096, 2048, 1024, 512, 256, 128, 64 });
+
     // Note, we multiply by 1000 to convert from sec to ms.
     int const nincs = (1000 * samp_len / leapfrog_dt);
     int const print_incs = (int)((1000.0 / samp_freq) / leapfrog_dt + 0.5);
@@ -395,7 +403,9 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
         graphics_voltage_handle,
         render_N,
         &electrode_net,
-        &morphology);
+        &morphology,
+        electrode_inds,
+        &synchrony_net);
 
     for (Float*& arr : sim_vars_cpu)
         cudaFree(arr);
@@ -405,10 +415,10 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
 int main()
 {
 #ifdef OUTPUT_ELECTRODES_FILE
-    int N_electrodes = 4; // 239;
+    int N_electrodes = 239;
 #else
     int N_electrodes = 1e5;
 #endif
-    sanmodel_inhexc_benchmark(1e5, 25000, 2, N_electrodes);
+    hh_benchmark(1e5, 2500, 2, N_electrodes);
     Graphics::terminate_graphics();
 }
