@@ -7,7 +7,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "ephys.cuh"
 
-#define OUTPUT_ELECTRODES_FILE
+//#define OUTPUT_ELECTRODES_FILE
 
 // This is simply a struct that contains all the relevant stuff for coupling. 
 // It can be called which will perform coupling and store it. 
@@ -385,6 +385,11 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
     std::cout << h_regions_inds.size() << std::endl;
     ElectrodeNet electrode_net(h_regions, h_regions_inds);
 
+    thrust::host_vector<int> synchrony_region_inds(4096);
+    for(int i = 0; i < synchrony_region_inds.size(); ++i)
+        synchrony_region_inds[i] = (N / synchrony_region_inds.size()) * i;
+    SynchronyNet synchrony_net(std::move(synchrony_region_inds), { 4096, 2048, 1024, 512, 256, 128, 64 });
+
     // Note, we multiply by 1000 to convert from sec to ms.
     int const nincs = (1000 * samp_len / leapfrog_dt);
     int const print_incs = (int)((1000.0 / samp_freq) / leapfrog_dt + 0.5);
@@ -395,7 +400,9 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
         graphics_voltage_handle,
         render_N,
         &electrode_net,
-        &morphology);
+        &morphology,
+        electrode_inds,
+        &synchrony_net);
 
     for (Float*& arr : sim_vars_cpu)
         cudaFree(arr);
@@ -409,6 +416,6 @@ int main()
 #else
     int N_electrodes = 1e5;
 #endif
-    sanmodel_inhexc_benchmark(1e5, 25000, 2, N_electrodes);
+    hh_benchmark(1e5, 25000, 2, N_electrodes);
     Graphics::terminate_graphics();
 }

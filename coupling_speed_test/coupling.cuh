@@ -7,6 +7,8 @@ struct AdjacencyList
 {
 	thrust::device_vector<int> indices;
 	thrust::device_vector<int> offset_in_indices;
+	thrust::device_vector<Float> vals;
+	thrust::device_vector<int> timers;
 };
 
 struct ChunkedAdjacencyList

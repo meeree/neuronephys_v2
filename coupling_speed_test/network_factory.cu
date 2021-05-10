@@ -8,6 +8,8 @@ AdjacencyList Network::ToAdjacencyList(Float*& Tcount) const
     AdjacencyList list;
 	list.indices = indices;
 	list.offset_in_indices = offset_in_indices;
+	list.vals = thrust::device_vector<Float>(indices.size(), 1);
+	list.timers = thrust::device_vector<int>(indices.size(), 0);
 
     // Calculate numer of upstream neurons for each neuron based on synaptic coupling
 	int N = offset_in_indices.size() - 1;
