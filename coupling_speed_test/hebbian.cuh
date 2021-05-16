@@ -4,24 +4,23 @@ class Hebbian
 {
 private:
     int Nconns;
-    thrust::device_vector<int> R, R0, R1, D;
+    thrust::device_vector<int> timers;
 public:
     int const window_duration;
-    Float const upscale;
-    Float const downscale;
+    Float const heb_inc;
 
     //! Construct Hebbian learner.
     //! \param [in] window_duration_ The window size for Hebbian learning rule in dt timestep units.
-    //! \param [in] upscale_ Constant to multiply synaptic weights by for increasing weight (1 <= upscale). 
-    //! \param [in] downscale_ Constant to multiply synaptic weights by for decreasing weight (0 <= downscale <= 1).
+    //! \param [in] heb_inc_ Hebbian rule increment.
+    //! \param [in] N Number of neurons in the network.
     //! \param [in] Nconns_ Number of synapses in the whole network.
-    Hebbian (int window_duration_, Float upscale_, Float downscale_, int Nconns_)
-        : Nconns{ Nconns_ }, R(Nconns), R0(Nconns), R1(Nconns), D(Nconns),
-        window_duration{ window_duration_ }, upscale{ upscale_ }, downscale{ downscale_ }
+    Hebbian (int window_duration_, Float heb_inc_, int N, int Nconns_)
+        : Nconns{ Nconns_ }, timers(N, 0),
+          window_duration{ window_duration_ }, heb_inc{ heb_inc_ }
     {}
 
     //! Do Hebbian learning at a certain instant in time.
-    //! \param [in] connectivity The synaptic connectivity stored as an adjacency list of downstream connections.
+    //! \param [in, out] connectivity The synaptic connectivity stored as an adjacency list of downstream connections, along with upstream indices and weights.
     //! \param [in] firing Vector where element i is 1/0 if neuron i is/isn't firing.
-    void UpdateWeights(AdjacencyList const& connectivity, thrust::device_vector<int> const& firing);
+    void UpdateWeights(AdjacencyList& connectivity, thrust::device_vector<int> const& is_firing);
 };

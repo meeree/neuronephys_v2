@@ -93,6 +93,7 @@
     <CudaCompile Include="defines.cu" />
     <CudaCompile Include="electrode_net.cu" />
     <CudaCompile Include="ephys.cu" />
+    <CudaCompile Include="hebbian.cu" />
     <CudaCompile Include="main.cu">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </CudaCompile>
@@ -104,6 +105,7 @@
     <ClInclude Include="electrode_net.cuh" />
     <ClInclude Include="ephys.cuh" />
     <ClInclude Include="graphics.h" />
+    <ClInclude Include="hebbian.cuh" />
     <ClInclude Include="morphology.h" />
     <ClInclude Include="network_factory.cuh" />
   </ItemGroup>

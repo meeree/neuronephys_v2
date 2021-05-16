@@ -36,7 +36,7 @@ inline __global__ void signal_spikes_kernel(int const num_firing,
 	int const* connectivity_offsets,
 	int const* firing_inds,
 	Float* spikes,
-	Float const* vals,
+	Float const* weights,
 	Float const* neuron_outputs)
 {
 	for (int tid = blockIdx.x * blockDim.x + threadIdx.x; tid < num_firing; tid += gridDim.x * blockDim.x) {
@@ -44,7 +44,7 @@ inline __global__ void signal_spikes_kernel(int const num_firing,
 		int const* post = connectivity + connectivity_offsets[pre_idx];
 		Float const signal = neuron_outputs[pre_idx];
         for (; post != connectivity + connectivity_offsets[pre_idx + 1]; ++post)
-			atomicAdd(spikes + *post, signal * vals[*post]);
+			atomicAdd(spikes + *post, signal * weights[*post]);
 	}
 }
 
@@ -132,7 +132,7 @@ int AtomicCoupling::operator()(AdjacencyList const& connectivity, Float* spikes,
 	// Transfer neurotransmitter from neurons to post-synaptic neurons.
 	signal_spikes_kernel<<<NBLOCKS, NTHREADS>>>(
 		num_firing, thrust::raw_pointer_cast(connectivity.indices.data()), thrust::raw_pointer_cast(connectivity.offset_in_indices.data()),
-		thrust::raw_pointer_cast(firing_neurons.data()), spikes, thrust::raw_pointer_cast(connectivity.vals.data()), neuron_outputs);
+		thrust::raw_pointer_cast(firing_neurons.data()), spikes, thrust::raw_pointer_cast(connectivity.weights.data()), neuron_outputs);
 	gpuErrchk( cudaPeekAtLastError() );
 	gpuErrchk( cudaDeviceSynchronize() );
 

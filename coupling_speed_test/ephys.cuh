@@ -114,7 +114,7 @@ namespace SAN
     constexpr static const Float gAMPA_grey = 0.5; // Coupling conductance and potential for AMPA in grey matter
     constexpr static const Float gNMDA = 0.0; // 0.0434132;
     constexpr static const Float gGABA = 0.5; //TODO: Change to non-averaged value
-    constexpr static const Float tauCa = 0.5 * 739.09; // Controls calcium decay rate. Decrease to decrease the length of the resting state between bursts. Around half is close to transition from wake to sleep.
+    constexpr static const Float tauCa = 0.0 * 739.09; // Controls calcium decay rate. Decrease to decrease the length of the resting state between bursts. Around half is close to transition from wake to sleep.
     constexpr static const Float white_noise_mean = 0.1f;
     constexpr static const Float white_noise_intensity = 0.05f; // Controls stddev of white noise.
     enum Params

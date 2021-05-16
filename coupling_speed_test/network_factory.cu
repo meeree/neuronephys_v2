@@ -4,13 +4,6 @@
 
 AdjacencyList Network::ToAdjacencyList(Float*& Tcount) const
 {
-    // Generate coupling
-    AdjacencyList list;
-	list.indices = indices;
-	list.offset_in_indices = offset_in_indices;
-	list.vals = thrust::device_vector<Float>(indices.size(), 1);
-	list.timers = thrust::device_vector<int>(indices.size(), 0);
-
     // Calculate numer of upstream neurons for each neuron based on synaptic coupling
 	int N = offset_in_indices.size() - 1;
 	if (N == -1)
@@ -18,6 +11,21 @@ AdjacencyList Network::ToAdjacencyList(Float*& Tcount) const
 		std::cerr << "Connectivity is empty. Returning blank list." << std::endl;
 		return {};
 	}
+
+    // Generate coupling
+    AdjacencyList list;
+	list.indices = indices;
+	list.offset_in_indices = offset_in_indices;
+	list.weights = thrust::device_vector<Float>(indices.size(), 1);
+	
+	// Get upstream indices.
+	thrust::host_vector<int> upstream(indices.size());
+	auto it = upstream.begin();
+	for (int i = 0; i < N; ++i)
+		for (int j = offset_in_indices[i]; j < offset_in_indices[i + 1]; ++j)
+			*it++ = i;
+
+	list.upstream = upstream;
 
 	double avg_num_conns = 0;
 	for (int i = 1; i < offset_in_indices.size(); ++i)
