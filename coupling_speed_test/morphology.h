@@ -97,6 +97,8 @@ public:
 
 	//! Find the minimum distance between any two adjacent points.
 	float GetMinimumDistance();
+	//! Find the maximum distance between any two adjacent points.
+	float GetMaximumDistance();
 
 	//! Getter for positions. 
 	std::vector<glm::vec3> const& GetPositions() { return positions; }

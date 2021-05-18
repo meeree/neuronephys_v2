@@ -260,6 +260,7 @@ __global__ void Leapfrog_diekman(Float** sim_vars, const int N, const float time
         const Float Rnl = sim_vars[DIEKMAN_VAR_RNL][idx];
         const Float Fnl = sim_vars[DIEKMAN_VAR_FNL][idx];
         const Float S = sim_vars[DIEKMAN_VAR_S][idx];
+        const Float P = sim_vars[DIEKMAN_VAR_P][idx];
         const Float Y = sim_vars[DIEKMAN_VAR_Y][idx];
         const Float Cas = sim_vars[DIEKMAN_VAR_CAS][idx];
         const Float Cac = sim_vars[DIEKMAN_VAR_CAC][idx];
@@ -269,9 +270,16 @@ __global__ void Leapfrog_diekman(Float** sim_vars, const int N, const float time
         const Float egaba = sim_vars[DIEKMAN_VAR_EGABA][idx];
 
         const Float R = clk * 11.36 * (G_biochem - 0.25); //changed in ~2/2014? = R2
+        const Float SS = 21 * (gto - 1.66); 
 
         const Float gkca = 198.0 / (1.0 + exp(R)) + 2.0;
         const Float gkleak = 0.2 / (1.0 + exp(R));
+        //const Float gnap = 2.13 + 0.14 / (1.0 + exp(-SS)); // if dki
+        //const Float gnap = 1.46 + 0.51 / (1.0 + exp(-SS)); // if chir
+        //const Float gnap = 1; // if riluzole
+        const Float gnaP = 1.59 + 0.5 / (1.0 + exp(-SS)); // if nothing
+        //const Float gnaP = 0;
+
 
         const Float M_inf = 1.0 / (1.0 + expf(-(V + 35.2) / 8.1));
         const Float H_inf = 1.0 / (1.0 + expf((V + 62.0) / 2.0));
@@ -280,14 +288,17 @@ __global__ void Leapfrog_diekman(Float** sim_vars, const int N, const float time
         const Float Rnl_inf = 1.0 / (1.0 + expf(-(V + 21.6) / 6.7));
         const Float Fnl_inf = 1.0 / (1.0 + exp((V + 260.0) / 65.0));
         const Float S_inf = 1e7 * Cas * Cas / (1e7 * Cas * Cas + 5.6);
+        const Float P_inf = 1.0 / powf(1.0 + expf(-(V + 25.0) / 7.4), 1.5);
 
         const Float tau_M = expf(-(V + 286.0) / 160.0);
         const Float tau_H = 0.51 + expf(-(V + 26.6) / 7.1);
         const Float tau_N = expf(-(V - 67.0) / 68.0);
         const Float tau_Rl = 3.1;
         const Float tau_Rnl = 3.1;
+       
         const Float tau_Fnl = expf(-(V - 444.0) / 220.0);
         const Float tau_S = 500.0 / (1e7 * Cas * Cas + 5.6);
+        const Float tau_P = 100;
 
         // Update gating variables except S and Y.
         const Float new_M = 2.0 * timestep / (2.0 * tau_M + timestep) * M_inf + (2.0 * tau_M - timestep) / (2.0 * tau_M + timestep) * M;
@@ -296,7 +307,7 @@ __global__ void Leapfrog_diekman(Float** sim_vars, const int N, const float time
         const Float new_Rl = 2.0 * timestep / (2.0 * tau_Rl + timestep) * Rl_inf + (2.0 * tau_Rl - timestep) / (2.0 * tau_Rl + timestep) * Rl;
         const Float new_Rnl = 2.0 * timestep / (2.0 * tau_Rnl + timestep) * Rnl_inf + (2.0 * tau_Rnl - timestep) / (2.0 * tau_Rnl + timestep) * Rnl;
         const Float new_Fnl = 2.0 * timestep / (2.0 * tau_Fnl + timestep) * Fnl_inf + (2.0 * tau_Fnl - timestep) / (2.0 * tau_Fnl + timestep) * Fnl;
-
+        const Float new_P = 2.0 * timestep / (2.0 * tau_P + timestep) * P_inf + (2.0 * tau_P - timestep) / (2.0 * tau_P + timestep) * P;
         // Solve for Cas using quadratic formula then update S gating variable.
         const Float expr = -kcas * (gcal * Rl * K1 / (K2 + Cas) + gcanl * Rnl * Fnl) * (V - Eca) - Cas / taucas + bcas;
         const Float B = (K2 - Cas - timestep / 2 * expr + timestep / 2 * kcas * gcanl * new_Rnl * new_Fnl * (V - Eca) + timestep / 2 / taucas * K2 - bcas * timestep / 2) / (1 + timestep / 2 / taucas);
@@ -316,8 +327,8 @@ __global__ void Leapfrog_diekman(Float** sim_vars, const int N, const float time
         const Float new_Y = (Ar * Tin_avg * timestep + (1 - timestep / 2 * (Ar * Tin_avg + Ad)) * Y) / (timestep / 2 * (Ar * Tin_avg + Ad) + 1);
 
         // Update the voltage.
-        const Float G = gna * new_M * new_M * new_M * new_H + gk * powf(new_N, 4) + gcal * new_Rl * (K1 / (K2 + new_Cas)) + gcanl * new_Rnl * new_Fnl + gkca * new_S * new_S + gkleak + gnaleak + new_Y;
-        const Float E = Ena * (gna * new_M * new_M * new_M * new_H + gnaleak) + Ek * (gk * powf(new_N, 4) + gkca * new_S * new_S + gkleak) + Eca * (gcal * new_Rl * (K1 / (K2 + new_Cas)) + gcanl * new_Rnl * new_Fnl) + g_gaba * new_Y * egaba;
+        const Float G = gna * new_M * new_M * new_M * new_H + gk * powf(new_N, 4) + gcal * new_Rl * (K1 / (K2 + new_Cas)) + gcanl * new_Rnl * new_Fnl + gkca * new_S * new_S + gkleak + gnaleak + gnaP*new_P + new_Y;
+        const Float E = Ena * (gna * new_M * new_M * new_M * new_H + gnaleak+ gnaP * new_P) + Ek * (gk * powf(new_N, 4) + gkca * new_S * new_S + gkleak) + Eca * (gcal * new_Rl * (K1 / (K2 + new_Cas)) + gcanl * new_Rnl * new_Fnl) + g_gaba * new_Y * egaba;
 
         sim_vars[DIEKMAN_VAR_V][idx] = (appcur * timestep + E * timestep + (1 - timestep / 2 * G) * V) / (1 + timestep / 2 * G);
         sim_vars[DIEKMAN_VAR_M][idx] = new_M;

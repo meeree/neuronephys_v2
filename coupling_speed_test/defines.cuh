@@ -157,16 +157,17 @@ namespace an_ie_params {
 #define DIEKMAN_VAR_RNL 5 
 #define DIEKMAN_VAR_FNL 6 
 #define DIEKMAN_VAR_S 7 
-#define DIEKMAN_VAR_Y 8 
-#define DIEKMAN_VAR_CAS 9
-#define DIEKMAN_VAR_CAC 10 
-#define DIEKMAN_VAR_G_BIOCHEM 11 // Biochemical model input
-#define DIEKMAN_VAR_IIN 12
-#define DIEKMAN_VAR_ICOUNT 13
-#define DIEKMAN_VAR_IOUTPUT 14
-#define DIEKMAN_VAR_EGABA 15 // GABA reversal potential
-#define DIEKMAN_VAR_PARACRINE 16 // Paracrine signalling input
-#define NUM_DIEKMAN_VAR 17
+#define DIEKMAN_VAR_P 8
+#define DIEKMAN_VAR_Y 9 
+#define DIEKMAN_VAR_CAS 10
+#define DIEKMAN_VAR_CAC 11 
+#define DIEKMAN_VAR_G_BIOCHEM 12 // Biochemical model input
+#define DIEKMAN_VAR_IIN 13
+#define DIEKMAN_VAR_ICOUNT 14
+#define DIEKMAN_VAR_IOUTPUT 15
+#define DIEKMAN_VAR_EGABA 16 // GABA reversal potential
+#define DIEKMAN_VAR_PARACRINE 17 // Paracrine signalling input
+#define NUM_DIEKMAN_VAR 18
 namespace diekman_params {
     constexpr static const Float leapfrog_dt = 0.4;// ms Timestep to use.
     constexpr static const Float Cm = 5.7;         // pF/um^2  membrane capacitance per unit area
@@ -193,8 +194,9 @@ namespace diekman_params {
     constexpr static const Float Vt = -20;         // mV       neurontransmitter threshold
     constexpr static const Float Kp = 3;           // mV       neurontransmitter activation rate
     constexpr static const Float clk = 2.2;        //          strength of the influence of the molecular clock on the electrical activity
+    constexpr static const Float gto = 1.66;        //          gto is the molecular clock variable corresponding to GSK3 activity
     constexpr static const Float g_gaba = 1.0;     // GABA coupling conductance coefficient.
-    constexpr static const Float g_paracrine = 1.0;// Paracrine coupling conductance coefficient.
+    constexpr static const Float g_paracrine = 1;// Paracrine coupling conductance coefficient.
     constexpr static const Float e_gaba = 20.0;     //Coupling potential for GABA and paracrine signalling
     constexpr static const Float e_paracrine = 20.0;//Coupling potential for paracrine signalling
     constexpr const static Float Ar = 5.0; constexpr const static Float Ad = 0.18; // alpha and beta for GABA gating variable

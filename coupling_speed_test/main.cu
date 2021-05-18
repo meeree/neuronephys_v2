@@ -93,6 +93,7 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
     uint8_t* frame_data;
     FILE* replay_out;
     bool pause{ false };
+    graphics_voltages_handle = false;
     if (graphics_voltages_handle)
     {
         frame_data = (uint8_t*)malloc(3 * sizeof(uint8_t) * Graphics::get_width() * Graphics::get_height());
@@ -103,7 +104,6 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
         slice = paracrine->get_grid().density().slice(Graphics::get_slice_index()).as(f32).host<float>();
 
     
-
     for (int i = 0; i < nincs; ++i)
     {
         if (i % (nincs / 100) == 0)
@@ -111,6 +111,14 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
 
         if (i % print_incs == 0)
         {
+            electrodes->DoElectrodeMeasurements(V_ptr);
+            Float const* avg_V_handle = electrodes->ElectrodeOutputHandle();
+#ifdef OUTPUT_ELECTRODES_FILE
+            for (int k = 0; k < render_N; ++k)
+                fout << avg_V_handle[k] << ',';
+#endif
+            fout << ElectrodeNet::MeasureAverageEntireNetwork(V_ptr, N);
+            fout << std::endl;
             // Update graphics if the graphics handle is non-null
             if (graphics_voltages_handle)
             {
@@ -118,13 +126,7 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
                 Float const* avg_V_handle = electrodes->ElectrodeOutputHandle();
                 for (int k = 0; k < render_N; ++k)
                     graphics_voltages_handle[k] = avg_V_handle[k];
-                               
-#ifdef OUTPUT_ELECTRODES_FILE
-                for(int k = 0; k < render_N; ++k)
-                    fout << avg_V_handle[k] << ',';
-#endif
-                fout << ElectrodeNet::MeasureAverageEntireNetwork(V_ptr, N);
-				fout << std::endl;
+
                 int slice_index;
                 slice_index = Graphics::get_slice_index();
                 if (paracrine)
@@ -432,7 +434,7 @@ void diekman_benchmark(int const N = 1, int const samp_freq = 1000, float const 
 
     // Generate coupling
     AtomicCoupling i_coupling(N);
-    UniformRandomNetwork i_net(100);
+    UniformRandomNetwork i_net(10);
     i_net.Generate(N);
     ChunkedAdjacencyList i_list{ i_net.ToChunkedAdjacencyList(sim_vars_cpu[DIEKMAN_VAR_ICOUNT]) };
     std::vector<CouplingStruct> coupling_structs
@@ -442,9 +444,14 @@ void diekman_benchmark(int const N = 1, int const samp_freq = 1000, float const 
 
     // Initialize paracrine signalling. 
     Float min_dist = morphology.GetMinimumDistance();
+    Float max_dist = morphology.GetMaximumDistance();
+    std::cout <<"min/max distances are"<< min_dist<<" "<< max_dist << std::endl;
+
     Float voxel_size = 10 * min_dist;
     int x_count, y_count, z_count;
     x_count = y_count = z_count = 2 / voxel_size;
+    std::cout << "x_count is" << x_count << std::endl;
+
     thrust::device_vector<Float> d_coords[3]; 
     auto const& positions{ morphology.GetPositions() };
 
@@ -503,7 +510,7 @@ int main()
 {
     cusparseCreate(&Csr_matrix::handle);
     int N = 14638;
-    int N_electrodes = N;
+    int N_electrodes = 1000;
     diekman_benchmark(N, 2500, 3, N_electrodes);
     Graphics::terminate_graphics();
 }

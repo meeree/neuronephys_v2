@@ -149,6 +149,25 @@ float Morphology::GetMinimumDistance()
     return sqrt(min_dist2);
 }
 
+float Morphology::GetMaximumDistance()
+{
+    if (!kd_tree)
+        SetupANN();
+
+    std::vector<int> knn(2);
+    std::vector<ANNdist> knn_dists(2);
+    float max_dist2 = FLT_MIN;
+    for (int n = 0; n < positions.size(); ++n)
+    {
+        // Get two nearest neighbors. First nearest neighor is always just the neuron itself.
+        // knn_dists[1] stores squared distance to nearest neuron.
+        KNN(n, 2, knn, knn_dists);
+        if (knn_dists[1] > max_dist2)
+            max_dist2 = knn_dists[1];
+    }
+    return sqrt(max_dist2);
+}
+
 bool HollowSphere::Generate(int const N)
 {
     std::cout << "Generating hollow sphere morphology..." << std::endl;
