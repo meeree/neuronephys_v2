@@ -116,6 +116,29 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
                 pause = Graphics::render(graphics_voltages_handle, nullptr, tex_dim, tex_dim, pause);
 #endif
             }
+
+            if (i % 25000 == 0)
+            {
+                // Write weights to hdf file.
+                thrust::host_vector<Float> weights(coupling_structs[1].list.weights);
+                size_t dim[1];
+                dim[0] = weights.size();
+
+                // Data type. For our custom Float type, this can either be a float or a double. 
+                // For an int, this should just be H5::PredType::NATIVE_INT. 
+                auto dtype = sizeof(Float) == 4 ? H5::PredType::NATIVE_FLOAT : H5::PredType::NATIVE_DOUBLE;
+                   
+                // Preparation of a dataset and a file.
+                H5::DataSpace space(1, dim);
+                H5::H5File *file = new H5::H5File("WEIGHTS_OUT_0.5_i=" + std::to_string(i) + ".h5", H5F_ACC_TRUNC);
+                H5::DataSet *dataset = new H5::DataSet(file->createDataSet("data", dtype, space));
+
+                // Write to file.
+                dataset->write(weights.data(), dtype);
+
+                delete dataset;
+                delete file;
+            }
         }
 
         if (pause)
@@ -128,36 +151,13 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
         int n_firing;
         for(auto& coup_struct: coupling_structs)
             n_firing = coup_struct();
-        heb->UpdateWeights(coupling_structs[1].list, coupling_structs[1].coupling.IsFiringGPU());
+        heb->UpdateWeights(coupling_structs[1].list, coupling_structs[1].coupling.IsFiringGPU(), coupling_structs[1].coupling.FiringIndicesGPU());
 
  //       fout << n_firing << std::endl;
 
         // Update ODE 
         ephys->SimulateEphys();
     }
-
-    // Write weights to hdf file.
-    thrust::host_vector<Float> weights(coupling_structs[1].list.weights);
-    size_t dim[1];
-    dim[0] = weights.size();
-
-    for (int i = 0; i < 1000; ++i)
-        std::cout << weights[i] << std::endl;
-
-    // Data type. For our custom Float type, this can either be a float or a double. 
-    // For an int, this should just be H5::PredType::NATIVE_INT. 
-    auto dtype = sizeof(Float) == 4 ? H5::PredType::NATIVE_FLOAT : H5::PredType::NATIVE_DOUBLE;
-       
-    // Preparation of a dataset and a file.
-    H5::DataSpace space(1, dim);
-    H5::H5File *file = new H5::H5File("WEIGHTS_OUT.h5", H5F_ACC_TRUNC);
-    H5::DataSet *dataset = new H5::DataSet(file->createDataSet("data", dtype, space));
-
-    // Write to file.
-    dataset->write(weights.data(), dtype);
-
-    delete dataset;
-    delete file;
 
     std::vector<double> chi_sub = synchrony_net->GetSynchronyMeasures();
     for (auto& chi : chi_sub)
@@ -323,7 +323,7 @@ void sanmodel_inhexc_benchmark(int const N = 1, int const samp_freq = 1000, floa
         synchrony_region_inds[i] = (N / synchrony_region_inds.size()) * i;
     SynchronyNet synchrony_net(std::move(synchrony_region_inds), { 4096, 2048, 1024, 512, 256, 128, 64 });
 
-    Hebbian heb(300, 0.1, N, e_list.indices.size());
+    Hebbian heb(300, 0.1, e_list.indices.size());
 
     // Note, we multiply by 1000 to convert from sec to ms.
     int const nincs = (1000 * samp_len / rk4_dt);
@@ -420,7 +420,7 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
         synchrony_region_inds[i] = (N / synchrony_region_inds.size()) * i;
     SynchronyNet synchrony_net(std::move(synchrony_region_inds), { 4096, 2048, 1024, 512, 256, 128, 64 });
     
-    Hebbian heb(30, 0.1, N, e_list.indices.size());
+    Hebbian heb(30, 0.1, e_list.indices.size());
 
     // Note, we multiply by 1000 to convert from sec to ms.
     int const nincs = (1000 * samp_len / leapfrog_dt);
@@ -449,6 +449,6 @@ int main()
 #else
     int N_electrodes = 1e4;
 #endif
-    sanmodel_inhexc_benchmark(1e4, 2500, 2, N_electrodes);
+    sanmodel_inhexc_benchmark(1e4, 2500, 60, N_electrodes);
     Graphics::terminate_graphics();
 }

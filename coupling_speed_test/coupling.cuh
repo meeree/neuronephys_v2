@@ -8,7 +8,6 @@ struct AdjacencyList
 	thrust::device_vector<int> indices;
 	thrust::device_vector<int> offset_in_indices;
 	thrust::device_vector<Float> weights;
-	thrust::device_vector<int> upstream;
 };
 
 struct ChunkedAdjacencyList
@@ -39,7 +38,8 @@ public:
 	int operator()(AdjacencyList const& connectivity, Float* spikes, Float const* neuron_outputs);
 	int operator()(ChunkedAdjacencyList const& connectivity, Float* spikes, Float const* neuron_outputs);
 
-	thrust::device_vector<int> const& IsFiringGPU() const { return is_firing; }
+	thrust::device_vector<int> const& IsFiringGPU () const { return is_firing; }
+	thrust::device_vector<int> const& FiringIndicesGPU () const { return firing_neurons; }
 };
 
 //! Stored in CSC format!

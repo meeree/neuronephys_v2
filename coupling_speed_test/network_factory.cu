@@ -17,15 +17,6 @@ AdjacencyList Network::ToAdjacencyList(Float*& Tcount) const
 	list.indices = indices;
 	list.offset_in_indices = offset_in_indices;
 	list.weights = thrust::device_vector<Float>(indices.size(), 1);
-	
-	// Get upstream indices.
-	thrust::host_vector<int> upstream(indices.size());
-	auto it = upstream.begin();
-	for (int i = 0; i < N; ++i)
-		for (int j = offset_in_indices[i]; j < offset_in_indices[i + 1]; ++j)
-			*it++ = i;
-
-	list.upstream = upstream;
 
 	double avg_num_conns = 0;
 	for (int i = 1; i < offset_in_indices.size(); ++i)
