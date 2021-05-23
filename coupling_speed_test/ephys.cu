@@ -6,58 +6,62 @@ HHEphys::HHEphys(int const N_)
     using namespace HH;
     // Set up simulation variables. Stored in a struct of arrays.
     sim_vars_cpu.resize(Params::PARAM_COUNT);
+    Reset();
+}
+
+void HHEphys::Reset()
+{
+    using namespace HH;
+    thrust::host_vector<Float> cpu_arr(N, 0);
+
+    // Zero arrays.
+    for (Float*& arr : sim_vars_cpu)
     {
-        thrust::host_vector<Float> cpu_arr(N, 0);
-
-        // Zero arrays.
-        for (Float*& arr : sim_vars_cpu)
-        {
-            cudaMalloc(&arr, N * sizeof(Float));
-            cudaMemcpy(sim_vars_cpu[Params::V], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-        }
-
-        // Set voltages randomly
-        auto& gen{ Utility::UnseededRandomEngine() };
-        std::normal_distribution<> voltage_dist(-55, 25);
-        for (auto& val : cpu_arr)
-            val = voltage_dist(gen);
-        thrust::fill_n(cpu_arr.begin(), N, -55);
+        cudaMalloc(&arr, N * sizeof(Float));
         cudaMemcpy(sim_vars_cpu[Params::V], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-        thrust::fill_n(cpu_arr.begin(), N, 0.0);
-
-        // Set gating variables  
-        std::normal_distribution<> gating_var_dist(0.0, 0.0);
-        cudaMemcpy(sim_vars_cpu[Params::M], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-
-        for (auto& val : cpu_arr)
-            val = gating_var_dist(gen);
-        cudaMemcpy(sim_vars_cpu[Params::N], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-
-        for (auto& val : cpu_arr)
-            val = gating_var_dist(gen);
-        cudaMemcpy(sim_vars_cpu[Params::H], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-
-        thrust::fill_n(cpu_arr.begin(), N, 0.0);
-        cudaMemcpy(sim_vars_cpu[Params::LOCAL_Y], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-        cudaMemcpy(sim_vars_cpu[Params::IY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-        cudaMemcpy(sim_vars_cpu[Params::EY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-
-        // No neurotransmitter input/output or connections
-        cudaMemcpy(sim_vars_cpu[Params::LOCAL_OUTPUT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-        cudaMemcpy(sim_vars_cpu[Params::LOCAL_IN], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-        cudaMemcpy(sim_vars_cpu[Params::LOCAL_COUNT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-        cudaMemcpy(sim_vars_cpu[Params::IOUTPUT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-        cudaMemcpy(sim_vars_cpu[Params::IIN], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-        cudaMemcpy(sim_vars_cpu[Params::ICOUNT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-        cudaMemcpy(sim_vars_cpu[Params::EOUTPUT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-        cudaMemcpy(sim_vars_cpu[Params::EIN], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-        cudaMemcpy(sim_vars_cpu[Params::ECOUNT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-
-        // Set applied current
-        thrust::fill_n(cpu_arr.begin(), N, appcur);
-        cudaMemcpy(sim_vars_cpu[Params::APPCUR], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-        gpuErrchk(cudaDeviceSynchronize());
     }
+
+    // Set voltages randomly
+    auto& gen{ Utility::UnseededRandomEngine() };
+    std::normal_distribution<> voltage_dist(-55, 25);
+    for (auto& val : cpu_arr)
+        val = voltage_dist(gen);
+    thrust::fill_n(cpu_arr.begin(), N, -55);
+    cudaMemcpy(sim_vars_cpu[Params::V], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    thrust::fill_n(cpu_arr.begin(), N, 0.0);
+
+    // Set gating variables  
+    std::normal_distribution<> gating_var_dist(0.0, 0.0);
+    cudaMemcpy(sim_vars_cpu[Params::M], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+    for (auto& val : cpu_arr)
+        val = gating_var_dist(gen);
+    cudaMemcpy(sim_vars_cpu[Params::N], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+    for (auto& val : cpu_arr)
+        val = gating_var_dist(gen);
+    cudaMemcpy(sim_vars_cpu[Params::H], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+    thrust::fill_n(cpu_arr.begin(), N, 0.0);
+    cudaMemcpy(sim_vars_cpu[Params::LOCAL_Y], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::IY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::EY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+    // No neurotransmitter input/output or connections
+    cudaMemcpy(sim_vars_cpu[Params::LOCAL_OUTPUT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::LOCAL_IN], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::LOCAL_COUNT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::IOUTPUT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::IIN], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::ICOUNT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::EOUTPUT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::EIN], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::ECOUNT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+    // Set applied current
+    thrust::fill_n(cpu_arr.begin(), N, appcur);
+    cudaMemcpy(sim_vars_cpu[Params::APPCUR], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    gpuErrchk(cudaDeviceSynchronize());
     // Copy pointers from CPU to GPU 
     sim_vars = sim_vars_cpu;
 }
@@ -103,7 +107,12 @@ SANEphys::SANEphys(int const N_)
         // GABA gating variable
         cudaMemcpy(sim_vars_cpu[Params::IY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
+        // Set tau_ca.
+        thrust::fill_n(cpu_arr.begin(), N, 1.0 * 739.09);
+        cudaMemcpy(sim_vars_cpu[Params::TAUCA], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
         // No neurotransmitter input/output. Connection counts are set to zero for now and edited below. 
+        thrust::fill_n(cpu_arr.begin(), N, 0.0);
         cudaMemcpy(sim_vars_cpu[Params::EOUTPUT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
         cudaMemcpy(sim_vars_cpu[Params::EIN], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
         cudaMemcpy(sim_vars_cpu[Params::ECOUNT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
@@ -160,6 +169,9 @@ __global__ void Leapfrog_HH(Float** sim_vars, const int N, const Float timestep,
         const Float Ein = sim_vars[Params::EIN][idx];
         const Float Enum_in = sim_vars[Params::ECOUNT][idx];
         const Float appcur = sim_vars[Params::APPCUR][idx];
+
+        const Float g_ampa_white = sim_vars[Params::GAMPA_WHITE][idx];
+        const Float g_ampa_grey = sim_vars[Params::GAMPA_GREY][idx];
 
         const Float V = *V_ptr;
         const Float M = *M_ptr;
@@ -218,6 +230,7 @@ void HHEphys::SimulateEphys()
 }
 
 __device__ void dxdt_an_ie_model(const int idx,
+    Float const tauCa, Float gWhite, Float gGrey,
     Float const V, Float const nK, Float const Ca, Float const Ye, Float const Yi, Float const Y_loc,
     Float const e_Tinavg, Float const i_Tinavg, Float const loc_Tinavg,
     Float const white_noise,
@@ -250,8 +263,8 @@ __device__ void dxdt_an_ie_model(const int idx,
         - gKCa * mKCa_inf * (V - vK)
         - gNaP * mNaP_inf * mNaP_inf * mNaP_inf * (V - vNa)
         - gL * (V - vL)
-        - gAMPA_white * Ye * (V - vAMPA)
-        - gAMPA_grey * Y_loc * (V - vGABA)
+        - gWhite * Ye * (V - vGABA)
+        - gGrey * Y_loc * (V - vGABA)
         - gGABA * Yi * (V - vGABA);
 
     *dvdt /= C;
@@ -272,6 +285,9 @@ __global__ void RK4_an_ie_model(Float** sim_vars, const int N, const float times
         Float* Ye_ptr = sim_vars[Params::EY] + idx;
         Float* Yi_ptr = sim_vars[Params::IY] + idx;
         Float* Y_loc_ptr = sim_vars[Params::LOCAL_Y] + idx;
+        Float tauCa = sim_vars[Params::TAUCA][idx];
+        Float gWhite = sim_vars[Params::GGABA_WHITE][idx];
+        Float gGrey = sim_vars[Params::GGABA_GREY][idx];
 
         // Calculate average neurotransmitter input
         Float e_Tinavg = sim_vars[Params::ECOUNT][idx];
@@ -292,20 +308,20 @@ __global__ void RK4_an_ie_model(Float** sim_vars, const int N, const float times
         Float white_noise = white_noise_intensity * curand_normal(random_states + idx) + white_noise_mean;
 
         // k1 = f(X)
-        dxdt_an_ie_model(idx, V, nK, Ca, Ye, Yi, Y_loc, e_Tinavg, i_Tinavg, loc_Tinavg, white_noise, &dvdt1, &dnKdt1, &dCadt1, &dYedt1, &dYidt1, &dY_loc_dt1);
+        dxdt_an_ie_model(idx, tauCa, gWhite, gGrey, V, nK, Ca, Ye, Yi, Y_loc, e_Tinavg, i_Tinavg, loc_Tinavg, white_noise, &dvdt1, &dnKdt1, &dCadt1, &dYedt1, &dYidt1, &dY_loc_dt1);
 
         // k2 = f(X + dt/2 * k1)
-        dxdt_an_ie_model(idx,
+        dxdt_an_ie_model(idx, tauCa, gWhite, gGrey,
             V + dvdt1 * timestep / 2, nK + dnKdt1 * timestep / 2, Ca + dCadt1 * timestep / 2, Ye + dYedt1 * timestep / 2, Yi + dYidt1 * timestep / 2, Y_loc + dY_loc_dt1 * timestep / 2, white_noise, 
             e_Tinavg, i_Tinavg, loc_Tinavg, &dvdt2, &dnKdt2, &dCadt2, &dYedt2, &dYidt2, &dY_loc_dt2);
 
         // k3 = f(X + dt/2 * k2)
-        dxdt_an_ie_model(idx,
+        dxdt_an_ie_model(idx, tauCa, gWhite, gGrey,
             V + dvdt2 * timestep / 2, nK + dnKdt2 * timestep / 2, Ca + dCadt2 * timestep / 2, Ye + dYedt2 * timestep / 2, Yi + dYidt2 * timestep / 2, Y_loc + dY_loc_dt2 * timestep / 2, white_noise, 
             e_Tinavg, i_Tinavg, loc_Tinavg, &dvdt3, &dnKdt3, &dCadt3, &dYedt3, &dYidt3, &dY_loc_dt3);
 
         // k4 = f(X + dt * k3)
-        dxdt_an_ie_model(idx,
+        dxdt_an_ie_model(idx, tauCa, gWhite, gGrey,
             V + dvdt3 * timestep, nK + dnKdt3 * timestep, Ca + dCadt3 * timestep, Ye + dYedt3 * timestep, Yi + dYidt3 * timestep, Y_loc + dY_loc_dt3 * timestep, white_noise, 
             e_Tinavg, i_Tinavg, loc_Tinavg, &dvdt4, &dnKdt4, &dCadt4, &dYedt4, &dYidt4, &dY_loc_dt4);
 
@@ -334,6 +350,9 @@ __global__ void Euler_an_ie_model(Float** sim_vars, const int N, const float tim
         Float* Ye_ptr = sim_vars[Params::EY] + idx;
         Float* Yi_ptr = sim_vars[Params::IY] + idx;
         Float* Y_loc_ptr = sim_vars[Params::LOCAL_Y] + idx;
+        Float tauCa = sim_vars[Params::TAUCA][idx];
+        Float gWhite = sim_vars[Params::GGABA_WHITE][idx];
+        Float gGrey = sim_vars[Params::GGABA_GREY][idx];
 
         // Calculate average neurotransmitter input
         Float e_Tinavg = sim_vars[Params::ECOUNT][idx];
@@ -353,7 +372,7 @@ __global__ void Euler_an_ie_model(Float** sim_vars, const int N, const float tim
         // Add random white noise to V.
         Float white_noise = white_noise_intensity * curand_normal(random_states + idx) + white_noise_mean;
 
-        dxdt_an_ie_model(idx, V, nK, Ca, Ye, Yi, Y_loc, e_Tinavg, i_Tinavg, loc_Tinavg, white_noise, &dvdt, &dnKdt, &dCadt, &dYedt, &dYidt, &dY_loc_dt);
+        dxdt_an_ie_model(idx, tauCa, gWhite, gGrey, V, nK, Ca, Ye, Yi, Y_loc, e_Tinavg, i_Tinavg, loc_Tinavg, white_noise, &dvdt, &dnKdt, &dCadt, &dYedt, &dYidt, &dY_loc_dt);
         
         // X(t + dt) = X(t) + dt * dxdt
         *V_ptr = V + timestep * dvdt;

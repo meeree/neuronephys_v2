@@ -6,13 +6,22 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="main.cu">
-      <Filter>Source</Filter>
-    </CudaCompile>
     <CudaCompile Include="coupling.cu">
       <Filter>Source</Filter>
     </CudaCompile>
     <CudaCompile Include="network_factory.cu">
+      <Filter>Source</Filter>
+    </CudaCompile>
+    <CudaCompile Include="defines.cu">
+      <Filter>Source</Filter>
+    </CudaCompile>
+    <CudaCompile Include="electrode_net.cu">
+      <Filter>Source</Filter>
+    </CudaCompile>
+    <CudaCompile Include="ephys.cu">
+      <Filter>Source</Filter>
+    </CudaCompile>
+    <CudaCompile Include="main.cu">
       <Filter>Source</Filter>
     </CudaCompile>
   </ItemGroup>
@@ -30,6 +39,12 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="morphology.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="electrode_net.cuh">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="ephys.cuh">
       <Filter>Source</Filter>
     </ClInclude>
   </ItemGroup>

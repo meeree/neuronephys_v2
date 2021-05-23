@@ -37,6 +37,7 @@ class HHEphys : public Ephys
 public:
     HHEphys(int const N_);
     virtual void SimulateEphys() override;
+    void Reset();
 };
 //! HH parameters and constants.
 namespace HH
@@ -50,8 +51,8 @@ namespace HH
     constexpr static const Float Tmax = 1.0;                                                             // Max neurotransmitter output
     constexpr static const Float Vt = -20.0; constexpr static const Float Kp = 3.0;                      // Neurotransmitter potential and scalar 
     constexpr const static Float Ar = 5.0; constexpr const static Float Ad = 0.18;                       // alpha and beta for GABA gating variable
-    constexpr static const Float g_ampa_white = 0.03; constexpr static const Float e_ampa = 0.0; // Coupling conductance and potential for AMPA in white matter
-    constexpr static const Float g_ampa_grey = 0.4; // Coupling conductance and potential for AMPA in grey matter
+    /*constexpr const static Float g_ampa_white[1];*/ constexpr static const Float e_ampa = 0.0; // Coupling conductance and potential for AMPA in white matter
+    /*constexpr const static Float g_ampa_grey[1];*/ // Coupling conductance and potential for AMPA in grey matter
     constexpr static const Float g_gaba = 0.05; constexpr static const Float e_gaba = -70.0; // Coupling conductance and potential for GABA
     constexpr static const Float appcur = 0.0;                                                            // Base current to apply when we only apply a constant current. 
     constexpr static const Float white_noise_mean = 2.0f;
@@ -70,6 +71,7 @@ namespace HH
         IOUTPUT, IIN, ICOUNT,
         // Applied current:
         APPCUR,
+        GAMPA_WHITE, GAMPA_GREY,
         // Number of parameters:
         PARAM_COUNT 
     };
@@ -85,7 +87,7 @@ public:
 //! SAN parameters and constants.
 namespace SAN
 {
-    constexpr static const Float rk4_dt = 0.04;
+    constexpr static const Float rk4_dt = 0.03;
     constexpr static const Float an_Vt = -45; constexpr static const Float an_Kp = 1;
     constexpr static const Float Tmax = 1.0;
     constexpr static const Float C = 1;
@@ -110,17 +112,17 @@ namespace SAN
     constexpr static const Float gNaP = 0.63314;
     constexpr static const Float gCa = 0.1624;
     constexpr static const Float gKCa = 0.7506;
-    constexpr static const Float gAMPA_white = 0.0; // Coupling conductance and potential for AMPA in white matter
-    constexpr static const Float gAMPA_grey = 0.5; // Coupling conductance and potential for AMPA in grey matter
+ //   constexpr static const Float gAMPA_white = 0.0; // Coupling conductance and potential for AMPA in white matter
+ //   constexpr static const Float gAMPA_grey = 0.1; // Coupling conductance and potential for AMPA in grey matter
     constexpr static const Float gNMDA = 0.0; // 0.0434132;
-    constexpr static const Float gGABA = 0.5; //TODO: Change to non-averaged value
-    constexpr static const Float tauCa = 0.5 * 739.09; // Controls calcium decay rate. Decrease to decrease the length of the resting state between bursts. Around half is close to transition from wake to sleep.
+    constexpr static const Float gGABA = 0.1; //TODO: Change to non-averaged value
+ //   constexpr static const Float tauCa = 0.5 * 739.09; // Controls calcium decay rate. Decrease to decrease the length of the resting state between bursts. Around half is close to transition from wake to sleep.
     constexpr static const Float white_noise_mean = 0.1f;
     constexpr static const Float white_noise_intensity = 0.05f; // Controls stddev of white noise.
     enum Params
     {
         // Main parameters:
-        V=0, NK, CA,
+        V=0, NK, CA, TAUCA,
         // Coupling gating variables:
         LOCAL_Y, IY, EY,
         // Local coupling parameters:
@@ -129,6 +131,7 @@ namespace SAN
         EOUTPUT, EIN, ECOUNT,
         // Inhibitory coupling parameters:
         IOUTPUT, IIN, ICOUNT,
+        GGABA_WHITE, GGABA_GREY,
         // Number of parameters:
         PARAM_COUNT 
     };

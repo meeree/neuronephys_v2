@@ -93,9 +93,7 @@
     <CudaCompile Include="defines.cu" />
     <CudaCompile Include="electrode_net.cu" />
     <CudaCompile Include="ephys.cu" />
-    <CudaCompile Include="main.cu">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
-    </CudaCompile>
+    <CudaCompile Include="main.cu" />
     <CudaCompile Include="network_factory.cu" />
   </ItemGroup>
   <ItemGroup>

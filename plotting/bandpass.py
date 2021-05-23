@@ -57,7 +57,7 @@ def run():
 
     # desired cutoff frequencies (in Hz).
     lowcut = 0.1
-    highcut = 100.0
+    highcut = 20.0
 
     # Plot the frequency response for a few different orders.
     plt.figure(1)
@@ -75,12 +75,19 @@ def run():
     plt.legend(loc='best')
 
     # Read in SAN trace.
-    full = pd.read_csv("..\coupling_speed_test\OUT_AN.txt", delimiter=',').to_numpy()
+    full = pd.read_csv("..\coupling_speed_test\OUT_HH.txt", delimiter=',').to_numpy()
     
-    # Select first column and remove initial transient second.
+    # remove initial transient second.
     real_dt = 0.4
-    x = full[int(1000 / real_dt):, 5000]
-        
+    full = full[int(1000 / real_dt):, :];
+
+    plt.figure(2);
+    for i in range(30):
+        plt.plot(full[:, i] + i, linewidth=0.9)
+    
+    # Select first column.
+    x = full[:, 0]
+
     # Downsample x so that timestep is equal to dt.
     downsample_rate = int(dt / real_dt + 0.5)
     x = x[0::downsample_rate]
@@ -91,15 +98,15 @@ def run():
     # Plot filtering with all data and with a subset. 
     for i in range(2):
         if i > 0:
-            x = x[:int(fs * 2.5)]
-            t = t[:int(fs * 2.5)]
+            x = x[:int(fs * 4)]
+            t = t[:int(fs * 4)]
             
-        plt.figure(2 + i)
+        plt.figure(3 + i)
         plt.clf()
         plt.plot(t[fs:], x[fs:], label='SAN LFP Trace', linewidth=0.4)
     
-        y = butter_lowpass_filter(x, highcut, fs, order=9)
-        plt.plot(t[fs:], y[fs:], label='Filtered signal, %.0f Hz' % highcut, linewidth=0.8)
+        y = butter_lowpass_filter(x, highcut, fs, order=3)
+        plt.plot(t[fs:], y[fs:], label='Filtered signal, %.0f Hz' % highcut, linewidth=0.9 if i > 0 else 0.3)
         plt.xlabel('time (seconds)')
         plt.ylabel('Voltage (mV)')
         plt.grid(True)

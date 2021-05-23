@@ -43,14 +43,13 @@ void run(int const N = 1, int const samp_freq = 1000, float const samp_len = 10,
     morphology.ProjectNeuronsToPlane(1);
 	morphology.Rotate(glm::radians(90.0f), glm::vec3(0, 0, 1));
 
-    float* graphics_voltage_handle;
 #ifdef OUTPUT_ELECTRODES_FILE
-    Graphics::setup(graphics_voltage_handle, (float*)projected_electrode_positions.data(), 36, 36);
     std::ofstream fout("OUT_HH.txt");
 #else
+    float* graphics_voltage_handle = nullptr;
     Graphics::setup(graphics_voltage_handle, morphology.GetPositionsRaw(), N, render_N);
-#endif
     Graphics::set_color_params(15, -60, 0.0);
+#endif
 
     HHEphys ephys(N);
     auto sim_vars_cpu = ephys.SimVarsCpu();
@@ -80,6 +79,7 @@ void run(int const N = 1, int const samp_freq = 1000, float const samp_len = 10,
     morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 1000);
  //   morphology.GenRegionsFromIDs(h_regions, h_regions_inds);
 //    morphology.GenCustomRegions([](glm::vec3 const& pos) {return int(2 * (pos.x + 1)); }, 4, h_regions, h_regions_inds);
+    render_N = h_regions_inds.size() - 1;
 #else
     morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 1);
 //    morphology.GenRegionsFromIDs(h_regions, h_regions_inds);
@@ -149,11 +149,6 @@ void run(int const N = 1, int const samp_freq = 1000, float const samp_len = 10,
 
 int main()
 {
-#ifdef OUTPUT_ELECTRODES_FILE
-    int N_electrodes = 4; // 239;
-#else
-    int N_electrodes = 1e5;
-#endif
+    int N_electrodes = 1e3;
     run(1e5, 2500, 12, N_electrodes);
-    Graphics::terminate_graphics();
 }
