@@ -55,7 +55,7 @@ def run(log_min, log_max, n_smpls = 20, inp_fl_name = ''):
             grids = np.load(inp_file)
     else:
         # Grids to display results for each split frequency.
-        grids = np.zeros((n_smpls, n_smpls, len(splitcuts)))
+        grids = np.zeros((n_smpls, n_smpls, len(splitcuts) + 1))
         for s1_raw, g_white in enumerate(smpls):
             for s2_raw, g_grey in enumerate(smpls):
                 s1, s2 = s1_raw, s2_raw
@@ -63,10 +63,13 @@ def run(log_min, log_max, n_smpls = 20, inp_fl_name = ''):
                 print('(%d, %d)' % (s1, s2), end = ',')
 
                 # Read in SAN trace.
-                full = pd.read_csv("SAN_OUT_%d_%d.txt" % (s1, s2), delimiter=',').to_numpy()
+                full = pd.read_csv("HH_OUT_%d_%d.txt" % (s1, s2), delimiter=',').to_numpy()
                 y = full[:, 0]
-                y = y[fs:]
+                y = y[4*fs:]
                 N = y.size
+                
+                chi = pd.read_csv("HH_CHI_OUT_%d_%d.txt" % (s1, s2), delimiter=',').to_numpy()
+                chi = chi[0]
             
                 yf = fft(y)
                 xf = fftfreq(N, dt / 1000)[:N//2]
@@ -88,12 +91,15 @@ def run(log_min, log_max, n_smpls = 20, inp_fl_name = ''):
                     # Divide by number of samples for bucket.
                     buckets[i] /= (j - j_prev)
                     
+                # Add synchrony.
+                buckets[-1] = chi
+                    
                 if(s1 == 0):
                     plt.figure(s1 * n_smpls + s2)
                     plt.plot(y)
                     plt.show()
 
-    out_fl_name = 'grids_%g_%g_%d_SAN.npy' % (log_min, log_max, n_smpls)
+    out_fl_name = 'grids_%g_%g_%d.npy' % (log_min, log_max, n_smpls)
     print('Writing to %s' % out_fl_name)
     with open(out_fl_name, 'wb') as f:
         np.save(f, grids)
@@ -108,7 +114,8 @@ def run(log_min, log_max, n_smpls = 20, inp_fl_name = ''):
         ax = axs[f // 3][f % 3]
         grid = grids[:, :, f]
         plt.subplot(ax)
-        plt.imshow(grid, cmap='seismic', norm=norm, interpolation='quadric')
+        plt.imshow(grid, cmap='seismic', interpolation='quadric')
+        #plt.plot([2, 20], [0, 18], '--', color=[0,1,0], linewidth=1.0)
         plt.axis('off')
         plt.title(titles[f])
     
@@ -121,6 +128,17 @@ def run(log_min, log_max, n_smpls = 20, inp_fl_name = ''):
     plt.xlabel('$\log$ $g_{grey}$', fontsize=12)
     plt.ylabel('$\log$ $g_{white}$', fontsize=12)
     ticks,labels = get_ticks(n_smpls, log_min, log_max, 2)
+    plt.xticks(ticks, labels=labels)
+    plt.yticks(ticks, labels=labels)
+        
+    # Plot synchrony
+    plt.subplots(1,1)
+    plt.imshow(grids[:, :, -1], cmap='hot', interpolation='quadric')
+    plt.colorbar()
+    plt.tick_params(axis=u'both', which=u'both',length=0)
+    plt.xlabel('$\log$ $g_{grey}$', fontsize=12)
+    plt.ylabel('$\log$ $g_{white}$', fontsize=12)
+    ticks,labels = get_ticks(n_smpls, log_min, log_max, 5)
     plt.xticks(ticks, labels=labels)
     plt.yticks(ticks, labels=labels)
     
@@ -146,4 +164,4 @@ def test():
     plt.show()
     
 # NOTE: You need to run this code with coupling_speed_test path as root directory.
-run(-3, 1, 20)
+run(-2, 0, 20)
