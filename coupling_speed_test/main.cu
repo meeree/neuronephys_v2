@@ -7,6 +7,8 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "ephys.cuh"
 
+#include <chrono>
+
 #define OUTPUT_ELECTRODES_FILE
 
 // This is simply a struct that contains all the relevant stuff for coupling. 
@@ -58,6 +60,7 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
     }
 
     thrust::host_vector<Float> h_appcur(N);
+    double total_duration = 0;
     for (int i = 0; i < nincs; ++i)
     {
         if (i % (nincs / 100) == 0)
@@ -77,6 +80,7 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
 //            thrust::fill_n(thrust::device_ptr<Float>(sim_vars_cpu[Params::APPCUR]), N, hh_params::appcur + 3.0f);
 //        else
 //            thrust::fill_n(thrust::device_ptr<Float>(sim_vars_cpu[Params::APPCUR]), N, hh_params::appcur);
+        auto start = std::chrono::high_resolution_clock::now();
 
         if (i % print_incs == 0)
         {
@@ -131,7 +135,16 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
 
         // Update ODE 
         ephys->SimulateEphys();
+
+        cudaDeviceSynchronize();
+        auto stop = std::chrono::high_resolution_clock::now();
+        if (t > 1000)
+        {
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+            total_duration += duration.count();
+        }
     }
+    std::cout << "DURATION (IGNORING TRANSIENT SECOND) " << total_duration << std::endl;
     std::vector<double> chi_sub = synchrony_net->GetSynchronyMeasures();
     for (auto& chi : chi_sub)
         std::cout << chi << std::endl;
@@ -364,12 +377,12 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
     // Setup electrodes based on mouse 2D data from 
     // https://gin.g-node.org/hiobeen/Mouse_hdEEG_ASSR_Hwang_et_al/src/master/montage.csv.
     thrust::host_vector<int> h_regions, h_regions_inds;
+    std::vector<int> electrode_inds(render_N);
 #ifdef OUTPUT_ELECTRODES_FILE
     morphology.GenSphericalRegions(h_regions, h_regions_inds, electrodes_cloud.GetPositions(), 1000);
  //   morphology.GenRegionsFromIDs(h_regions, h_regions_inds);
 //    morphology.GenCustomRegions([](glm::vec3 const& pos) {return int(2 * (pos.x + 1)); }, 4, h_regions, h_regions_inds);
 #else
-    std::vector<int> electrode_inds(render_N);
     for(int i = 0; i < render_N; ++i)
         electrode_inds[i] = (N / render_N) * i;
     morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 1);
@@ -385,6 +398,11 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
     std::cout << h_regions_inds.size() << std::endl;
     ElectrodeNet electrode_net(h_regions, h_regions_inds);
 
+    thrust::host_vector<int> synchrony_region_inds(32768);
+    for(int i = 0; i < synchrony_region_inds.size(); ++i)
+        synchrony_region_inds[i] = (N / synchrony_region_inds.size()) * i;
+    SynchronyNet synchrony_net(std::move(synchrony_region_inds), { 32768, 16384, 8192, 4096, 2048, 1024, 512, 256, 128, 64 });
+
     // Note, we multiply by 1000 to convert from sec to ms.
     int const nincs = (1000 * samp_len / leapfrog_dt);
     int const print_incs = (int)((1000.0 / samp_freq) / leapfrog_dt + 0.5);
@@ -395,7 +413,9 @@ void hh_benchmark(int const N = 1, int const samp_freq = 1000, float const samp_
         graphics_voltage_handle,
         render_N,
         &electrode_net,
-        &morphology);
+        &morphology,
+        electrode_inds,
+        &synchrony_net);
 
     for (Float*& arr : sim_vars_cpu)
         cudaFree(arr);
@@ -409,6 +429,6 @@ int main()
 #else
     int N_electrodes = 1e5;
 #endif
-    sanmodel_inhexc_benchmark(1e5, 25000, 2, N_electrodes);
+    hh_benchmark(1e5, 2500, 2, N_electrodes);
     Graphics::terminate_graphics();
 }
