@@ -69,7 +69,7 @@ dpi = 600
 mpl.rcParams['agg.path.chunksize'] = 10000
 
 plt.figure(dpi=dpi)
-plot_over_time(["../coupling_speed_test/WEIGHTS_OUT_i=%d.h5" % (i * 25000) for i in range(1, 60)], stretch=1)
+plot_over_time(["../coupling_speed_test/WEIGHTS_OUT_0.5_i=%d.h5" % (i * 25000) for i in range(1, 60)], stretch=1)
 
 
 # for t, lbl in zip([0.0, 0.5, 1.0, -1], ['Wake', 'Transition', 'Deep Sleep', 'Wake, long']):
