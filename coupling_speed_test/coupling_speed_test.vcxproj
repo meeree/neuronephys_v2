@@ -95,6 +95,7 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <CudaCompile Include="circadian.cpp" />
     <CudaCompile Include="coupling.cu" />
     <CudaCompile Include="defines.cu" />
     <CudaCompile Include="electrode_net.cu" />
@@ -106,6 +107,7 @@
     <CudaCompile Include="paracrine.cu" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="circadian.h" />
     <ClInclude Include="coupling.cuh" />
     <ClInclude Include="defines.cuh" />
     <ClInclude Include="electrode_net.cuh" />

@@ -1,4 +1,5 @@
 #include "ephys.cuh"
+#include "circadian.h"
 
 __global__ void init_random(unsigned int seed, int const N, curandState_t* states) 
 {
@@ -268,16 +269,21 @@ __global__ void Leapfrog_diekman(Float** sim_vars, const int N, const float time
         const Float Tin = sim_vars[DIEKMAN_VAR_IIN][idx];
         const Float num_in = sim_vars[DIEKMAN_VAR_ICOUNT][idx];
         const Float egaba = sim_vars[DIEKMAN_VAR_EGABA][idx];
+        const Float gkca = sim_vars[DIEKMAN_VAR_GKCA][idx];
+        const Float gkleak = sim_vars[DIEKMAN_VAR_GKLEAK][idx];
+   
+        //const Float R = clk * 11.36 * (G_biochem - 0.25); //changed in ~2/2014? = R2
+        const Float R = 3.1;
+        const Float gnaP = 2.85;
 
-        const Float R = clk * 11.36 * (G_biochem - 0.25); //changed in ~2/2014? = R2
         const Float SS = 21 * (gto - 1.66); 
-
-        const Float gkca = 198.0 / (1.0 + exp(R)) + 2.0;
-        const Float gkleak = 0.2 / (1.0 + exp(R));
+        
+        //const Float gkca = 198.0 / (1.0 + exp(R)) + 2.0;
+        //const Float gkleak = 0.2 / (1.0 + exp(R));
         //const Float gnap = 2.13 + 0.14 / (1.0 + exp(-SS)); // if dki
         //const Float gnap = 1.46 + 0.51 / (1.0 + exp(-SS)); // if chir
         //const Float gnap = 1; // if riluzole
-        const Float gnaP = 1.59 + 0.5 / (1.0 + exp(-SS)); // if nothing
+        //const Float gnaP = 1.59 + 0.5 / (1.0 + exp(-SS)); // if nothing
         //const Float gnaP = 0;
 
 

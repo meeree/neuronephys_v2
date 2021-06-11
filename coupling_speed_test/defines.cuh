@@ -167,7 +167,9 @@ namespace an_ie_params {
 #define DIEKMAN_VAR_IOUTPUT 15
 #define DIEKMAN_VAR_EGABA 16 // GABA reversal potential
 #define DIEKMAN_VAR_PARACRINE 17 // Paracrine signalling input
-#define NUM_DIEKMAN_VAR 18
+#define DIEKMAN_VAR_GKCA 18
+#define DIEKMAN_VAR_GKLEAK 19
+#define NUM_DIEKMAN_VAR 20
 namespace diekman_params {
     constexpr static const Float leapfrog_dt = 0.4;// ms Timestep to use.
     constexpr static const Float Cm = 5.7;         // pF/um^2  membrane capacitance per unit area
@@ -187,7 +189,7 @@ namespace diekman_params {
     constexpr static const Float taucac = 1.75e3;  // ms       calcium clearance time constant (inner)
     constexpr static const Float bcas = 5.425e-4;  // mM / ms  ????????????? (outer)
     constexpr static const Float bcac = 3.1e-8;    // mM / ms  ????????????? (inner)
-    constexpr static const Float Iapp = 0;         // pA       constant applied current into the cell
+    //constexpr static const Float Iapp = 0;         // pA       constant applied current into the cell
     constexpr static const Float ar = 5;           // 1/mM/ms  activation rate of the gaba synapse
     constexpr static const Float ad = 0.18;        // 1/ms     de-activation rate of the gaba synapse
     constexpr static const Float Tmax = 1;         // mM       maximum neurotransmitter in the gaba synapse
@@ -195,9 +197,9 @@ namespace diekman_params {
     constexpr static const Float Kp = 3;           // mV       neurontransmitter activation rate
     constexpr static const Float clk = 2.2;        //          strength of the influence of the molecular clock on the electrical activity
     constexpr static const Float gto = 1.66;        //          gto is the molecular clock variable corresponding to GSK3 activity
-    constexpr static const Float g_gaba = 1.0;     // GABA coupling conductance coefficient.
-    constexpr static const Float g_paracrine = 1;// Paracrine coupling conductance coefficient.
-    constexpr static const Float e_gaba = 20.0;     //Coupling potential for GABA and paracrine signalling
+    constexpr static const Float g_gaba = 0.1;     // GABA coupling conductance coefficient.
+    constexpr static const Float g_paracrine = 0;// Paracrine coupling conductance coefficient.
+    //constexpr static const Float e_gaba = 20.0;     //Coupling potential for GABA and paracrine signalling
     constexpr static const Float e_paracrine = 20.0;//Coupling potential for paracrine signalling
     constexpr const static Float Ar = 5.0; constexpr const static Float Ad = 0.18; // alpha and beta for GABA gating variable
     constexpr const static Float appcur = 3.5;      // Input current

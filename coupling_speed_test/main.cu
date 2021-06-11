@@ -2,6 +2,7 @@
 #include "graphics.h"
 #include "morphology.h"
 #include "ephys.cuh"
+#include "circadian.h"
 #include "paracrine.cuh"
 #include "electrode_net.cuh"
 #include <glm/gtx/norm.hpp>
@@ -86,7 +87,9 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
     Float* V_ptr,
     float* graphics_voltages_handle = nullptr, int const render_N = -1,
     ElectrodeNet* electrodes = nullptr,
-    ParacrineModule* paracrine = nullptr)
+    ParacrineModule* paracrine = nullptr,
+    const float circadian_time = 0.0f,
+    const Circadian* circadian = nullptr)
 {
     std::cout << " HI2" << std::endl;
     // If graphics handle is non-null, allocate CPU mem to copy voltages to.
@@ -106,6 +109,21 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
     
     for (int i = 0; i < nincs; ++i)
     {
+
+       
+
+        Float sim_time = i * diekman_params::leapfrog_dt;
+
+        if (fmod(sim_time, 1000.0f) < diekman_params::leapfrog_dt) 
+        {
+            Float sim_time_hr = sim_time / (1000*3600);
+
+            std::vector<float> gk_pair = circadian->get_params_at_time(circadian_time+sim_time_hr);
+            std::cout << circadian_time + sim_time_hr << " " << gk_pair[0] << " " << gk_pair[1] << std::endl;
+            thrust::fill_n(thrust::device_ptr<Float>(sim_vars_cpu[DIEKMAN_VAR_GKCA]), N, gk_pair[0]);
+            thrust::fill_n(thrust::device_ptr<Float>(sim_vars_cpu[DIEKMAN_VAR_GKLEAK]), N, gk_pair[1]);
+        }
+
         if (i % (nincs / 100) == 0)
             std::cout << 100 * (i / (float)nincs) << "%" << std::endl;
 
@@ -115,7 +133,7 @@ void _RunAndPrintSimulation(int const nincs, int const print_incs, std::ostream&
             Float const* avg_V_handle = electrodes->ElectrodeOutputHandle();
 #ifdef OUTPUT_ELECTRODES_FILE
             for (int k = 0; k < render_N; ++k)
-                fout << avg_V_handle[k] << ',';
+                fout << avg_V_handle[k] << ','; //which neurons to sample
 #endif
             fout << ElectrodeNet::MeasureAverageEntireNetwork(V_ptr, N);
             fout << std::endl;
@@ -412,7 +430,7 @@ void diekman_benchmark(int const N = 1, int const samp_freq = 1000, float const 
 
     // Set up simulation variables. Stored in a struct of arrays.
     thrust::host_vector<Float*> sim_vars_cpu(NUM_DIEKMAN_VAR);
-    std::ofstream fout("OUT_DIEKMAN.txt");
+    std::ofstream fout("testcircadian3.txt");
     {
         thrust::host_vector<Float> cpu_arr(N, 0);
 
@@ -434,7 +452,7 @@ void diekman_benchmark(int const N = 1, int const samp_freq = 1000, float const 
 
     // Generate coupling
     AtomicCoupling i_coupling(N);
-    UniformRandomNetwork i_net(10);
+    UniformRandomNetwork i_net(100);
     i_net.Generate(N);
     ChunkedAdjacencyList i_list{ i_net.ToChunkedAdjacencyList(sim_vars_cpu[DIEKMAN_VAR_ICOUNT]) };
     std::vector<CouplingStruct> coupling_structs
@@ -484,13 +502,17 @@ void diekman_benchmark(int const N = 1, int const samp_freq = 1000, float const 
     std::vector<int> electrode_inds(render_N);
     for(int i = 0; i < render_N; ++i)
         electrode_inds[i] = (N / render_N) * i;
-    morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 1);
+    morphology.GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 1);//last parameter sets the number of nearest neighbors to sample
     ElectrodeNet electrode_net(h_regions, h_regions_inds);
-
+    
+    
     // Note, we multiply by 1000 to convert from sec to ms.
     int const nincs = (1000 * samp_len / diekman_params::leapfrog_dt);
     int const print_incs = (int)((1000.0 / samp_freq) / diekman_params::leapfrog_dt + 0.5);
-    std::cout << " HI" << std::endl;
+
+    Float circadian_time = 10.1;
+    Circadian circadian("../circtable.csv");//initialize circadian class
+
     _RunAndPrintSimulation(nincs, print_incs, fout,
         N, sim_vars, sim_vars_cpu,
         &ephys, 
@@ -499,10 +521,13 @@ void diekman_benchmark(int const N = 1, int const samp_freq = 1000, float const 
         graphics_voltage_handle,
         render_N,
         &electrode_net,
-        &paracrine);
+        nullptr,
+        circadian_time,
+        &circadian);
 
     for (Float*& arr : sim_vars_cpu)
         cudaFree(arr);
+    std::cout << "gaga";
     fout.close();
 }
 
@@ -510,7 +535,7 @@ int main()
 {
     cusparseCreate(&Csr_matrix::handle);
     int N = 14638;
-    int N_electrodes = 1000;
-    diekman_benchmark(N, 2500, 3, N_electrodes);
+    int N_electrodes = 10;
+    diekman_benchmark(N, 2500, 10, N_electrodes);
     Graphics::terminate_graphics();
 }
