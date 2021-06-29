@@ -96,6 +96,7 @@
     <CudaCompile Include="main.cu">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </CudaCompile>
+    <CudaCompile Include="mouse_cortex.cu" />
     <CudaCompile Include="network_factory.cu" />
   </ItemGroup>
   <ItemGroup>
@@ -105,6 +106,7 @@
     <ClInclude Include="ephys.cuh" />
     <ClInclude Include="graphics.h" />
     <ClInclude Include="morphology.h" />
+    <ClInclude Include="mouse_cortex.cuh" />
     <ClInclude Include="network_factory.cuh" />
   </ItemGroup>
   <ItemGroup>
