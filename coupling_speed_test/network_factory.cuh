@@ -30,21 +30,6 @@ public:
 	*/
 	AdjacencyList ToAdjacencyList(Float*& Tcount) const;
 
-	//! Generates a ChunkedAdjacencyList on the GPU and returns it.
-	/*!
-	  \param [out] Tcount Number of upstream connections per neuron. 
-      \return The chunked adjacency list.
-	*/
-	ChunkedAdjacencyList ToChunkedAdjacencyList(Float*& Tcount) const;
-
-	//! Generates a CuSparseAdjacencyMatrix on the GPU which gives upstream neuron connections (transpose of downstream).
-	/*!
-	  \param [in, out] handle The cusparse handle to use. 
-	  \param [in, out] list Connectivity stored in AdjacencyList format. 
-      \return The sparse matrix coupling.
-	*/
-	CuSparseAdjacencyMatrix ToUpstreamSparseMatrix(cusparseHandle_t& handle, AdjacencyList& list) const;
-
 	//! Getter for indices on cpu.
 	thrust::host_vector<int> const& GetCpuIndices() const { return indices; }
 

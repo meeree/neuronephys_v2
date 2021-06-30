@@ -3,41 +3,43 @@
 #include <cusparse.h>
 #include <cublas.h>
 
+//! Structure for storing sparse matrix connectivity in a compressed format. 
+//! indices contains all the entries per row.
+//! The ith element of offset_in_indices is the number of non-zero entries in the matrix up until row i.
+//! Note that offset_in_indices has size ROWS + 1, where the last entry is the total number of non-zero elements (i.e., total number of connections).
 struct AdjacencyList
 {
 	thrust::device_vector<int> indices;
 	thrust::device_vector<int> offset_in_indices;
 };
 
-struct ChunkedAdjacencyList
-{
-	thrust::device_vector<int*> indices_chunks;
-	thrust::device_vector<int*> offset_in_indices_chunks;
-};
-
-//!  Class that performs coupling using adjacency list telling us the downstream neurons per neuron. 
+//! This is a struct that contains all the relevant stuff for coupling. 
+//! It can be called which will perform coupling and store it. 
+//! Description:
+//! - list Adjacency list containing connectivity.
+//! - neuron_outputs Output of neurons.
+//! - downstream_inputs Input to downstream neurons after coupling.
+//! - is_firing Vector of integers such that element i is 1 if the neuron i is firing and 0 otherwise.
+//! - firing_neurons Vector of indices of firing neurons. The vector is of length N but only the first <NUMBER FIRING NEURONS> elements are valid.
 class AtomicCoupling
 {
 private:
-	int N;
+	Float* downstream_inputs;
+	Float* neuron_outputs;
+
+public:
+	AdjacencyList list;
 	thrust::device_vector<int> is_firing;
 	thrust::device_vector<int> firing_neurons;
-	bool fired_previously = false;
-    thrust::device_vector<Float> downstream_copies;
-public:
-	AtomicCoupling(int const N_);
 
-	//! Perform atomic coupling given connectivity provided as an AdjacenyList.
-	/*!
-	  \param [in] connectivity Network connectivity 
-	  \param [out] spikes Output spikes for the neurons. For HH neurons, this is neurotramsmitter concentration for downstream neurons. 
-	  \param [in] neuron_ouputs Neuron outputs, for HH neurons, this is the concentration of neurotransmitter outputted from the neuron.
-	  \return Number of neurons firing 
-	*/
-	int operator()(AdjacencyList const& connectivity, Float* spikes, Float const* neuron_outputs);
-	int operator()(ChunkedAdjacencyList const& connectivity, Float* spikes, Float const* neuron_outputs);
+	AtomicCoupling(int const N, AdjacencyList list_, Float* downstream_inputs_, Float* neuron_outputs_);
+    
+    //! Performs coupling and stores results in downstream_inputs. 
+    //! \return Number of neurons firing.
+    int PerformCoupling();
 };
 
+#if 0 // Old code for doing coupling with cusparse matrix. This is not being used ATM because we found that the cusparse matrix was always slower. Left here for possible future use.
 //! Stored in CSC format!
 struct CuSparseAdjacencyMatrix
 {
@@ -77,7 +79,7 @@ public:
 	  \param [in] neuron_ouputs Neuron outputs, for HH neurons, this is the concentration of neurotransmitter outputted from the neuron.
 	  \return Number of neurons firing 
 	*/
-	int operator()(CuSparseAdjacencyMatrix const& connectivity, Float* spikes, Float const* neuron_outputs);
+	void operator()(CuSparseAdjacencyMatrix const& connectivity, Float* spikes, Float const* neuron_outputs);
 
 	//! (DENSE VERISON) Perform sparse coupling given connectivity provided as an AdjacenyMatrix using cuSparse.
 	/*!
@@ -87,5 +89,6 @@ public:
 	  \param [in] neuron_ouputs Neuron outputs, for HH neurons, this is the concentration of neurotransmitter outputted from the neuron.
 	  \return Number of neurons firing 
 	*/
-	int operator()(CuBlasAdjacencyMatrix const& connectivity, Float* spikes, Float const* neuron_outputs);
+	void operator()(CuBlasAdjacencyMatrix const& connectivity, Float* spikes, Float const* neuron_outputs);
 };
+#endif
