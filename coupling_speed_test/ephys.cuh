@@ -29,6 +29,9 @@ public:
 
     //! Get simulation timestep.
     Float Dt() const { return dt; }
+
+    //! Free all the data allocated dynamically.
+    virtual ~Ephys();
 };
 
 //! Hodgkin-Huxley model (https://neuronaldynamics.epfl.ch/online/Ch2.S2.html)

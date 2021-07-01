@@ -1,5 +1,11 @@
 #include "ephys.cuh"
 
+Ephys::~Ephys()
+{
+    for (Float*& dev_ptr : sim_vars_cpu)
+        cudaFree(dev_ptr);
+}
+
 HHEphys::HHEphys(int const N_)
     : Ephys(N_, HH::leapfrog_dt)
 {

@@ -45,7 +45,6 @@ bool UniformRandomNetwork::Generate(int const N)
 	{
         if (i % 1000 == 0)
             std::cout << i / (float)N * 100 << "%\r" << std::flush;
-
 		thrust::fill_n(neuron_downstream.begin(), Ncouple, INT_MAX);
 		for (int j = 0; j < Ncouple; ++j)
 		{
@@ -65,6 +64,7 @@ bool UniformRandomNetwork::Generate(int const N)
 	}
     std::cout << "100%\r" << std::endl;
 	offset_in_indices[N] = N * Ncouple;
+	return true;
 }
 
 bool KNNNetwork::Generate(int const N)
@@ -86,6 +86,7 @@ bool KNNNetwork::Generate(int const N)
         offset_in_indices[n + 1] = offset_in_indices[n] + k;
     }
     std::cout << "100%\r" << std::endl;
+	return true;
 }
 
 bool NormalNetwork::Generate(int const N)
@@ -130,6 +131,7 @@ bool NormalNetwork::Generate(int const N)
     indices.shrink_to_fit(); // Shrink capacity
     std::cout << "Average number of connections: " << indices.size() / (float)N << std::endl;
     std::cout << "Average ball size: " << ball_sz_sum / (float)N << std::endl;
+	return true;
 }
 
 FileNetwork::FileNetwork(std::string const& fl_name_)
