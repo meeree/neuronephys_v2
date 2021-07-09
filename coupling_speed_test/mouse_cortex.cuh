@@ -15,7 +15,7 @@ public:
     static std::string inhibitory_conns_file_name;
 
     //! Pointer to brain morphology.
-    std::unique_ptr<Morphology> morphology;
+    std::unique_ptr<FileMorphology> morphology;
     //! Pointer to brain electrophysiology class holding all the data and relevant methods.
     std::unique_ptr<Ephys> ephys;
 

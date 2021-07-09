@@ -5,27 +5,28 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <chrono>
 
+int NumIncsSecond(float dt=HH::leapfrog_dt)
+{
+    return int(1000 / dt); 
+}
+
 // NOTE THAT: this benchmark defaults to using uniform random connections and no gray matter. 
 // These can both be switched so that the gray and white matter are realistic. 
-void SweepBenchmark(std::vector<int> const& choices_of_N, std::string neuron_type = "HH", bool uniform_random_white=true, bool use_gray=false)
+// For FIGURE 2.
+void SweepBenchmark(std::vector<int> const& choices_of_N, bool uniform_random_white=true, bool use_gray=false)
 {
     std::ofstream fout("HH_VARIED_N_OUT.csv");
+    int n_incs = NumIncsSecond();
     for (int N : choices_of_N)
     {
         {
             std::cout << "N " << N << std::endl;
-            MouseCortex mouse_cortex(N, neuron_type, uniform_random_white, use_gray);
-            Float dt = HH::leapfrog_dt;
-            int n_incs = 1000 / dt; // Number of increments to simulate a second.
+            MouseCortex mouse_cortex(N, "HH", uniform_random_white, use_gray);
 
             // Start of simulation.
             auto start = std::chrono::steady_clock::now();
-
-            // Run simulation.
             for (int i = 0; i < n_incs; ++i)
                 mouse_cortex.Simulate();
-
-            // End of simulation.
             auto stop = std::chrono::steady_clock::now();
 
             // Measure elapsed time and write to row of file in format <N> <TIME>
@@ -36,16 +37,112 @@ void SweepBenchmark(std::vector<int> const& choices_of_N, std::string neuron_typ
     fout.close();
 }
 
+// Generate some examples exhibiting waves in the 3D visualization. 
+// N is number of neurons.
+// render_N is number of neurons to render. If not specified, render_N = N is default.
+// ElectrodeK constrols the number of nearest neighbors for electorde measurements.
+// For FIGURE 3.
+void WavesExamples(int const N, int render_N = -1, int const electrodeK = 1)
+{
+    if (render_N < 0)
+        render_N = N;
+
+    MouseCortex mouse_cortex(N);
+    std::vector<int> electrode_inds(render_N);
+    int const render_stride = N / render_N;
+
+    // Generate electrodes by sampling render_N neurons uniformly from the N and creating electrodes at every such neuron.
+    for (int i = 0; i < render_N; ++i)
+        electrode_inds[i] = render_stride * i;
+    thrust::host_vector<int> h_regions, h_regions_inds;
+    mouse_cortex.morphology->GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, electrodeK);
+    ElectrodeNet electrode_net(h_regions, h_regions_inds);
+    Float const* avg_V_handle = electrode_net.ElectrodeOutputHandle();
+    Float const* V_ptr = mouse_cortex.ephys->SimVarsCpu()[HH::Params::V];
+
+    int n_incs_transient = NumIncsSecond() * 3;
+    int n_incs_record = NumIncsSecond() * 3;
+
+    float* graphics_voltage_handle;
+    Graphics::setup(graphics_voltage_handle, mouse_cortex.morphology->GetPositionsRaw(), N, render_N);
+    // Hodgkin-Huxley normalized coloring.
+    Graphics::set_color_params(15, -60, 0.0);
+
+    // Transient.
+    for (int i = 0; i < n_incs_transient; ++i)
+        mouse_cortex.Simulate();
+
+    // Simulate and record ERP.
+    bool pause = false;
+    for (int i = 0; i < n_incs_record; ++i)
+    {
+        electrode_net.DoElectrodeMeasurements(V_ptr);
+        mouse_cortex.Simulate();
+        for (int j = 0; j < h_regions_inds.size() - 1; ++j)
+            graphics_voltage_handle[j] = avg_V_handle[j];
+        Graphics::render(graphics_voltage_handle, nullptr, 0, 0, pause);
+    }
+}
+
+// Simulates ERP for three cases: realistic connectivity, realistic short range and uniform long range, and uniform long range. 
+// For FIGURE 4.
+void SimulatedERP(int const N)
+{
+    MouseCortex::excitatory_conns_file_name = "cortex_connectivity_1m_1k_exc.h5";
+    MouseCortex::inhibitory_conns_file_name = "cortex_connectivity_1m_1k_inh.h5";
+    MouseCortex::uniform_random_Ncouple = 1000;
+
+    // Figure out what the indices of the electrodes should be.
+    thrust::host_vector<int> h_regions, h_regions_inds;
+    {
+        MouseCortex mouse_cortex(N);
+        mouse_cortex.morphology->GenRegionsFromIDs(h_regions, h_regions_inds);
+    }
+    ElectrodeNet electrode_net(h_regions, h_regions_inds);
+    Float const* avg_V_handle = electrode_net.ElectrodeOutputHandle();
+    int n_incs_transient = NumIncsSecond() * 3;
+    int n_incs_record = NumIncsSecond();
+
+    // Simulate and record the three cases: gray + white, gray + uniform, uniform only.
+    bool use_uniform_white[3]{ false, true, true };
+    bool use_gray[3]{ true, true, false };
+    std::string fout_names[3]{ "ERP_OUT_GRAY_WHITE.csv", "ERP_OUT_GRAY_UNIFORM.csv", "ERP_OUT_UNIFORM.csv" };
+    for(int case_idx = 0; case_idx < 3; ++case_idx)
+    {
+        MouseCortex mouse_cortex(N, "HH", use_uniform_white[case_idx], use_gray[case_idx]);
+        std::ofstream fout(fout_names[case_idx]);
+        Float const* V_ptr = mouse_cortex.ephys->SimVarsCpu()[HH::Params::V];
+
+        // Transient.
+        for (int i = 0; i < n_incs_transient; ++i)
+            mouse_cortex.Simulate();
+
+        // Simulate and record ERP.
+        for (int i = 0; i < n_incs_record; ++i)
+        {
+            electrode_net.DoElectrodeMeasurements(V_ptr);
+            mouse_cortex.Simulate();
+            for (int i = 0; i < h_regions_inds.size() - 1; ++i)
+                fout << avg_V_handle[i] << ',';
+            fout << '\n';
+        }
+        fout.close();
+    }
+}
+
 int main()
 {
+    WavesExamples(1e5, 4e4, 10);
+    SimulatedERP(1e5);
+    return 0;
     MouseCortex::excitatory_conns_file_name = "cortex_connectivity_13M_100_exc.h5";
     MouseCortex::inhibitory_conns_file_name = "cortex_connectivity_13M_100_inh.h5";
-    MouseCortex::uniform_random_Ncouple = 1000;
+    MouseCortex::uniform_random_Ncouple = 100;
 
     // Logarithmic scale choices of N.
     std::vector<int> choices_of_N(30);
     float exp_min = 4;
-    float exp_max = 6.3;
+    float exp_max = 7.12;
 
     // Vary exponent linearly.
     for (int i = 0; i < choices_of_N.size(); ++i)
