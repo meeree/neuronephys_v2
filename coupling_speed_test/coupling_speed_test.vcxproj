@@ -52,7 +52,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;WIN64;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>external_libs\GLFW\include;external_libs\glm\include;external_libs\GLEW\include;external_libs\ann_1.1.2\include;external_libs\hdf5-1.10.5\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\james hazelden\Desktop\HFSP\neuronephys_v2\coupling_speed_test\external_libs\ArrayFire\include;external_libs\glm\include;external_libs\GLFW\include;external_libs\GLEW\include;external_libs\ann_1.1.2\include;external_libs\hdf5-1.10.5\include;external_libs\json\single_include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -73,7 +73,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;WIN64;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\james hazelden\Desktop\HFSP\neuronephys_v2\coupling_speed_test\external_libs\ArrayFire\include;external_libs\glm\include;external_libs\GLFW\include;external_libs\GLEW\include;external_libs\ann_1.1.2\include;external_libs\hdf5-1.10.5\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\james hazelden\Desktop\HFSP\neuronephys_v2\coupling_speed_test\external_libs\ArrayFire\include;external_libs\glm\include;external_libs\GLFW\include;external_libs\GLEW\include;external_libs\ann_1.1.2\include;external_libs\hdf5-1.10.5\include;external_libs\json\single_include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -108,10 +108,12 @@
     <ClInclude Include="morphology.h" />
     <ClInclude Include="mouse_cortex.cuh" />
     <ClInclude Include="network_factory.cuh" />
+    <ClInclude Include="regions_tree.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="graphics.cpp" />
     <ClCompile Include="morphology.cpp" />
+    <ClCompile Include="regions_tree.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\frag.glsl">

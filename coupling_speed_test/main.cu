@@ -4,10 +4,33 @@
 #include <glm/gtx/norm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <chrono>
+#include "regions_tree.h"
 
 int NumIncsSecond(float dt=HH::leapfrog_dt)
 {
     return int(1000 / dt); 
+}
+
+void RecordNumFiring(int N, std::string fl_suffix="")
+{
+    std::ofstream fout("N_FIRING_" + fl_suffix + ".txt");
+    MouseCortex mouse_cortex(N, "HH", false, false);
+    Float const* V_ptr = mouse_cortex.ephys->SimVarsCpu()[HH::Params::V];
+
+    // Transient.
+    for(int i = 0; i < NumIncsSecond() * 3; ++i)
+        mouse_cortex.Simulate();
+
+    int const n_incs = NumIncsSecond() * 10;
+    std::cout << "\r           ";
+    for (int i = 0; i < n_incs; ++i)
+    {
+        if (i % 1000 == 0)
+            std::cout << "\r" << i / (float)n_incs * 100 << "%";
+        fout << mouse_cortex.Simulate() << '\n';
+    }
+    std::cout << std::endl;
+    fout.close();
 }
 
 // NOTE THAT: this benchmark defaults to using uniform random connections and no gray matter. 
@@ -96,6 +119,7 @@ void SimulatedERP(int const N)
     thrust::host_vector<int> h_regions, h_regions_inds;
     {
         MouseCortex mouse_cortex(N);
+        mouse_cortex.morphology->SpecfiyRegionsDepth(7, "CUBIC_regionID_lookup_no_comma.json");
         mouse_cortex.morphology->GenRegionsFromIDs(h_regions, h_regions_inds);
     }
     ElectrodeNet electrode_net(h_regions, h_regions_inds);
@@ -132,8 +156,11 @@ void SimulatedERP(int const N)
 
 int main()
 {
-    WavesExamples(1e5, 4e4, 10);
     SimulatedERP(1e5);
+    exit(0);
+    for(int i = 1; i < 10; ++i)
+        RecordNumFiring(i * 1e5, std::to_string(i));
+    WavesExamples(1e5, 4e4, 10);
     return 0;
     MouseCortex::excitatory_conns_file_name = "cortex_connectivity_13M_100_exc.h5";
     MouseCortex::inhibitory_conns_file_name = "cortex_connectivity_13M_100_inh.h5";

@@ -4,6 +4,8 @@
 #include <glm/ext.hpp>
 #include <glm/gtx/norm.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <unordered_map>
+#include "regions_tree.h"
 using namespace H5;
 
 void Morphology::Union(Morphology* rhs)
@@ -256,6 +258,37 @@ FileMorphology::FileMorphology(std::string const& fl_name_, bool read_regions_)
 {
 }
 
+void FileMorphology::SpecfiyRegionsDepth(int const depth_in_tree, std::string region_tree_fl_name)
+{
+    std::cout << "Updating regions depth to be " << depth_in_tree << std::endl;
+
+    // Replace regions with parent regions at depth specified in constructor.
+    std::unordered_map<int, int> node_to_parent;
+    std::set<int> new_unique_regions_set; 
+    try
+    {
+        RegionsTree tree(region_tree_fl_name);
+        for (int id : unique_regions)
+        {
+            int parent_at_depth = tree.GetParentRegionAtDepth(id, depth_in_tree);
+            node_to_parent[id] = parent_at_depth;
+            new_unique_regions_set.insert(parent_at_depth);
+        }
+    }
+    catch (std::runtime_error& e)
+    {
+        std::cerr << e.what() << std::endl;
+        exit(1);
+    }
+    // Update regions using map.
+    for (int& id : regions)
+        id = node_to_parent[id];
+
+    // Update unique_regions with new unique regions at specified depth.
+    unique_regions = std::vector<int>(new_unique_regions_set.begin(), new_unique_regions_set.end());
+    std::cout << "Done updating region depth. Number of unique regions at depth: " << unique_regions.size() << std::endl;
+}
+
 bool FileMorphology::Generate(int const N)
 {
     std::cout << "Generating morphology from file '" + fl_name + "'..." << std::endl;
@@ -326,14 +359,7 @@ bool FileMorphology::GenerateFromHDF(int const N)
             regions[i] = axes[n_dims - 1][j];
         }
         std::set<int> unique_regions_set(regions.begin(), regions.end());
-        std::vector<int> unique_regions(unique_regions_set.begin(), unique_regions_set.end());
-        for (int i = 0; i < N; ++i)
-            regions[i] = std::find(unique_regions.begin(), unique_regions.end(), regions[i]) - unique_regions.begin();
-
-        std::vector<int> occurences(unique_regions.size(), 0);
-        for (int i = 0; i < N; ++i)
-            occurences[regions[i]] += 1;
-        std::cout << std::max_element(occurences.begin(), occurences.end()) - occurences.begin() << std::endl;
+        unique_regions = std::vector<int>(unique_regions_set.begin(), unique_regions_set.end());
     }
 
     // Translate so that min is zero.
@@ -355,22 +381,18 @@ void FileMorphology::GenRegionsFromIDs(thrust::host_vector<int>& h_regions, thru
 
     std::cout << "Generating regions from IDs..." << std::endl;
     int const N = positions.size();
-	int const N_regions = std::set<int>(regions.begin(), regions.end()).size();
+	int const N_regions = unique_regions.size();
     h_regions.resize(N);
     h_region_inds.resize(N_regions + 1, 0);
     auto it = h_regions.begin();
     std::vector<int> sizes;
     for (int n = 0; n < N_regions; ++n)
     {
+        int region_id = unique_regions[n];
         for (int j = 0; j < N; ++j)
         {
-            if (regions[j] == n)
+            if (regions[j] == region_id)
                 *it++ = j;
-            if (it - h_regions.begin() - h_region_inds[n] == 100)
-            {
-                std::cout << n << ',';
-                break;
-            }
         }
 
         h_region_inds[n + 1] = (it - h_regions.begin());

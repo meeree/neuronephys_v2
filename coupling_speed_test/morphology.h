@@ -199,6 +199,7 @@ class FileMorphology : public Morphology
 protected:	
 	std::string fl_name;	
 	std::string format;
+	std::vector<int> unique_regions;
 	std::vector<int> regions;
 	bool read_regions;
 public:
@@ -209,6 +210,13 @@ public:
 	FileMorphology(std::string const& fl_name_, bool read_regions_=false);
 	bool GenerateFromHDF(int const N);
 	virtual bool Generate(int const N) override;
+
+	//! Replace all regions with parent region at specified depth in Allen atlas region tree. 
+	/*!
+	  \param [in] depth_in_tree This specifies the depth of the subregion in the Allen atlas regions which are stored as tree. By default, leaf regions are used.
+	  \param [in] region_tree_fl_name Name of file containing regions JSON for Allen atlas.
+	*/
+	void SpecfiyRegionsDepth(int const depth_in_tree, std::string region_tree_fl_name);
 
 	//! Generate a list of regions defined by the region IDs in regions variable, read from file. 
 	/*!
