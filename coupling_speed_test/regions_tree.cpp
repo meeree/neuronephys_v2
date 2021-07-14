@@ -20,7 +20,7 @@ RegionsTree::RegionsTree(std::string json_path)
     json_fl.close();
 }
 
-int RegionsTree::GetParentRegionAtDepth(int region_idx, int depth)
+int RegionsTree::GetParentRegionAtDepth(int region_idx, int depth) const
 {
     // Get index of entry corresponding to region_idx in JSON.
     int idx_in_json = -1;
@@ -33,9 +33,16 @@ int RegionsTree::GetParentRegionAtDepth(int region_idx, int depth)
         }
     }
     if (idx_in_json == -1)
-    {
-        std::cout << "SHIT" << std::endl;
         throw std::runtime_error("Coulding find region with index " + std::to_string(region_idx) + " in JSON.");
-    }
     return  regions_json[idx_in_json]["structure_id_path"][depth];
+}
+
+int RegionsTree::GetIdOfRegionByName(std::string name, bool acronym)
+{
+    std::string label_str = acronym ? "acronym" : "name";
+    for (auto& region : regions_json)
+    {
+        if (region[label_str] == name)
+            return region["id"];
+    }
 }

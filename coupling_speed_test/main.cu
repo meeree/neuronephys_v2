@@ -116,11 +116,27 @@ void SimulatedERP(int const N)
     MouseCortex::uniform_random_Ncouple = 1000;
 
     // Figure out what the indices of the electrodes should be.
-    thrust::host_vector<int> h_regions, h_regions_inds;
+    thrust::host_vector<int> h_regions, h_regions_inds, associated_ids;
+    int visual_region_idx = -1;
     {
         MouseCortex mouse_cortex(N);
-        mouse_cortex.morphology->SpecfiyRegionsDepth(7, "CUBIC_regionID_lookup_no_comma.json");
-        mouse_cortex.morphology->GenRegionsFromIDs(h_regions, h_regions_inds);
+        // Use super-regions at a specific depth in the regions json tree.
+        try
+        {
+            RegionsTree tree("CUBIC_regionID_lookup_no_comma.json");
+            mouse_cortex.morphology->SpecfiyRegionsDepth(6, tree);
+            mouse_cortex.morphology->GenRegionsFromIDs(h_regions, h_regions_inds, associated_ids);
+
+            // Find region corresponding to the visual region in h_regions.
+            int ID = tree.GetIdOfRegionByName("VIS");
+            std::cout << "Visual region ID: " << ID << std::endl;
+            visual_region_idx = std::find(associated_ids.begin(), associated_ids.end(), ID) - associated_ids.begin();
+        }
+        catch (std::runtime_error& e)
+        {
+            std::cerr << e.what() << std::endl;
+            exit(1);
+        }
     }
     ElectrodeNet electrode_net(h_regions, h_regions_inds);
     Float const* avg_V_handle = electrode_net.ElectrodeOutputHandle();
@@ -136,6 +152,13 @@ void SimulatedERP(int const N)
         MouseCortex mouse_cortex(N, "HH", use_uniform_white[case_idx], use_gray[case_idx]);
         std::ofstream fout(fout_names[case_idx]);
         Float const* V_ptr = mouse_cortex.ephys->SimVarsCpu()[HH::Params::V];
+
+        // Set applied current to zero everywhere but the visual regions.
+        thrust::host_vector<Float> appcur(N, 0);
+        for (int i = h_regions_inds[visual_region_idx]; i < h_regions_inds[visual_region_idx + 1]; ++i)
+            appcur[h_regions[i]] = 7;
+        thrust::device_vector<Float> d_appcur(appcur);
+        thrust::copy_n(d_appcur.begin(), N, thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::APPCUR]));
 
         // Transient.
         for (int i = 0; i < n_incs_transient; ++i)

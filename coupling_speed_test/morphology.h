@@ -4,7 +4,7 @@
 #include <ANN/ANN.h>
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
-#pragma once
+#include "regions_tree.h"
 
 //! Morphology is an abstract class that supports morphology generation 
 //! and operations such as union, nearest-neighbor, etc.
@@ -214,16 +214,17 @@ public:
 	//! Replace all regions with parent region at specified depth in Allen atlas region tree. 
 	/*!
 	  \param [in] depth_in_tree This specifies the depth of the subregion in the Allen atlas regions which are stored as tree. By default, leaf regions are used.
-	  \param [in] region_tree_fl_name Name of file containing regions JSON for Allen atlas.
+	  \param [in] regions_tree RegionsTree class which represents the heirarchy of regions for the Allen Atlas regions. See: RegionsTree.
 	*/
-	void SpecfiyRegionsDepth(int const depth_in_tree, std::string region_tree_fl_name);
+	void SpecfiyRegionsDepth(int const depth_in_tree, RegionsTree const& regions_tree);
 
 	//! Generate a list of regions defined by the region IDs in regions variable, read from file. 
 	/*!
 		\param [out] h_regions Column indices for region adjacency list. 
 		\param [out] h_region_inds Row offsets for region adjacency list.
+		\param [out] associated_ids Vector of IDs associated with each of the regions. 
 	*/	
-	void GenRegionsFromIDs(thrust::host_vector<int>& h_regions, thrust::host_vector<int>& h_region_inds);
+	void GenRegionsFromIDs(thrust::host_vector<int>& h_regions, thrust::host_vector<int>& h_region_inds, thrust::host_vector<int>& associated_ids);
 
 	std::vector<int> const& GetRegions() const { return regions; }
 };

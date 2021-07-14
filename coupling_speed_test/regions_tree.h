@@ -15,5 +15,9 @@ public:
     RegionsTree(std::string json_path);
 
     //! Retrieves the exact region at a specified depth in the region tree so that region_idx is an ancestor (i.e. subregion).
-    int GetParentRegionAtDepth(int region_idx, int depth);
+    int GetParentRegionAtDepth(int region_idx, int depth) const;
+
+    //! Retrieves the ID of a region specified by a specific name. The parameter acronym determines if the name should be the acronym name,
+    //! or the full name. By default it is true (i.e., acronym should be specified).
+    int GetIdOfRegionByName(std::string name, bool acronym = true);
 };
