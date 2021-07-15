@@ -95,6 +95,33 @@ void WavesExamples(int const N, int render_N = -1, int const electrodeK = 1)
     for (int i = 0; i < n_incs_transient; ++i)
         mouse_cortex.Simulate();
 
+    // Use super-regions at a specific depth in the regions json tree.
+    int visual_region_idx;
+    thrust::host_vector<int> h_regions_allen, h_regions_inds_allen, associated_ids;
+    try
+    {
+        RegionsTree tree("CUBIC_regionID_lookup_no_comma.json");
+        mouse_cortex.morphology->SpecfiyRegionsDepth(6, tree);
+        mouse_cortex.morphology->GenRegionsFromIDs(h_regions_allen, h_regions_inds_allen, associated_ids);
+
+        // Find region corresponding to the visual region in h_regions.
+        int ID = tree.GetIdOfRegionByName("AI");
+        std::cout << "Visual region ID: " << ID << std::endl;
+        visual_region_idx = std::find(associated_ids.begin(), associated_ids.end(), ID) - associated_ids.begin();
+
+        // Set applied current to zero everywhere but the visual regions.
+        thrust::host_vector<Float> appcur(N, 2);
+        for (int i = h_regions_inds_allen[visual_region_idx]; i < h_regions_inds_allen[visual_region_idx + 1]; ++i)
+            appcur[h_regions_allen[i]] = 7;
+        thrust::device_vector<Float> d_appcur(appcur);
+        thrust::copy_n(d_appcur.begin(), N, thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::APPCUR]));
+    }
+    catch (std::runtime_error& e)
+    {
+        std::cerr << e.what() << std::endl;
+        exit(1);
+    }
+
     // Simulate and record ERP.
     bool pause = false;
     for (int i = 0; i < n_incs_record; ++i)
@@ -113,13 +140,13 @@ void SimulatedERP(int const N)
 {
     MouseCortex::excitatory_conns_file_name = "cortex_connectivity_1m_1k_exc.h5";
     MouseCortex::inhibitory_conns_file_name = "cortex_connectivity_1m_1k_inh.h5";
-    MouseCortex::uniform_random_Ncouple = 1000;
 
     // Figure out what the indices of the electrodes should be.
     thrust::host_vector<int> h_regions, h_regions_inds, associated_ids;
     int visual_region_idx = -1;
+    std::ofstream region_sizes_fout("REGION_SIZES.csv");
     {
-        MouseCortex mouse_cortex(N);
+        MouseCortex mouse_cortex(N, "HH", false, false);
         // Use super-regions at a specific depth in the regions json tree.
         try
         {
@@ -131,6 +158,20 @@ void SimulatedERP(int const N)
             int ID = tree.GetIdOfRegionByName("VIS");
             std::cout << "Visual region ID: " << ID << std::endl;
             visual_region_idx = std::find(associated_ids.begin(), associated_ids.end(), ID) - associated_ids.begin();
+
+            for (int i = 0; i < h_regions_inds.size() - 1; ++i)
+                region_sizes_fout << h_regions_inds[i + 1] - h_regions_inds[i] << '\n';
+            
+///            thrust::host_vector<int> new_h_regions(N * 404), new_h_regions_inds(h_regions_inds.size(), 0);
+///            for (int i = 0; i < h_regions_inds.size() - 1; ++i)
+///            {
+///                new_h_regions_inds[i + 1] = new_h_regions_inds[i] + 404;
+///
+///                for (int j = 0; j < 404; ++j)
+///                    new_h_regions[new_h_regions_inds[i] + j] = h_regions[h_regions_inds[i] + j];
+///            }
+///            h_regions = new_h_regions;
+///            h_regions_inds = new_h_regions_inds;
         }
         catch (std::runtime_error& e)
         {
@@ -138,8 +179,7 @@ void SimulatedERP(int const N)
             exit(1);
         }
     }
-    ElectrodeNet electrode_net(h_regions, h_regions_inds);
-    Float const* avg_V_handle = electrode_net.ElectrodeOutputHandle();
+    region_sizes_fout.close();
     int n_incs_transient = NumIncsSecond() * 3;
     int n_incs_record = NumIncsSecond();
 
@@ -149,14 +189,16 @@ void SimulatedERP(int const N)
     std::string fout_names[3]{ "ERP_OUT_GRAY_WHITE.csv", "ERP_OUT_GRAY_UNIFORM.csv", "ERP_OUT_UNIFORM.csv" };
     for(int case_idx = 0; case_idx < 3; ++case_idx)
     {
+        ElectrodeNet electrode_net(h_regions, h_regions_inds);
+        Float const* avg_V_handle = electrode_net.ElectrodeOutputHandle();
         MouseCortex mouse_cortex(N, "HH", use_uniform_white[case_idx], use_gray[case_idx]);
         std::ofstream fout(fout_names[case_idx]);
         Float const* V_ptr = mouse_cortex.ephys->SimVarsCpu()[HH::Params::V];
 
         // Set applied current to zero everywhere but the visual regions.
-        thrust::host_vector<Float> appcur(N, 0);
+        thrust::host_vector<Float> appcur(N, 6);
         for (int i = h_regions_inds[visual_region_idx]; i < h_regions_inds[visual_region_idx + 1]; ++i)
-            appcur[h_regions[i]] = 7;
+            appcur[h_regions[i]] = 10;
         thrust::device_vector<Float> d_appcur(appcur);
         thrust::copy_n(d_appcur.begin(), N, thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::APPCUR]));
 
@@ -169,8 +211,8 @@ void SimulatedERP(int const N)
         {
             electrode_net.DoElectrodeMeasurements(V_ptr);
             mouse_cortex.Simulate();
-            for (int i = 0; i < h_regions_inds.size() - 1; ++i)
-                fout << avg_V_handle[i] << ',';
+            for (int j = 0; j < h_regions_inds.size() - 1; ++j)
+                fout << avg_V_handle[j] << ',';
             fout << '\n';
         }
         fout.close();
@@ -179,11 +221,11 @@ void SimulatedERP(int const N)
 
 int main()
 {
-    SimulatedERP(1e5);
+//    WavesExamples(1e5, 1e5, 100);
+    SimulatedERP(1e6);
     exit(0);
     for(int i = 1; i < 10; ++i)
         RecordNumFiring(i * 1e5, std::to_string(i));
-    WavesExamples(1e5, 4e4, 10);
     return 0;
     MouseCortex::excitatory_conns_file_name = "cortex_connectivity_13M_100_exc.h5";
     MouseCortex::inhibitory_conns_file_name = "cortex_connectivity_13M_100_inh.h5";

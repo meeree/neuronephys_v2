@@ -32,7 +32,8 @@ public:
 	thrust::device_vector<int> is_firing;
 	thrust::device_vector<int> firing_neurons;
 
-	AtomicCoupling(int const N, AdjacencyList list_, Float* downstream_inputs_, Float* neuron_outputs_);
+	//! Constructor. Note that list_ will be moved to internal AtomicCoupling member variable list, so list_ SHOULD NOT BE USED AFTER SENDING IT TO THE CTOR!!!
+	AtomicCoupling(int const N, AdjacencyList& list_, Float* downstream_inputs_, Float* neuron_outputs_);
     
     //! Performs coupling and stores results in downstream_inputs. 
     //! \return Number of neurons firing.

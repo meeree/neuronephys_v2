@@ -35,7 +35,6 @@ void main(void)
     }
     float t = (fs_in.voltage - color_off) / color_divisor;
     t = clamp(t, 0, 1);
-    t = 1 - t;
     if(t < color_cutoff)
         discard;
     color = mix(vec4(1.0, 0.0, 1.0, 1.0), vec4(1.0, 1.0, 0.0, 1.0), (t - color_cutoff) / (1 - color_cutoff));

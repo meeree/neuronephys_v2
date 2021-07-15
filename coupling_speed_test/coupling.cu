@@ -1,8 +1,11 @@
 #include "coupling.cuh"
 
-AtomicCoupling::AtomicCoupling(int const N, AdjacencyList list_, Float* downstream_inputs_, Float* neuron_outputs_)
-    : list{ list_ }, downstream_inputs{ downstream_inputs_ }, neuron_outputs{ neuron_outputs_ }, is_firing(N, 0), firing_neurons(N, -1)
+AtomicCoupling::AtomicCoupling(int const N, AdjacencyList& list_, Float* downstream_inputs_, Float* neuron_outputs_)
+    : list{}, downstream_inputs{ downstream_inputs_ }, neuron_outputs{ neuron_outputs_ }, is_firing(N, 0), firing_neurons(N, -1)
 {
+	// Move contents of list_ to list. This makes list_ now empty!
+	std::swap(list.indices, list_.indices);
+	std::swap(list.offset_in_indices, list_.offset_in_indices);
 }
 
 inline __global__ void signal_spikes_kernel(int const num_firing,
