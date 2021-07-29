@@ -15,6 +15,10 @@
     <CudaCompile Include="network_factory.cu">
       <Filter>Source</Filter>
     </CudaCompile>
+    <CudaCompile Include="defines.cu" />
+    <CudaCompile Include="electrode_net.cu" />
+    <CudaCompile Include="ephys.cu" />
+    <CudaCompile Include="mouse_cortex.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="coupling.cuh">
@@ -32,12 +36,21 @@
     <ClInclude Include="morphology.h">
       <Filter>Source</Filter>
     </ClInclude>
+    <ClInclude Include="electrode_net.cuh" />
+    <ClInclude Include="ephys.cuh" />
+    <ClInclude Include="mouse_cortex.cuh" />
+    <ClInclude Include="regions_tree.h">
+      <Filter>Source</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="graphics.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="morphology.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="regions_tree.cpp">
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>

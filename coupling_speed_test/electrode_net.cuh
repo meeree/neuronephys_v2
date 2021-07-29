@@ -10,18 +10,23 @@ private:
 	int N_regions;
 	thrust::device_vector<Float> d_avg_voltages;
 	thrust::host_vector<Float> h_avg_voltages;
+	thrust::device_vector<int> d_firing_per_region;
+	thrust::host_vector<int> h_firing_per_region;
 public:
 	ElectrodeNet (thrust::host_vector<int> const& regions_inds, 
 	              thrust::host_vector<int> const& regions_offsets)
 		: d_regions{regions_inds, regions_offsets}, 
 		  N_regions{(int)regions_offsets.size() - 1},
 		  d_avg_voltages(N_regions, 0),
-		  h_avg_voltages(N_regions, 0)
+		  h_avg_voltages(N_regions, 0),
+		  d_firing_per_region(N_regions, 0),
+		  h_firing_per_region(N_regions, 0)
 	{
 	}
 
 	//! Computes the averaged activity in each region and then copies to CPU in h_avg_voltages.
-	void DoElectrodeMeasurements (Float const* V_ptr);
+	//! Also computes the number of neurons firing per region.
+	void DoElectrodeMeasurements (Float const* V_ptr, thrust::device_vector<int> const& is_firing);
 
 	//! Computes the average voltage over the ENTIRE network of neurons.
 	static Float MeasureAverageEntireNetwork (Float const* V_ptr, int const N);
@@ -29,6 +34,11 @@ public:
 	Float const* ElectrodeOutputHandle () const
 	{
 		return h_avg_voltages.data();
+	}
+
+	int const* FiringPerRegionHandle() const
+	{
+		return h_firing_per_region.data();
 	}
 };
 

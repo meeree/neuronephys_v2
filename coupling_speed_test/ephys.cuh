@@ -53,11 +53,11 @@ namespace HH
     constexpr static const Float Tmax = 1.0;                                                             // Max neurotransmitter output
     constexpr static const Float Vt = -20.0; constexpr static const Float Kp = 3.0;                      // Neurotransmitter potential and scalar 
     constexpr const static Float Ar = 5.0; constexpr const static Float Ad = 0.18;                       // alpha and beta for GABA gating variable
-    constexpr static const Float g_ampa_white = 0.03; constexpr static const Float e_ampa = 0.0; // Coupling conductance and potential for AMPA in white matter
-    constexpr static const Float g_ampa_grey = 0.4; // Coupling conductance and potential for AMPA in grey matter
-    constexpr static const Float g_gaba = 0.05; constexpr static const Float e_gaba = -70.0; // Coupling conductance and potential for GABA
+    constexpr static const Float g_ampa_white = 0.0; constexpr static const Float e_ampa = 0.0; // Coupling conductance and potential for AMPA in white matter
+    constexpr static const Float g_ampa_grey = 0.1; // Coupling conductance and potential for AMPA in grey matter
+    constexpr static const Float g_gaba = 0.0; constexpr static const Float e_gaba = -70.0; // Coupling conductance and potential for GABA
     constexpr static const Float appcur = 0.0;                                                            // Base current to apply when we only apply a constant current. 
-    constexpr static const Float white_noise_mean = 2.0f;
+    constexpr static const Float white_noise_mean = 0.0f;
     constexpr static const Float white_noise_intensity = 2.0f; // Controls stddev of white noise.
     enum Params
     {

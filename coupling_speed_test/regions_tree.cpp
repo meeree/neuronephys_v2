@@ -45,4 +45,16 @@ int RegionsTree::GetIdOfRegionByName(std::string name, bool acronym)
         if (region[label_str] == name)
             return region["id"];
     }
+    return 0;
+}
+
+std::string RegionsTree::GetNameOfRegionById(int id, bool acronym)
+{
+    std::string label_str = acronym ? "acronym" : "name";
+    for (auto& region : regions_json)
+    {
+        if (region["id"] == id)
+            return region[label_str];
+    }
+    return "";
 }

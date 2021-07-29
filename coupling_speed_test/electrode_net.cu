@@ -5,42 +5,47 @@ inline __global__ void electrodes_measure_kernel (
     int const* regions,
     int const* region_offsets,
     Float* output,
-    Float const* V)
+    Float const* V,
+    int* firing_per_region,
+    int const* is_firing)
 {
     for (int tid = blockIdx.x * blockDim.x + threadIdx.x; tid < N_regions; tid += gridDim.x * blockDim.x) 
     {
+        // Compute average voltage for region.
         Float V_sum = 0;
-
         int const* region_start = regions + region_offsets[tid];
         int const* region_end = regions + region_offsets[tid + 1];
         for(int const* it = region_start; it != region_end; ++it)
             V_sum += V[*it];
 
         output[tid] = V_sum / (region_end - region_start);
+
+        // Compute number of neurons firing in region.
+        int n_firing = 0;
+        for (int const* it = region_start; it != region_end; ++it)
+            n_firing += is_firing[*it];
+
+        firing_per_region[tid] = n_firing;
     }
 }
 
-void ElectrodeNet::DoElectrodeMeasurements (Float const* V_ptr)
+void ElectrodeNet::DoElectrodeMeasurements (Float const* V_ptr, thrust::device_vector<int> const& is_firing)
 {
 	electrodes_measure_kernel<<<NBLOCKS, NTHREADS>>>(
         N_regions,
         thrust::raw_pointer_cast(d_regions.indices.data()),
         thrust::raw_pointer_cast(d_regions.offset_in_indices.data()),
         thrust::raw_pointer_cast(d_avg_voltages.data()),
-        V_ptr);
+        V_ptr,
+        thrust::raw_pointer_cast(d_firing_per_region.data()),
+        thrust::raw_pointer_cast(is_firing.data())
+    );
 	gpuErrchk( cudaPeekAtLastError() );
 	gpuErrchk( cudaDeviceSynchronize() );
 
     // Copy averages from GPU to CPU.
     h_avg_voltages = d_avg_voltages;
-}
-
-inline __global__ void TMP_kernel(Float const* V, int const N, Float* sum)
-{
-    *sum = 0;
-    for(int i = 0; i < N; ++i)
-        *sum += V[i]; 
-    *sum /= N;
+    h_firing_per_region = d_firing_per_region;
 }
 
 Float ElectrodeNet::MeasureAverageEntireNetwork (Float const* V_ptr, int const N)

@@ -83,17 +83,10 @@ void WavesExamples(int const N, int render_N = -1, int const electrodeK = 1)
     Float const* avg_V_handle = electrode_net.ElectrodeOutputHandle();
     Float const* V_ptr = mouse_cortex.ephys->SimVarsCpu()[HH::Params::V];
 
-    int n_incs_transient = NumIncsSecond() * 3;
-    int n_incs_record = NumIncsSecond() * 3;
-
     float* graphics_voltage_handle;
     Graphics::setup(graphics_voltage_handle, mouse_cortex.morphology->GetPositionsRaw(), N, render_N);
     // Hodgkin-Huxley normalized coloring.
     Graphics::set_color_params(15, -60, 0.0);
-
-    // Transient.
-    for (int i = 0; i < n_incs_transient; ++i)
-        mouse_cortex.Simulate();
 
     // Use super-regions at a specific depth in the regions json tree.
     int visual_region_idx;
@@ -123,15 +116,46 @@ void WavesExamples(int const N, int render_N = -1, int const electrodeK = 1)
     }
 
     // Simulate and record ERP.
-    bool pause = false;
-    for (int i = 0; i < n_incs_record; ++i)
+    std::ofstream fout("N_FIRING_APPCUR.csv");
+    int switch_incs = NumIncsSecond();
+    for (int window = 0; window < 3; ++window)
     {
-        electrode_net.DoElectrodeMeasurements(V_ptr);
-        mouse_cortex.Simulate();
-        for (int j = 0; j < h_regions_inds.size() - 1; ++j)
-            graphics_voltage_handle[j] = avg_V_handle[j];
-        Graphics::render(graphics_voltage_handle, nullptr, 0, 0, pause);
+        int n_incs_transient = NumIncsSecond() * 10;
+        int n_incs_record = NumIncsSecond() * 2;
+        float stim = window == 0 ? 4 : 5;
+        bool pause = false;
+        for (int i = 0; i < n_incs_transient + n_incs_record; ++i)
+        {
+            thrust::host_vector<Float> appcur(N, 3);
+            Float appcur_write = 3;
+            if (i % switch_incs == 0)
+                std::cout << "SWITCH : " << (i % (2 * switch_incs)) / switch_incs << ", i = " << i << std::endl;
+
+            if(i % (2 * switch_incs) < switch_incs && i % (switch_incs / 50) < 2)
+            {
+//                for (int j = h_regions_inds_allen[visual_region_idx]; j < h_regions_inds_allen[visual_region_idx + 1]; ++j)
+//                    appcur[h_regions_allen[j]] = stim;
+                for (int j = 0; j < N; ++j)
+                    if (mouse_cortex.morphology->GetPositions()[j].y > 0.5)
+                        appcur[j] = stim;
+                thrust::fill_n(appcur.begin(), N, stim);
+                appcur_write = stim;
+            }
+            thrust::device_vector<Float> d_appcur(appcur);
+            thrust::copy_n(d_appcur.begin(), N, thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::APPCUR]));
+
+            fout << mouse_cortex.Simulate() << ',' << appcur_write << '\n';
+
+            if (i > n_incs_transient)
+            {
+                electrode_net.DoElectrodeMeasurements(V_ptr, mouse_cortex.white_ampa_connectivity->is_firing);
+                for (int j = 0; j < h_regions_inds.size() - 1; ++j)
+                    graphics_voltage_handle[j] = avg_V_handle[j];
+                Graphics::render(graphics_voltage_handle, nullptr, 0, 0, pause);
+            }
+        }
     }
+    fout.close();
 }
 
 // Simulates ERP for three cases: realistic connectivity, realistic short range and uniform long range, and uniform long range. 
@@ -143,8 +167,12 @@ void SimulatedERP(int const N)
 
     // Figure out what the indices of the electrodes should be.
     thrust::host_vector<int> h_regions, h_regions_inds, associated_ids;
+
+    // Regions to sample EEG for. This differs from the above because we want an equal number of neurons per region for EEG.
+    thrust::host_vector<int> eeg_sample_regions, eeg_sample_regions_inds; 
     int visual_region_idx = -1;
     std::ofstream region_sizes_fout("REGION_SIZES.csv");
+    std::ofstream region_names("REGION_NAMES.txt");
     {
         MouseCortex mouse_cortex(N, "HH", false, false);
         // Use super-regions at a specific depth in the regions json tree.
@@ -154,24 +182,35 @@ void SimulatedERP(int const N)
             mouse_cortex.morphology->SpecfiyRegionsDepth(6, tree);
             mouse_cortex.morphology->GenRegionsFromIDs(h_regions, h_regions_inds, associated_ids);
 
+            // Print region names to file.
+            for (int id : associated_ids)
+                region_names << tree.GetNameOfRegionById(id) << '\n';
+
             // Find region corresponding to the visual region in h_regions.
-            int ID = tree.GetIdOfRegionByName("VIS");
+            int ID = tree.GetIdOfRegionByName("AUD");
             std::cout << "Visual region ID: " << ID << std::endl;
             visual_region_idx = std::find(associated_ids.begin(), associated_ids.end(), ID) - associated_ids.begin();
-
-            for (int i = 0; i < h_regions_inds.size() - 1; ++i)
-                region_sizes_fout << h_regions_inds[i + 1] - h_regions_inds[i] << '\n';
             
-///            thrust::host_vector<int> new_h_regions(N * 404), new_h_regions_inds(h_regions_inds.size(), 0);
-///            for (int i = 0; i < h_regions_inds.size() - 1; ++i)
-///            {
-///                new_h_regions_inds[i + 1] = new_h_regions_inds[i] + 404;
-///
-///                for (int j = 0; j < 404; ++j)
-///                    new_h_regions[new_h_regions_inds[i] + j] = h_regions[h_regions_inds[i] + j];
-///            }
-///            h_regions = new_h_regions;
-///            h_regions_inds = new_h_regions_inds;
+            // Sample the same number of neurons from each subregion to measure EEG for.
+            int N_sample = INT_MAX;
+            for (int i = 0; i < h_regions_inds.size() - 1; ++i)
+            {
+                region_sizes_fout << h_regions_inds[i + 1] - h_regions_inds[i] << '\n';
+                if(h_regions_inds[i+1] - h_regions_inds[i] < N_sample)
+                    N_sample = h_regions_inds[i+1] - h_regions_inds[i];
+                if(h_regions_inds[i+1] - h_regions_inds[i] < N_sample)
+                    N_sample = h_regions_inds[i+1] - h_regions_inds[i];
+            }
+            std::cout << "Sampling the first " << N_sample << " neurons from each region" << std::endl;
+
+            eeg_sample_regions.resize((h_regions_inds.size() - 1) * N_sample);
+            eeg_sample_regions_inds.resize(h_regions_inds.size(), 0);
+            for (int i = 0; i < h_regions_inds.size() - 1; ++i)
+            {
+                eeg_sample_regions_inds[i + 1] = eeg_sample_regions_inds[i] + N_sample;
+                for (int j = 0; j < N_sample; ++j)
+                    eeg_sample_regions[eeg_sample_regions_inds[i] + j] = h_regions[h_regions_inds[i] + j];
+            }
         }
         catch (std::runtime_error& e)
         {
@@ -180,19 +219,24 @@ void SimulatedERP(int const N)
         }
     }
     region_sizes_fout.close();
+    region_names.close();
     int n_incs_transient = NumIncsSecond() * 3;
-    int n_incs_record = NumIncsSecond();
+    int n_incs_record = NumIncsSecond() * 300;
+
+    ElectrodeNet electrode_net(eeg_sample_regions, eeg_sample_regions_inds);
+    Float const* avg_V_handle = electrode_net.ElectrodeOutputHandle();
+    int const* firing_handle = electrode_net.FiringPerRegionHandle();
 
     // Simulate and record the three cases: gray + white, gray + uniform, uniform only.
     bool use_uniform_white[3]{ false, true, true };
-    bool use_gray[3]{ true, true, false };
-    std::string fout_names[3]{ "ERP_OUT_GRAY_WHITE.csv", "ERP_OUT_GRAY_UNIFORM.csv", "ERP_OUT_UNIFORM.csv" };
+    bool use_gray[3]{ false, true, false };
+    std::string fout_names[3]{ "ERP_OUT_GRAY_WHITE_AUD.csv", "ERP_OUT_GRAY_UNIFORM.csv", "ERP_OUT_UNIFORM.csv" };
+    std::string fout_firing_names[3]{"FIRING_OUT_GRAY_WHITE_AUD.csv", "FIRING_OUT_GRAY_UNIFORM.csv", "FIRING_OUT_UNIFORM.csv" };
     for(int case_idx = 0; case_idx < 3; ++case_idx)
     {
-        ElectrodeNet electrode_net(h_regions, h_regions_inds);
-        Float const* avg_V_handle = electrode_net.ElectrodeOutputHandle();
         MouseCortex mouse_cortex(N, "HH", use_uniform_white[case_idx], use_gray[case_idx]);
         std::ofstream fout(fout_names[case_idx]);
+        std::ofstream firing_fout(fout_firing_names[case_idx]);
         Float const* V_ptr = mouse_cortex.ephys->SimVarsCpu()[HH::Params::V];
 
         // Set applied current to zero everywhere but the visual regions.
@@ -209,19 +253,26 @@ void SimulatedERP(int const N)
         // Simulate and record ERP.
         for (int i = 0; i < n_incs_record; ++i)
         {
-            electrode_net.DoElectrodeMeasurements(V_ptr);
+            electrode_net.DoElectrodeMeasurements(V_ptr, mouse_cortex.white_ampa_connectivity->is_firing);
             mouse_cortex.Simulate();
-            for (int j = 0; j < h_regions_inds.size() - 1; ++j)
+
+            for (int j = 0; j < eeg_sample_regions_inds.size() - 1; ++j)
+                firing_fout << firing_handle[j] << ',';
+            firing_fout << '\n';
+
+            for (int j = 0; j < eeg_sample_regions_inds.size() - 1; ++j)
                 fout << avg_V_handle[j] << ',';
             fout << '\n';
         }
         fout.close();
+        firing_fout.close();
     }
 }
 
 int main()
 {
-//    WavesExamples(1e5, 1e5, 100);
+    WavesExamples(1e5, 1e5, 30);
+    exit(0);
     SimulatedERP(1e6);
     exit(0);
     for(int i = 1; i < 10; ++i)

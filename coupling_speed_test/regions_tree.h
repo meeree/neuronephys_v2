@@ -20,4 +20,7 @@ public:
     //! Retrieves the ID of a region specified by a specific name. The parameter acronym determines if the name should be the acronym name,
     //! or the full name. By default it is true (i.e., acronym should be specified).
     int GetIdOfRegionByName(std::string name, bool acronym = true);
+
+    //! Inverse of GetIdOfRegionByName.
+    std::string GetNameOfRegionById(int id, bool acronym = true);
 };
