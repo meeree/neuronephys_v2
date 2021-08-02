@@ -120,25 +120,26 @@ void WavesExamples(int const N, int render_N = -1, int const electrodeK = 1)
     int switch_incs = NumIncsSecond();
     for (int window = 0; window < 3; ++window)
     {
-        int n_incs_transient = NumIncsSecond() * 10;
+        int n_incs_transient = NumIncsSecond() * 1;
         int n_incs_record = NumIncsSecond() * 2;
-        float stim = window == 0 ? 4 : 5;
+        float stim = window == 0 ? 0 : (window == 1 ? 5 : 10);
+        float base = window == 0 ? 0 : 3;
         bool pause = false;
         for (int i = 0; i < n_incs_transient + n_incs_record; ++i)
         {
-            thrust::host_vector<Float> appcur(N, 3);
-            Float appcur_write = 3;
+            thrust::host_vector<Float> appcur(N, base);
+            Float appcur_write = base;
             if (i % switch_incs == 0)
                 std::cout << "SWITCH : " << (i % (2 * switch_incs)) / switch_incs << ", i = " << i << std::endl;
 
-            if(i % (2 * switch_incs) < switch_incs && i % (switch_incs / 50) < 2)
+            if((i < n_incs_transient || i % (2 * switch_incs) < switch_incs) && i % (switch_incs / 500) < 2)
             {
 //                for (int j = h_regions_inds_allen[visual_region_idx]; j < h_regions_inds_allen[visual_region_idx + 1]; ++j)
 //                    appcur[h_regions_allen[j]] = stim;
                 for (int j = 0; j < N; ++j)
-                    if (mouse_cortex.morphology->GetPositions()[j].y > 0.5)
+                    if (mouse_cortex.morphology->GetPositions()[j].y > 0.0)
                         appcur[j] = stim;
-                thrust::fill_n(appcur.begin(), N, stim);
+//                thrust::fill_n(appcur.begin(), N, stim);
                 appcur_write = stim;
             }
             thrust::device_vector<Float> d_appcur(appcur);
@@ -271,7 +272,7 @@ void SimulatedERP(int const N)
 
 int main()
 {
-    WavesExamples(1e5, 1e5, 30);
+    WavesExamples(5e5, 5e5, 30);
     exit(0);
     SimulatedERP(1e6);
     exit(0);
