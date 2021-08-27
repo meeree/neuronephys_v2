@@ -11,6 +11,70 @@ int NumIncsSecond(float dt=HH::leapfrog_dt)
     return int(1000 / dt); 
 }
 
+void VisualizationTest(int N, int render_N=-1, int electrodeK=10)
+{
+    if (render_N < 0)
+        render_N = N;
+
+    MouseCortex mouse_cortex(N);
+    std::vector<int> electrode_inds(render_N);
+    int const render_stride = N / render_N;
+
+    // Generate electrodes by sampling render_N neurons uniformly from the N and creating electrodes at every such neuron.
+    for (int i = 0; i < render_N; ++i)
+        electrode_inds[i] = render_stride * i;
+    thrust::host_vector<int> h_regions, h_regions_inds;
+    mouse_cortex.morphology->GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, electrodeK);
+
+    ElectrodeNet electrode_net(h_regions, h_regions_inds);
+    Float const* avg_V_handle = electrode_net.ElectrodeOutputHandle();
+    Float const* V_ptr = mouse_cortex.ephys->SimVarsCpu()[HH::Params::V];
+
+    float* graphics_voltage_handle;
+    Graphics::setup(graphics_voltage_handle, mouse_cortex.morphology->GetPositionsRaw(), N, render_N);
+    // Hodgkin-Huxley normalized coloring.
+    Graphics::set_color_params(15, -60, 0.0);
+
+    // Use super-regions at a specific depth in the regions json tree.
+    int visual_region_idx;
+    thrust::host_vector<int> h_regions_allen, h_regions_inds_allen, associated_ids;
+    try
+    {
+        RegionsTree tree("CUBIC_regionID_lookup_no_comma.json");
+        mouse_cortex.morphology->SpecfiyRegionsDepth(6, tree);
+        mouse_cortex.morphology->GenRegionsFromIDs(h_regions_allen, h_regions_inds_allen, associated_ids);
+
+        // Find region corresponding to the visual region in h_regions.
+        int ID = tree.GetIdOfRegionByName("VIS");
+        std::cout << "Visual region ID: " << ID << std::endl;
+        visual_region_idx = std::find(associated_ids.begin(), associated_ids.end(), ID) - associated_ids.begin();
+
+        // Set applied current to zero everywhere but the visual regions.
+        thrust::host_vector<Float> appcur(N, 2);
+        for (int i = h_regions_inds_allen[visual_region_idx]; i < h_regions_inds_allen[visual_region_idx + 1]; ++i)
+            appcur[h_regions_allen[i]] = 7;
+        thrust::device_vector<Float> d_appcur(appcur);
+        thrust::copy_n(d_appcur.begin(), N, thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::APPCUR]));
+    }
+    catch (std::runtime_error& e)
+    {
+        std::cerr << e.what() << std::endl;
+        exit(1);
+    }
+
+    int switch_incs = NumIncsSecond();
+    bool pause = false;
+    for(int i = 0; i < NumIncsSecond() * 3; ++i)
+    {
+        mouse_cortex.Simulate();
+
+        electrode_net.DoElectrodeMeasurements(V_ptr, mouse_cortex.white_ampa_connectivity->is_firing);
+        for (int j = 0; j < h_regions_inds.size() - 1; ++j)
+            graphics_voltage_handle[j] = avg_V_handle[j];
+        Graphics::render(graphics_voltage_handle, nullptr, 0, 0, pause);
+    }
+}
+
 void RecordNumFiring(int N, std::string fl_suffix="")
 {
     std::ofstream fout("N_FIRING_" + fl_suffix + ".txt");
@@ -272,7 +336,7 @@ void SimulatedERP(int const N)
 
 int main()
 {
-    WavesExamples(5e5, 5e5, 30);
+    VisualizationTest(1e5, 1e5);
     exit(0);
     SimulatedERP(1e6);
     exit(0);
