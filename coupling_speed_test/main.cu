@@ -337,26 +337,4 @@ void SimulatedERP(int const N)
 int main()
 {
     VisualizationTest(1e5, 1e5);
-    exit(0);
-    SimulatedERP(1e6);
-    exit(0);
-    for(int i = 1; i < 10; ++i)
-        RecordNumFiring(i * 1e5, std::to_string(i));
-    return 0;
-    MouseCortex::excitatory_conns_file_name = "cortex_connectivity_13M_100_exc.h5";
-    MouseCortex::inhibitory_conns_file_name = "cortex_connectivity_13M_100_inh.h5";
-    MouseCortex::uniform_random_Ncouple = 100;
-
-    // Logarithmic scale choices of N.
-    std::vector<int> choices_of_N(30);
-    float exp_min = 4;
-    float exp_max = 7.12;
-
-    // Vary exponent linearly.
-    for (int i = 0; i < choices_of_N.size(); ++i)
-    {
-        float exp = exp_min + (exp_max - exp_min) * i / (choices_of_N.size() - 1);
-        choices_of_N[i] = pow(10, exp);
-    }
-    SweepBenchmark(choices_of_N);
 }
