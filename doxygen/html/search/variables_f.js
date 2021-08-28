@@ -1,9 +1,9 @@
 var searchData=
 [
-  ['tex_5fcoord_5fbuff_363',['tex_coord_buff',['../namespace_graphics.html#aeee17015cfc742e0670bae836aa799b6',1,'Graphics']]],
-  ['tex_5fcoord_5floc_364',['tex_coord_loc',['../namespace_graphics.html#a25de7c3762e3f43795930ff04caef37a',1,'Graphics']]],
-  ['tex_5fshaderprogram_365',['tex_shaderProgram',['../namespace_graphics.html#a020afe678b17fb21faf7042a9e2e28f2',1,'Graphics']]],
-  ['texture_366',['texture',['../namespace_graphics.html#a7add95f36038e655dea6e2213f4533ef',1,'Graphics']]],
-  ['theta_367',['theta',['../namespace_graphics.html#a0920e10e3618cd0f9b0bc786dd02050f',1,'Graphics']]],
-  ['title_368',['title',['../namespace_graphics.html#ad6a7e8662921598c7d8441ea97d19e56',1,'Graphics']]]
+  ['sampler_5floc_589',['sampler_loc',['../namespace_graphics.html#a298e89da0de163d5082b5cd9181afbe6',1,'Graphics']]],
+  ['shaderprogram_590',['shaderProgram',['../namespace_graphics.html#a0411bf5e304baaf3df72555018c26e6e',1,'Graphics']]],
+  ['sim_5fvars_591',['sim_vars',['../class_ephys.html#af4f2353c0513dc4e04cdd4ade2608a6b',1,'Ephys']]],
+  ['sim_5fvars_5fcpu_592',['sim_vars_cpu',['../class_ephys.html#a07856f49f73a6a477f1207bdf9fdf425',1,'Ephys']]],
+  ['slice_5findex_593',['slice_index',['../namespace_graphics.html#a85781c7fcd6555318df976123c7e1531',1,'Graphics']]],
+  ['stddev_594',['stddev',['../class_normal_network.html#a7a7f9c63b550525665714a0f4a56b5d2',1,'NormalNetwork']]]
 ];

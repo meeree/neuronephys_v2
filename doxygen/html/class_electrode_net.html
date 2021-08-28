@@ -74,14 +74,17 @@ $(function() {
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a01117a16bd2dd9a5a80d079627ba307c"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_electrode_net.html#a01117a16bd2dd9a5a80d079627ba307c">ElectrodeNet</a> (thrust::host_vector&lt; int &gt; const &amp;regions_inds, thrust::host_vector&lt; int &gt; const &amp;regions_offsets)</td></tr>
 <tr class="separator:a01117a16bd2dd9a5a80d079627ba307c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a96b8ed6df4ebc2f9a44a209dbfefc9d5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_electrode_net.html#a96b8ed6df4ebc2f9a44a209dbfefc9d5">DoElectrodeMeasurements</a> (<a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> const *V_ptr)</td></tr>
-<tr class="separator:a96b8ed6df4ebc2f9a44a209dbfefc9d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a068c59904058329938a7f211c591a16f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_electrode_net.html#a068c59904058329938a7f211c591a16f">DoElectrodeMeasurements</a> (<a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> const *V_ptr, thrust::device_vector&lt; int &gt; const &amp;is_firing)</td></tr>
+<tr class="separator:a068c59904058329938a7f211c591a16f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad6337d9526d7607f1f939036d17068d4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> const  *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_electrode_net.html#ad6337d9526d7607f1f939036d17068d4">ElectrodeOutputHandle</a> () const</td></tr>
 <tr class="separator:ad6337d9526d7607f1f939036d17068d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a32275701e076e9f9ed59a0933e656529"><td class="memItemLeft" align="right" valign="top">int const  *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_electrode_net.html#a32275701e076e9f9ed59a0933e656529">FiringPerRegionHandle</a> () const</td></tr>
+<tr class="separator:a32275701e076e9f9ed59a0933e656529"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
 <tr class="memitem:abb1a781f9362936fb62f102c648a5074"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_electrode_net.html#abb1a781f9362936fb62f102c648a5074">MeasureAverageEntireNetwork</a> (<a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> const *V_ptr, int const N)</td></tr>
+<tr class="memdesc:abb1a781f9362936fb62f102c648a5074"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the average voltage over the ENTIRE network of neurons.  <a href="class_electrode_net.html#abb1a781f9362936fb62f102c648a5074">More...</a><br /></td></tr>
 <tr class="separator:abb1a781f9362936fb62f102c648a5074"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
@@ -123,13 +126,13 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="electrode__net_8cuh_source.html#l00014">14</a> of file <a class="el" href="electrode__net_8cuh_source.html">electrode_net.cuh</a>.</p>
+<p class="definition">Definition at line <a class="el" href="electrode__net_8cuh_source.html#l00016">16</a> of file <a class="el" href="electrode__net_8cuh_source.html">electrode_net.cuh</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="a96b8ed6df4ebc2f9a44a209dbfefc9d5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a96b8ed6df4ebc2f9a44a209dbfefc9d5">&#9670;&nbsp;</a></span>DoElectrodeMeasurements()</h2>
+<a id="a068c59904058329938a7f211c591a16f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a068c59904058329938a7f211c591a16f">&#9670;&nbsp;</a></span>DoElectrodeMeasurements()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -138,13 +141,24 @@ Static Public Member Functions</h2></td></tr>
           <td class="memname">void ElectrodeNet::DoElectrodeMeasurements </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> const *&#160;</td>
-          <td class="paramname"><em>V_ptr</em></td><td>)</td>
+          <td class="paramname"><em>V_ptr</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">thrust::device_vector&lt; int &gt; const &amp;&#160;</td>
+          <td class="paramname"><em>is_firing</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
 </div><div class="memdoc">
+<p>Computes the averaged activity in each region and then copies to CPU in h_avg_voltages. Also computes the number of neurons firing per region. </p>
 
-<p class="definition">Definition at line <a class="el" href="electrode__net_8cu_source.html#l00023">23</a> of file <a class="el" href="electrode__net_8cu_source.html">electrode_net.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="electrode__net_8cu_source.html#l00032">32</a> of file <a class="el" href="electrode__net_8cu_source.html">electrode_net.cu</a>.</p>
 
 </div>
 </div>
@@ -171,7 +185,34 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="electrode__net_8cuh_source.html#l00029">29</a> of file <a class="el" href="electrode__net_8cuh_source.html">electrode_net.cuh</a>.</p>
+<p class="definition">Definition at line <a class="el" href="electrode__net_8cuh_source.html#l00034">34</a> of file <a class="el" href="electrode__net_8cuh_source.html">electrode_net.cuh</a>.</p>
+
+</div>
+</div>
+<a id="a32275701e076e9f9ed59a0933e656529"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a32275701e076e9f9ed59a0933e656529">&#9670;&nbsp;</a></span>FiringPerRegionHandle()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">int const* ElectrodeNet::FiringPerRegionHandle </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="electrode__net_8cuh_source.html#l00039">39</a> of file <a class="el" href="electrode__net_8cuh_source.html">electrode_net.cuh</a>.</p>
 
 </div>
 </div>
@@ -209,7 +250,9 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="electrode__net_8cu_source.html#l00044">44</a> of file <a class="el" href="electrode__net_8cu_source.html">electrode_net.cu</a>.</p>
+<p>Computes the average voltage over the ENTIRE network of neurons. </p>
+
+<p class="definition">Definition at line <a class="el" href="electrode__net_8cu_source.html#l00051">51</a> of file <a class="el" href="electrode__net_8cu_source.html">electrode_net.cu</a>.</p>
 
 </div>
 </div>

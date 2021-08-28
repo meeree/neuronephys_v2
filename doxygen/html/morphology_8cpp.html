@@ -66,15 +66,18 @@ $(function() {
 </div><!-- top -->
 <div class="header">
   <div class="summary">
-<a href="#define-members">Macros</a>  </div>
+<a href="#define-members">Macros</a> &#124;
+<a href="#func-members">Functions</a>  </div>
   <div class="headertitle">
 <div class="title">morphology.cpp File Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><code>#include &quot;<a class="el" href="morphology_8h_source.html">morphology.h</a>&quot;</code><br />
+<code>#include &lt;set&gt;</code><br />
 <code>#include &lt;glm/ext.hpp&gt;</code><br />
 <code>#include &lt;glm/gtx/norm.hpp&gt;</code><br />
 <code>#include &lt;glm/gtc/type_ptr.hpp&gt;</code><br />
+<code>#include &lt;unordered_map&gt;</code><br />
 </div>
 <p><a href="morphology_8cpp_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -82,6 +85,11 @@ $(function() {
 Macros</h2></td></tr>
 <tr class="memitem:a525335710b53cb064ca56b936120431e"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="morphology_8cpp.html#a525335710b53cb064ca56b936120431e">_USE_MATH_DEFINES</a></td></tr>
 <tr class="separator:a525335710b53cb064ca56b936120431e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
+Functions</h2></td></tr>
+<tr class="memitem:a32f4ee96fdbf7a19353a88459e91f201"><td class="memItemLeft" align="right" valign="top">unsigned char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="morphology_8cpp.html#a32f4ee96fdbf7a19353a88459e91f201">ReadBMP</a> (std::string const &amp;filename, int &amp;width, int &amp;height)</td></tr>
+<tr class="separator:a32f4ee96fdbf7a19353a88459e91f201"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Macro Definition Documentation</h2>
 <a id="a525335710b53cb064ca56b936120431e"></a>
@@ -97,6 +105,43 @@ Macros</h2></td></tr>
 </div><div class="memdoc">
 
 <p class="definition">Definition at line <a class="el" href="morphology_8cpp_source.html#l00001">1</a> of file <a class="el" href="morphology_8cpp_source.html">morphology.cpp</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Function Documentation</h2>
+<a id="a32f4ee96fdbf7a19353a88459e91f201"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a32f4ee96fdbf7a19353a88459e91f201">&#9670;&nbsp;</a></span>ReadBMP()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">unsigned char* ReadBMP </td>
+          <td>(</td>
+          <td class="paramtype">std::string const &amp;&#160;</td>
+          <td class="paramname"><em>filename</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int &amp;&#160;</td>
+          <td class="paramname"><em>width</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int &amp;&#160;</td>
+          <td class="paramname"><em>height</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="morphology_8cpp_source.html#l00407">407</a> of file <a class="el" href="morphology_8cpp_source.html">morphology.cpp</a>.</p>
 
 </div>
 </div>

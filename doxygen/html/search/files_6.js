@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['plot_5faveraged_2em_244',['plot_averaged.m',['../plot__averaged_8m.html',1,'']]]
+  ['network_5ffactory_2ecu_368',['network_factory.cu',['../network__factory_8cu.html',1,'']]],
+  ['network_5ffactory_2ecuh_369',['network_factory.cuh',['../network__factory_8cuh.html',1,'']]]
 ];

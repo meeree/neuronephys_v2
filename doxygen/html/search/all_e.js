@@ -1,6 +1,22 @@
 var searchData=
 [
-  ['offset_5fin_5findices_117',['offset_in_indices',['../struct_adjacency_list.html#a509efd38665c8696432d649b78b66a21',1,'AdjacencyList::offset_in_indices()'],['../class_network.html#ab94a8ea92631fe16a460ea0b50968e3e',1,'Network::offset_in_indices()']]],
-  ['offset_5fin_5findices_5fchunks_118',['offset_in_indices_chunks',['../struct_chunked_adjacency_list.html#a615720a8bfaad53e1fa5f04c28db73f4',1,'ChunkedAdjacencyList']]],
-  ['operator_28_29_119',['operator()',['../struct_check_firing_operator.html#a10ff9882a1833ce025d0e47cd6e3360a',1,'CheckFiringOperator::operator()()'],['../class_atomic_coupling.html#aec984ded1c4f5368c4a7820ea6312435',1,'AtomicCoupling::operator()(AdjacencyList const &amp;connectivity, Float *spikes, Float const *neuron_outputs)'],['../class_atomic_coupling.html#ab22e36dad8ee6fa575d2de03adda412c',1,'AtomicCoupling::operator()(ChunkedAdjacencyList const &amp;connectivity, Float *spikes, Float const *neuron_outputs)'],['../class_matrix_coupling.html#a16679cef98600f783891b06d2e28e9a2',1,'MatrixCoupling::operator()(CuSparseAdjacencyMatrix const &amp;connectivity, Float *spikes, Float const *neuron_outputs)'],['../class_matrix_coupling.html#aa70c09f8d59f81a446b98c934ad376b5',1,'MatrixCoupling::operator()(CuBlasAdjacencyMatrix const &amp;connectivity, Float *spikes, Float const *neuron_outputs)'],['../struct_coupling_struct.html#a9cdcaf80ea37a014b38b6c7c2159a40c',1,'CouplingStruct::operator()()']]]
+  ['n_174',['N',['../class_ephys.html#a59b5f3f0f9616af18d5a6a52f5ede6a7',1,'Ephys::N()'],['../namespace_h_h.html#a74e8f68dcdb55b6637790b4cc7f4767aaea506dfee6ef4ff5c0132e8697c12d83',1,'HH::N()']]],
+  ['n_5felectrodes_175',['N_electrodes',['../main___8cu.html#a4af0b10fe033231871123fdef9d49c9d',1,'main_.cu']]],
+  ['n_5fper_5fchunk_176',['N_PER_CHUNK',['../defines_8cuh.html#a67746e9015cf6a48b7e393cf633c357f',1,'defines.cuh']]],
+  ['n_5fsamples_5fsecond_177',['n_samples_second',['../plot__regions_8m.html#ac45263b52bf1e9cb6d9d68f831c9f0af',1,'n_samples_second():&#160;plot_regions.m'],['../plot__san__crossings_8m.html#ac45263b52bf1e9cb6d9d68f831c9f0af',1,'n_samples_second():&#160;plot_san_crossings.m']]],
+  ['n_5fseconds_178',['n_seconds',['../plot__averaged_8m.html#a0f75e75e916305b1d7fe1a12d84d737d',1,'n_seconds():&#160;plot_averaged.m'],['../plot__regions_8m.html#a0f75e75e916305b1d7fe1a12d84d737d',1,'n_seconds():&#160;plot_regions.m'],['../plot__san__crossings_8m.html#a0f75e75e916305b1d7fe1a12d84d737d',1,'n_seconds():&#160;plot_san_crossings.m']]],
+  ['n_5fstddevs_179',['n_stddevs',['../class_normal_network.html#aa64da9c0bcaeacd31b34499e8394e867',1,'NormalNetwork']]],
+  ['nblocks_180',['NBLOCKS',['../defines_8cuh.html#a9b48d6bfa3d7790c546a05cea212f543',1,'defines.cuh']]],
+  ['nchunks_181',['NCHUNKS',['../defines_8cuh.html#a4f747b77d7e5100b43722cdba0611c22',1,'defines.cuh']]],
+  ['ncouple_182',['Ncouple',['../class_uniform_random_network.html#aa47c31dcb3cad8f3c9442788e33516fb',1,'UniformRandomNetwork']]],
+  ['network_183',['Network',['../class_network.html',1,'Network'],['../class_network.html#a22366a210c0fb05448d1802a0e98452a',1,'Network::Network()']]],
+  ['network_5ffactory_2ecu_184',['network_factory.cu',['../network__factory_8cu.html',1,'']]],
+  ['network_5ffactory_2ecuh_185',['network_factory.cuh',['../network__factory_8cuh.html',1,'']]],
+  ['neuron_5foutputs_186',['neuron_outputs',['../struct_coupling_struct.html#a5099799c210764656a5ca1d4fbb827c8',1,'CouplingStruct']]],
+  ['nk_187',['NK',['../namespace_s_a_n.html#a15af896260fe0e04733287b891f38ea4a2edeb2282137a8c64596f00af75102cc',1,'SAN']]],
+  ['noise_188',['Noise',['../plot__regions_8m.html#a29129a7bc58d2f3d8dec187007830f91',1,'plot_regions.m']]],
+  ['normalnetwork_189',['NormalNetwork',['../class_normal_network.html',1,'NormalNetwork'],['../class_normal_network.html#a552f46144bccd93f75a492e52bca55b4',1,'NormalNetwork::NormalNetwork()']]],
+  ['nthreads_190',['NTHREADS',['../defines_8cuh.html#a51ca9914034cd3e92903476fd4eebbd6',1,'defines.cuh']]],
+  ['num_5fframes_191',['num_frames',['../struct_graphics_1_1_replay_buffer.html#a160a993e2207aeaa6fe6e51ba2ee0335',1,'Graphics::ReplayBuffer']]],
+  ['numincssecond_192',['NumIncsSecond',['../main_8cu.html#a3f5b558b545496b96df9dde988cc1be5',1,'main.cu']]]
 ];

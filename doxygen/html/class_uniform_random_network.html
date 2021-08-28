@@ -95,12 +95,12 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a71f5f7837ef8498d0cfe0822acbd13ba inherit pub_methods_class_network"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_adjacency_list.html">AdjacencyList</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_network.html#a71f5f7837ef8498d0cfe0822acbd13ba">ToAdjacencyList</a> (<a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> *&amp;Tcount) const</td></tr>
 <tr class="memdesc:a71f5f7837ef8498d0cfe0822acbd13ba inherit pub_methods_class_network"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generates an <a class="el" href="struct_adjacency_list.html">AdjacencyList</a> on the GPU and returns it.  <a href="class_network.html#a71f5f7837ef8498d0cfe0822acbd13ba">More...</a><br /></td></tr>
 <tr class="separator:a71f5f7837ef8498d0cfe0822acbd13ba inherit pub_methods_class_network"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7a621755596ebf2217dcbbf9e9b70ec9 inherit pub_methods_class_network"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_chunked_adjacency_list.html">ChunkedAdjacencyList</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_network.html#a7a621755596ebf2217dcbbf9e9b70ec9">ToChunkedAdjacencyList</a> (<a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> *&amp;Tcount) const</td></tr>
-<tr class="memdesc:a7a621755596ebf2217dcbbf9e9b70ec9 inherit pub_methods_class_network"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generates a <a class="el" href="struct_chunked_adjacency_list.html">ChunkedAdjacencyList</a> on the GPU and returns it.  <a href="class_network.html#a7a621755596ebf2217dcbbf9e9b70ec9">More...</a><br /></td></tr>
-<tr class="separator:a7a621755596ebf2217dcbbf9e9b70ec9 inherit pub_methods_class_network"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a82f6ed06747e808e7b5db1a29d2d000e inherit pub_methods_class_network"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_cu_sparse_adjacency_matrix.html">CuSparseAdjacencyMatrix</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_network.html#a82f6ed06747e808e7b5db1a29d2d000e">ToUpstreamSparseMatrix</a> (cusparseHandle_t &amp;handle, <a class="el" href="struct_adjacency_list.html">AdjacencyList</a> &amp;list) const</td></tr>
-<tr class="memdesc:a82f6ed06747e808e7b5db1a29d2d000e inherit pub_methods_class_network"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generates a <a class="el" href="struct_cu_sparse_adjacency_matrix.html" title="Stored in CSC format!">CuSparseAdjacencyMatrix</a> on the GPU which gives upstream neuron connections (transpose of downstream).  <a href="class_network.html#a82f6ed06747e808e7b5db1a29d2d000e">More...</a><br /></td></tr>
-<tr class="separator:a82f6ed06747e808e7b5db1a29d2d000e inherit pub_methods_class_network"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a85947fe844b94f11999a2bfbea0dcd74 inherit pub_methods_class_network"><td class="memItemLeft" align="right" valign="top">thrust::host_vector&lt; int &gt; const  &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_network.html#a85947fe844b94f11999a2bfbea0dcd74">GetCpuIndices</a> () const</td></tr>
+<tr class="memdesc:a85947fe844b94f11999a2bfbea0dcd74 inherit pub_methods_class_network"><td class="mdescLeft">&#160;</td><td class="mdescRight">Getter for indices on cpu.  <a href="class_network.html#a85947fe844b94f11999a2bfbea0dcd74">More...</a><br /></td></tr>
+<tr class="separator:a85947fe844b94f11999a2bfbea0dcd74 inherit pub_methods_class_network"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5fe25a10482ebc660572bb4c83924428 inherit pub_methods_class_network"><td class="memItemLeft" align="right" valign="top">thrust::host_vector&lt; int &gt; const  &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_network.html#a5fe25a10482ebc660572bb4c83924428">GetCpuOffsetsIntoIndices</a> () const</td></tr>
+<tr class="memdesc:a5fe25a10482ebc660572bb4c83924428 inherit pub_methods_class_network"><td class="mdescLeft">&#160;</td><td class="mdescRight">Getter for offsets_in_indices on CPU.  <a href="class_network.html#a5fe25a10482ebc660572bb4c83924428">More...</a><br /></td></tr>
+<tr class="separator:a5fe25a10482ebc660572bb4c83924428 inherit pub_methods_class_network"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-attribs"></a>
 Protected Attributes</h2></td></tr>
@@ -117,7 +117,7 @@ Protected Attributes</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p><a class="el" href="class_network.html" title="Network is an abstract class that supports creation of connectivity on a set of neurons and operation...">Network</a> where each neuron has a fixed number of downstream connections chosen uniformly randomly. </p>
 
-<p class="definition">Definition at line <a class="el" href="network__factory_8cuh_source.html#l00050">50</a> of file <a class="el" href="network__factory_8cuh_source.html">network_factory.cuh</a>.</p>
+<p class="definition">Definition at line <a class="el" href="network__factory_8cuh_source.html#l00041">41</a> of file <a class="el" href="network__factory_8cuh_source.html">network_factory.cuh</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="ab3e7b0c56a968f719992958e750b0935"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ab3e7b0c56a968f719992958e750b0935">&#9670;&nbsp;</a></span>UniformRandomNetwork()</h2>
@@ -149,7 +149,7 @@ Protected Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="network__factory_8cuh_source.html#l00059">59</a> of file <a class="el" href="network__factory_8cuh_source.html">network_factory.cuh</a>.</p>
+<p class="definition">Definition at line <a class="el" href="network__factory_8cuh_source.html#l00050">50</a> of file <a class="el" href="network__factory_8cuh_source.html">network_factory.cuh</a>.</p>
 
 </div>
 </div>
@@ -189,7 +189,7 @@ Protected Attributes</h2></td></tr>
 
 <p>Implements <a class="el" href="class_network.html#ae8a1e4319696d998a626e8059d9c02c1">Network</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="network__factory_8cu_source.html#l00085">85</a> of file <a class="el" href="network__factory_8cu_source.html">network_factory.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="network__factory_8cu_source.html#l00034">34</a> of file <a class="el" href="network__factory_8cu_source.html">network_factory.cu</a>.</p>
 
 </div>
 </div>
@@ -214,7 +214,7 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="network__factory_8cuh_source.html#l00053">53</a> of file <a class="el" href="network__factory_8cuh_source.html">network_factory.cuh</a>.</p>
+<p class="definition">Definition at line <a class="el" href="network__factory_8cuh_source.html#l00044">44</a> of file <a class="el" href="network__factory_8cuh_source.html">network_factory.cuh</a>.</p>
 
 </div>
 </div>

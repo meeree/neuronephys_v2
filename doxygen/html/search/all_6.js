@@ -1,12 +1,21 @@
 var searchData=
 [
-  ['f_43',['F',['../class_implicit_solid.html#aab9635cd85d38d97e4f2138835352ab7',1,'ImplicitSolid::F()'],['../class_solid_sphere.html#a48f07535765b75ea5b4e68de2455320f',1,'SolidSphere::F()']]],
-  ['filemorphology_44',['FileMorphology',['../class_file_morphology.html',1,'FileMorphology'],['../class_file_morphology.html#afda713b2cf04e0a057c5d5cbfd080f56',1,'FileMorphology::FileMorphology()']]],
-  ['filenetwork_45',['FileNetwork',['../class_file_network.html',1,'FileNetwork'],['../class_file_network.html#a1bfb529282d01f5258833001ff0e54c9',1,'FileNetwork::FileNetwork()']]],
-  ['fl_5fname_46',['fl_name',['../class_file_morphology.html#adc68cd4fca6264341ded6412ca8ad461',1,'FileMorphology::fl_name()'],['../class_file_network.html#ae0a882c8725b5fd8ca1b2d589dcb7848',1,'FileNetwork::fl_name()']]],
-  ['float_47',['Float',['../defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f',1,'defines.cuh']]],
-  ['format_48',['format',['../class_file_morphology.html#a0a5e065ace0242864ae50f9508a854d6',1,'FileMorphology::format()'],['../class_file_network.html#a581a353455ee6e2b4065e366e56b8670',1,'FileNetwork::format()']]],
-  ['frame_5fidx_49',['frame_idx',['../struct_graphics_1_1_replay_buffer.html#a02f0a279393cf762d54c3da0bf044946',1,'Graphics::ReplayBuffer']]],
-  ['frame_5frewind_5fidx_50',['frame_rewind_idx',['../struct_graphics_1_1_replay_buffer.html#a0314c14382f3baacc8965eb2b8c64341',1,'Graphics::ReplayBuffer']]],
-  ['frame_5fsize_51',['frame_size',['../struct_graphics_1_1_replay_buffer.html#a8f3082352560c436e00740cd0768060c',1,'Graphics::ReplayBuffer']]]
+  ['f_55',['F',['../class_implicit_solid.html#ac1ee9e7cb53b84137c0d7a54b91d2a0f',1,'ImplicitSolid::F()'],['../class_solid_sphere.html#ab538612037a683622d8f73d062200d17',1,'SolidSphere::F()'],['../class_simple_wrinkled_solid_sphere.html#abc77f2cbce53f5fc8396fc13936de7cf',1,'SimpleWrinkledSolidSphere::F()']]],
+  ['figure_56',['figure',['../plot__regions_8m.html#a39cc4eae8cc13eaea23364936540819f',1,'figure(1):&#160;plot_regions.m'],['../plot__regions_8m.html#ac84feabc0a5ffe70fd5e05e72a103d54',1,'figure(2):&#160;plot_regions.m'],['../plot__regions_8m.html#aca6d0944f22cdc0bc8a0e368b7243aa1',1,'figure(4):&#160;plot_regions.m'],['../plot__san__crossings_8m.html#a39cc4eae8cc13eaea23364936540819f',1,'figure(1):&#160;plot_san_crossings.m'],['../plot__san__crossings_8m.html#ac84feabc0a5ffe70fd5e05e72a103d54',1,'figure(2):&#160;plot_san_crossings.m']]],
+  ['filemorphology_57',['FileMorphology',['../class_file_morphology.html',1,'FileMorphology'],['../class_file_morphology.html#a9f5046e15c6ec03d7335d417a7efed71',1,'FileMorphology::FileMorphology()']]],
+  ['filenetwork_58',['FileNetwork',['../class_file_network.html',1,'FileNetwork'],['../class_file_network.html#a1bfb529282d01f5258833001ff0e54c9',1,'FileNetwork::FileNetwork()']]],
+  ['filtered_59',['filtered',['../plot__regions_8m.html#a43a75300e7fbb760272affc39b34c5e1',1,'filtered():&#160;plot_regions.m'],['../plot__san__crossings_8m.html#a43a75300e7fbb760272affc39b34c5e1',1,'filtered():&#160;plot_san_crossings.m']]],
+  ['filtered2_60',['filtered2',['../plot__regions_8m.html#a7532a8ee417d5ca046e24c6e89041046',1,'plot_regions.m']]],
+  ['filtered3_61',['filtered3',['../plot__regions_8m.html#a9c384163bdff7606d0c550f5ce5d73e6',1,'plot_regions.m']]],
+  ['firing_5fneurons_62',['firing_neurons',['../class_atomic_coupling.html#af0598ee055e78945844df75f7f1686a3',1,'AtomicCoupling']]],
+  ['firingperregionhandle_63',['FiringPerRegionHandle',['../class_electrode_net.html#a32275701e076e9f9ed59a0933e656529',1,'ElectrodeNet']]],
+  ['fl_5fname_64',['fl_name',['../class_file_morphology.html#adc68cd4fca6264341ded6412ca8ad461',1,'FileMorphology::fl_name()'],['../class_file_network.html#ae0a882c8725b5fd8ca1b2d589dcb7848',1,'FileNetwork::fl_name()']]],
+  ['float_65',['Float',['../defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f',1,'defines.cuh']]],
+  ['fontsize_66',['FontSize',['../plot__regions_8m.html#a54a0f0b6b0415bc00dbec5b2e5b73126',1,'plot_regions.m']]],
+  ['format_67',['format',['../class_file_morphology.html#a0a5e065ace0242864ae50f9508a854d6',1,'FileMorphology::format()'],['../class_file_network.html#a581a353455ee6e2b4065e366e56b8670',1,'FileNetwork::format()']]],
+  ['frame_5fidx_68',['frame_idx',['../struct_graphics_1_1_replay_buffer.html#a02f0a279393cf762d54c3da0bf044946',1,'Graphics::ReplayBuffer']]],
+  ['frame_5frewind_5fidx_69',['frame_rewind_idx',['../struct_graphics_1_1_replay_buffer.html#a0314c14382f3baacc8965eb2b8c64341',1,'Graphics::ReplayBuffer']]],
+  ['frame_5fsize_70',['frame_size',['../struct_graphics_1_1_replay_buffer.html#a8f3082352560c436e00740cd0768060c',1,'Graphics::ReplayBuffer']]],
+  ['freq_71',['freq',['../plot__regions_8m.html#adb3b9049889b71bfe43243d871fd939f',1,'plot_regions.m']]],
+  ['fs_72',['Fs',['../plot__regions_8m.html#a94cba07dced5157cd126ed6fb3fbf43d',1,'plot_regions.m']]]
 ];
