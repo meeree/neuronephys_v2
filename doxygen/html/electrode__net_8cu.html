@@ -77,14 +77,14 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ab4f30b028abb29e941a32bee030c29b0"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="electrode__net_8cu.html#ab4f30b028abb29e941a32bee030c29b0">electrodes_measure_kernel</a> (int const N_regions, int const *regions, int const *region_offsets, <a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> *output, <a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> const *V)</td></tr>
-<tr class="separator:ab4f30b028abb29e941a32bee030c29b0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a33bf2cf6f2fa93765bd000b6610f03dc"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="electrode__net_8cu.html#a33bf2cf6f2fa93765bd000b6610f03dc">TMP_kernel</a> (<a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> const *V, int const N, <a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> *sum)</td></tr>
-<tr class="separator:a33bf2cf6f2fa93765bd000b6610f03dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a849fc7398c181583ae97b19dcbcc951d"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="electrode__net_8cu.html#a849fc7398c181583ae97b19dcbcc951d">electrodes_measure_kernel</a> (int const N_regions, int const *regions, int const *region_offsets, <a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> *output, <a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> const *V, int *firing_per_region, int const *is_firing)</td></tr>
+<tr class="separator:a849fc7398c181583ae97b19dcbcc951d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae32d4aa29a9b3b7d443fa0a55268d686"><td class="memItemLeft" align="right" valign="top">__global__ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="electrode__net_8cu.html#ae32d4aa29a9b3b7d443fa0a55268d686">variance_kernel</a> (int const N, int const *region_inds, <a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> const *V, double *Vi2_sum, double *Vi_sum)</td></tr>
+<tr class="separator:ae32d4aa29a9b3b7d443fa0a55268d686"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="ab4f30b028abb29e941a32bee030c29b0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab4f30b028abb29e941a32bee030c29b0">&#9670;&nbsp;</a></span>electrodes_measure_kernel()</h2>
+<a id="a849fc7398c181583ae97b19dcbcc951d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a849fc7398c181583ae97b19dcbcc951d">&#9670;&nbsp;</a></span>electrodes_measure_kernel()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -120,7 +120,19 @@ Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype"><a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> const *&#160;</td>
-          <td class="paramname"><em>V</em>&#160;</td>
+          <td class="paramname"><em>V</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int *&#160;</td>
+          <td class="paramname"><em>firing_per_region</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int const *&#160;</td>
+          <td class="paramname"><em>is_firing</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -139,8 +151,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a33bf2cf6f2fa93765bd000b6610f03dc"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a33bf2cf6f2fa93765bd000b6610f03dc">&#9670;&nbsp;</a></span>TMP_kernel()</h2>
+<a id="ae32d4aa29a9b3b7d443fa0a55268d686"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae32d4aa29a9b3b7d443fa0a55268d686">&#9670;&nbsp;</a></span>variance_kernel()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -149,22 +161,34 @@ Functions</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">__global__ void TMP_kernel </td>
+          <td class="memname">__global__ void variance_kernel </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> const *&#160;</td>
-          <td class="paramname"><em>V</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
           <td class="paramtype">int const&#160;</td>
           <td class="paramname"><em>N</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> *&#160;</td>
-          <td class="paramname"><em>sum</em>&#160;</td>
+          <td class="paramtype">int const *&#160;</td>
+          <td class="paramname"><em>region_inds</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> const *&#160;</td>
+          <td class="paramname"><em>V</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double *&#160;</td>
+          <td class="paramname"><em>Vi2_sum</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double *&#160;</td>
+          <td class="paramname"><em>Vi_sum</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -179,7 +203,7 @@ Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="electrode__net_8cu_source.html#l00036">36</a> of file <a class="el" href="electrode__net_8cu_source.html">electrode_net.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="electrode__net_8cu_source.html#l00056">56</a> of file <a class="el" href="electrode__net_8cu_source.html">electrode_net.cu</a>.</p>
 
 </div>
 </div>

@@ -63,32 +63,43 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="class_atomic_coupling-members.html">List of all members</a>  </div>
   <div class="headertitle">
 <div class="title">AtomicCoupling Class Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
-
-<p>Class that performs coupling using adjacency list telling us the downstream neurons per neuron.  
- <a href="class_atomic_coupling.html#details">More...</a></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:ac80691e7dd9f97a69384248c5929c420"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_atomic_coupling.html#ac80691e7dd9f97a69384248c5929c420">AtomicCoupling</a> (int const N_)</td></tr>
-<tr class="separator:ac80691e7dd9f97a69384248c5929c420"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aec984ded1c4f5368c4a7820ea6312435"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_atomic_coupling.html#aec984ded1c4f5368c4a7820ea6312435">operator()</a> (<a class="el" href="struct_adjacency_list.html">AdjacencyList</a> const &amp;connectivity, <a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> *spikes, <a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> const *neuron_outputs)</td></tr>
-<tr class="memdesc:aec984ded1c4f5368c4a7820ea6312435"><td class="mdescLeft">&#160;</td><td class="mdescRight">Perform atomic coupling given connectivity provided as an AdjacenyList.  <a href="class_atomic_coupling.html#aec984ded1c4f5368c4a7820ea6312435">More...</a><br /></td></tr>
-<tr class="separator:aec984ded1c4f5368c4a7820ea6312435"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab22e36dad8ee6fa575d2de03adda412c"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_atomic_coupling.html#ab22e36dad8ee6fa575d2de03adda412c">operator()</a> (<a class="el" href="struct_chunked_adjacency_list.html">ChunkedAdjacencyList</a> const &amp;connectivity, <a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> *spikes, <a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> const *neuron_outputs)</td></tr>
-<tr class="separator:ab22e36dad8ee6fa575d2de03adda412c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a56b476f2d3ccb2a674dc451f22c77799"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_atomic_coupling.html#a56b476f2d3ccb2a674dc451f22c77799">AtomicCoupling</a> (int const N, <a class="el" href="struct_adjacency_list.html">AdjacencyList</a> &amp;list_, <a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> *downstream_inputs_, <a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> *neuron_outputs_)</td></tr>
+<tr class="memdesc:a56b476f2d3ccb2a674dc451f22c77799"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor. Note that list_ will be moved to internal <a class="el" href="class_atomic_coupling.html">AtomicCoupling</a> member variable list, so list_ SHOULD NOT BE USED AFTER SENDING IT TO THE CTOR!!!  <a href="class_atomic_coupling.html#a56b476f2d3ccb2a674dc451f22c77799">More...</a><br /></td></tr>
+<tr class="separator:a56b476f2d3ccb2a674dc451f22c77799"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad1d5734ff62e25c79850e7b83c1035e4"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_atomic_coupling.html#ad1d5734ff62e25c79850e7b83c1035e4">PerformCoupling</a> ()</td></tr>
+<tr class="separator:ad1d5734ff62e25c79850e7b83c1035e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-attribs"></a>
+Public Attributes</h2></td></tr>
+<tr class="memitem:a51712298ce7efb448a7f34caf6446a04"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_adjacency_list.html">AdjacencyList</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_atomic_coupling.html#a51712298ce7efb448a7f34caf6446a04">list</a></td></tr>
+<tr class="separator:a51712298ce7efb448a7f34caf6446a04"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaae0ba8d7c886085dd437fab6d73e466"><td class="memItemLeft" align="right" valign="top">thrust::device_vector&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_atomic_coupling.html#aaae0ba8d7c886085dd437fab6d73e466">is_firing</a></td></tr>
+<tr class="separator:aaae0ba8d7c886085dd437fab6d73e466"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af0598ee055e78945844df75f7f1686a3"><td class="memItemLeft" align="right" valign="top">thrust::device_vector&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_atomic_coupling.html#af0598ee055e78945844df75f7f1686a3">firing_neurons</a></td></tr>
+<tr class="separator:af0598ee055e78945844df75f7f1686a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Class that performs coupling using adjacency list telling us the downstream neurons per neuron. </p>
+<div class="textblock"><p>This is a struct that contains all the relevant stuff for coupling. It can be called which will perform coupling and store it. Description:</p><ul>
+<li>list Adjacency list containing connectivity.</li>
+<li>neuron_outputs Output of neurons.</li>
+<li>downstream_inputs Input to downstream neurons after coupling.</li>
+<li>is_firing Vector of integers such that element i is 1 if the neuron i is firing and 0 otherwise.</li>
+<li>firing_neurons Vector of indices of firing neurons. The vector is of length N but only the first &lt;NUMBER FIRING NEURONS&gt; elements are valid. </li>
+</ul>
 
-<p class="definition">Definition at line <a class="el" href="coupling_8cuh_source.html#l00019">19</a> of file <a class="el" href="coupling_8cuh_source.html">coupling.cuh</a>.</p>
+<p class="definition">Definition at line <a class="el" href="coupling_8cuh_source.html#l00024">24</a> of file <a class="el" href="coupling_8cuh_source.html">coupling.cuh</a>.</p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="ac80691e7dd9f97a69384248c5929c420"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac80691e7dd9f97a69384248c5929c420">&#9670;&nbsp;</a></span>AtomicCoupling()</h2>
+<a id="a56b476f2d3ccb2a674dc451f22c77799"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a56b476f2d3ccb2a674dc451f22c77799">&#9670;&nbsp;</a></span>AtomicCoupling()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -97,97 +108,107 @@ Public Member Functions</h2></td></tr>
           <td class="memname">AtomicCoupling::AtomicCoupling </td>
           <td>(</td>
           <td class="paramtype">int const&#160;</td>
-          <td class="paramname"><em>N_</em></td><td>)</td>
+          <td class="paramname"><em>N</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype"><a class="el" href="struct_adjacency_list.html">AdjacencyList</a> &amp;&#160;</td>
+          <td class="paramname"><em>list_</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> *&#160;</td>
+          <td class="paramname"><em>downstream_inputs_</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> *&#160;</td>
+          <td class="paramname"><em>neuron_outputs_</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="coupling_8cu_source.html#l00005">5</a> of file <a class="el" href="coupling_8cu_source.html">coupling.cu</a>.</p>
+<p>Constructor. Note that list_ will be moved to internal <a class="el" href="class_atomic_coupling.html">AtomicCoupling</a> member variable list, so list_ SHOULD NOT BE USED AFTER SENDING IT TO THE CTOR!!! </p>
+
+<p class="definition">Definition at line <a class="el" href="coupling_8cu_source.html#l00003">3</a> of file <a class="el" href="coupling_8cu_source.html">coupling.cu</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="aec984ded1c4f5368c4a7820ea6312435"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aec984ded1c4f5368c4a7820ea6312435">&#9670;&nbsp;</a></span>operator()() <span class="overload">[1/2]</span></h2>
+<a id="ad1d5734ff62e25c79850e7b83c1035e4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad1d5734ff62e25c79850e7b83c1035e4">&#9670;&nbsp;</a></span>PerformCoupling()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">int AtomicCoupling::operator() </td>
+          <td class="memname">int AtomicCoupling::PerformCoupling </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="struct_adjacency_list.html">AdjacencyList</a> const &amp;&#160;</td>
-          <td class="paramname"><em>connectivity</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
+          <td class="paramname"></td><td>)</td>
           <td></td>
-          <td class="paramtype"><a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> *&#160;</td>
-          <td class="paramname"><em>spikes</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> const *&#160;</td>
-          <td class="paramname"><em>neuron_outputs</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
         </tr>
       </table>
 </div><div class="memdoc">
+<p>Performs coupling and stores results in downstream_inputs. </p><dl class="section return"><dt>Returns</dt><dd>Number of neurons firing. </dd></dl>
 
-<p>Perform atomic coupling given connectivity provided as an AdjacenyList. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">connectivity</td><td><a class="el" href="class_network.html" title="Network is an abstract class that supports creation of connectivity on a set of neurons and operation...">Network</a> connectivity </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">spikes</td><td>Output spikes for the neurons. For HH neurons, this is neurotramsmitter concentration for downstream neurons. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">neuron_ouputs</td><td>Neuron outputs, for HH neurons, this is the concentration of neurotransmitter outputted from the neuron. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>Number of neurons firing </dd></dl>
-
-<p class="definition">Definition at line <a class="el" href="coupling_8cu_source.html#l00111">111</a> of file <a class="el" href="coupling_8cu_source.html">coupling.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="coupling_8cu_source.html#l00042">42</a> of file <a class="el" href="coupling_8cu_source.html">coupling.cu</a>.</p>
 
 </div>
 </div>
-<a id="ab22e36dad8ee6fa575d2de03adda412c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab22e36dad8ee6fa575d2de03adda412c">&#9670;&nbsp;</a></span>operator()() <span class="overload">[2/2]</span></h2>
+<h2 class="groupheader">Member Data Documentation</h2>
+<a id="af0598ee055e78945844df75f7f1686a3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af0598ee055e78945844df75f7f1686a3">&#9670;&nbsp;</a></span>firing_neurons</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">int AtomicCoupling::operator() </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="struct_chunked_adjacency_list.html">ChunkedAdjacencyList</a> const &amp;&#160;</td>
-          <td class="paramname"><em>connectivity</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> *&#160;</td>
-          <td class="paramname"><em>spikes</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> const *&#160;</td>
-          <td class="paramname"><em>neuron_outputs</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
+          <td class="memname">thrust::device_vector&lt;int&gt; AtomicCoupling::firing_neurons</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="coupling_8cu_source.html#l00143">143</a> of file <a class="el" href="coupling_8cu_source.html">coupling.cu</a>.</p>
+<p class="definition">Definition at line <a class="el" href="coupling_8cuh_source.html#l00033">33</a> of file <a class="el" href="coupling_8cuh_source.html">coupling.cuh</a>.</p>
+
+</div>
+</div>
+<a id="aaae0ba8d7c886085dd437fab6d73e466"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaae0ba8d7c886085dd437fab6d73e466">&#9670;&nbsp;</a></span>is_firing</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">thrust::device_vector&lt;int&gt; AtomicCoupling::is_firing</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="coupling_8cuh_source.html#l00032">32</a> of file <a class="el" href="coupling_8cuh_source.html">coupling.cuh</a>.</p>
+
+</div>
+</div>
+<a id="a51712298ce7efb448a7f34caf6446a04"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a51712298ce7efb448a7f34caf6446a04">&#9670;&nbsp;</a></span>list</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="struct_adjacency_list.html">AdjacencyList</a> AtomicCoupling::list</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="coupling_8cuh_source.html#l00031">31</a> of file <a class="el" href="coupling_8cuh_source.html">coupling.cuh</a>.</p>
 
 </div>
 </div>

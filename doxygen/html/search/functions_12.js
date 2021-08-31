@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['write_5fframe_312',['write_frame',['../struct_graphics_1_1_replay_buffer.html#ab30124032828aec9c5f1042d16316e78',1,'Graphics::ReplayBuffer::write_frame()'],['../namespace_graphics.html#ab50e7a72d8c39bac06a7ecd9518997b2',1,'Graphics::write_frame()']]]
+  ['variance_5fkernel_489',['variance_kernel',['../electrode__net_8cu.html#ae32d4aa29a9b3b7d443fa0a55268d686',1,'electrode_net.cu']]],
+  ['visualizationtest_490',['VisualizationTest',['../main_8cu.html#a06791ded23f10513c6b146494b0e2c8a',1,'main.cu']]]
 ];

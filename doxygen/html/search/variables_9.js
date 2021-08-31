@@ -1,10 +1,9 @@
 var searchData=
 [
-  ['m_5fmat_5floc_337',['m_mat_loc',['../namespace_graphics.html#acf2724be7a18e8148883bb0629e5ca3c',1,'Graphics']]],
-  ['matrix_338',['matrix',['../struct_cu_blas_adjacency_matrix.html#a51bd5a98ac1b3b89125adde060a84187',1,'CuBlasAdjacencyMatrix']]],
-  ['max_5fraw_5fvideo_5fsize_5fgb_339',['max_raw_video_size_gb',['../namespace_graphics.html#a8cc2b613e01468cd06738e6aabfbb233',1,'Graphics']]],
-  ['model_340',['model',['../namespace_graphics.html#acef47ff2fb5bb5de0df186a57b236947',1,'Graphics']]],
-  ['morphology_5fhandle_341',['morphology_handle',['../class_k_n_n_network.html#a0b7951d7d3e979294613a73fea0a0973',1,'KNNNetwork']]],
-  ['mouse_342',['mouse',['../namespace_graphics.html#ab9b7d01516fea5a69f0082a9a7aa4602',1,'Graphics']]],
-  ['mov_5fvideo_5fidx_343',['mov_video_idx',['../namespace_graphics.html#adeec2db5ee6c6115b9717d264566a7ea',1,'Graphics']]]
+  ['light_546',['light',['../plot__averaged_8m.html#a905fd19248d5d31398d8b80c1de02171',1,'plot_averaged.m']]],
+  ['line_5fbuff_547',['line_buff',['../namespace_graphics.html#adc1ae7ee6f5bef0ae1b1c64337cda9d5',1,'Graphics']]],
+  ['lines_548',['lines',['../namespace_graphics.html#a961ff722df8cd751e2a1d48b89f2e4ef',1,'Graphics']]],
+  ['linewidth_549',['LineWidth',['../plot__regions_8m.html#a8e8f94c01952accc14d0e7c214b00cd4',1,'plot_regions.m']]],
+  ['list_550',['list',['../class_atomic_coupling.html#a51712298ce7efb448a7f34caf6446a04',1,'AtomicCoupling::list()'],['../struct_coupling_struct.html#a0f007e0075d43adc044276a50d7fb950',1,'CouplingStruct::list()']]],
+  ['look_5fpos_551',['look_pos',['../namespace_graphics.html#a3a123ad9d4361bbb65e56c48e84a5ad5',1,'Graphics']]]
 ];

@@ -80,7 +80,8 @@ Inheritance diagram for Network:</div>
   <map id="Network_map" name="Network_map">
 <area href="class_file_network.html" title="Network read in from a file with the format inferred in constructor." alt="FileNetwork" shape="rect" coords="0,56,146,80"/>
 <area href="class_k_n_n_network.html" title="Localized coupling where a neuron is connected to the k-nearest neighbors." alt="KNNNetwork" shape="rect" coords="156,56,302,80"/>
-<area href="class_uniform_random_network.html" title="Network where each neuron has a fixed number of downstream connections chosen uniformly randomly." alt="UniformRandomNetwork" shape="rect" coords="312,56,458,80"/>
+<area href="class_normal_network.html" alt="NormalNetwork" shape="rect" coords="312,56,458,80"/>
+<area href="class_uniform_random_network.html" title="Network where each neuron has a fixed number of downstream connections chosen uniformly randomly." alt="UniformRandomNetwork" shape="rect" coords="468,56,614,80"/>
   </map>
 </div></div>
 <table class="memberdecls">
@@ -94,12 +95,12 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a71f5f7837ef8498d0cfe0822acbd13ba"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_adjacency_list.html">AdjacencyList</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_network.html#a71f5f7837ef8498d0cfe0822acbd13ba">ToAdjacencyList</a> (<a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> *&amp;Tcount) const</td></tr>
 <tr class="memdesc:a71f5f7837ef8498d0cfe0822acbd13ba"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generates an <a class="el" href="struct_adjacency_list.html">AdjacencyList</a> on the GPU and returns it.  <a href="class_network.html#a71f5f7837ef8498d0cfe0822acbd13ba">More...</a><br /></td></tr>
 <tr class="separator:a71f5f7837ef8498d0cfe0822acbd13ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7a621755596ebf2217dcbbf9e9b70ec9"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_chunked_adjacency_list.html">ChunkedAdjacencyList</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_network.html#a7a621755596ebf2217dcbbf9e9b70ec9">ToChunkedAdjacencyList</a> (<a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> *&amp;Tcount) const</td></tr>
-<tr class="memdesc:a7a621755596ebf2217dcbbf9e9b70ec9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generates a <a class="el" href="struct_chunked_adjacency_list.html">ChunkedAdjacencyList</a> on the GPU and returns it.  <a href="class_network.html#a7a621755596ebf2217dcbbf9e9b70ec9">More...</a><br /></td></tr>
-<tr class="separator:a7a621755596ebf2217dcbbf9e9b70ec9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a82f6ed06747e808e7b5db1a29d2d000e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_cu_sparse_adjacency_matrix.html">CuSparseAdjacencyMatrix</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_network.html#a82f6ed06747e808e7b5db1a29d2d000e">ToUpstreamSparseMatrix</a> (cusparseHandle_t &amp;handle, <a class="el" href="struct_adjacency_list.html">AdjacencyList</a> &amp;list) const</td></tr>
-<tr class="memdesc:a82f6ed06747e808e7b5db1a29d2d000e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generates a <a class="el" href="struct_cu_sparse_adjacency_matrix.html" title="Stored in CSC format!">CuSparseAdjacencyMatrix</a> on the GPU which gives upstream neuron connections (transpose of downstream).  <a href="class_network.html#a82f6ed06747e808e7b5db1a29d2d000e">More...</a><br /></td></tr>
-<tr class="separator:a82f6ed06747e808e7b5db1a29d2d000e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a85947fe844b94f11999a2bfbea0dcd74"><td class="memItemLeft" align="right" valign="top">thrust::host_vector&lt; int &gt; const  &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_network.html#a85947fe844b94f11999a2bfbea0dcd74">GetCpuIndices</a> () const</td></tr>
+<tr class="memdesc:a85947fe844b94f11999a2bfbea0dcd74"><td class="mdescLeft">&#160;</td><td class="mdescRight">Getter for indices on cpu.  <a href="class_network.html#a85947fe844b94f11999a2bfbea0dcd74">More...</a><br /></td></tr>
+<tr class="separator:a85947fe844b94f11999a2bfbea0dcd74"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5fe25a10482ebc660572bb4c83924428"><td class="memItemLeft" align="right" valign="top">thrust::host_vector&lt; int &gt; const  &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_network.html#a5fe25a10482ebc660572bb4c83924428">GetCpuOffsetsIntoIndices</a> () const</td></tr>
+<tr class="memdesc:a5fe25a10482ebc660572bb4c83924428"><td class="mdescLeft">&#160;</td><td class="mdescRight">Getter for offsets_in_indices on CPU.  <a href="class_network.html#a5fe25a10482ebc660572bb4c83924428">More...</a><br /></td></tr>
+<tr class="separator:a5fe25a10482ebc660572bb4c83924428"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-attribs"></a>
 Protected Attributes</h2></td></tr>
@@ -174,7 +175,65 @@ Protected Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>If the function is successful for not. </dd></dl>
 
-<p>Implemented in <a class="el" href="class_file_network.html#a3db18e6aa176bf1ef98fe96869b440f9">FileNetwork</a>, <a class="el" href="class_k_n_n_network.html#a25999cb66596284eecb327e5f3094847">KNNNetwork</a>, and <a class="el" href="class_uniform_random_network.html#ac651ed09e0ce445ecdf70e6e35457b14">UniformRandomNetwork</a>.</p>
+<p>Implemented in <a class="el" href="class_file_network.html#a3db18e6aa176bf1ef98fe96869b440f9">FileNetwork</a>, <a class="el" href="class_normal_network.html#a72e297bda0df63cbe1d112edb1c3be92">NormalNetwork</a>, <a class="el" href="class_k_n_n_network.html#a25999cb66596284eecb327e5f3094847">KNNNetwork</a>, and <a class="el" href="class_uniform_random_network.html#ac651ed09e0ce445ecdf70e6e35457b14">UniformRandomNetwork</a>.</p>
+
+</div>
+</div>
+<a id="a85947fe844b94f11999a2bfbea0dcd74"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a85947fe844b94f11999a2bfbea0dcd74">&#9670;&nbsp;</a></span>GetCpuIndices()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">thrust::host_vector&lt;int&gt; const&amp; Network::GetCpuIndices </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Getter for indices on cpu. </p>
+
+<p class="definition">Definition at line <a class="el" href="network__factory_8cuh_source.html#l00034">34</a> of file <a class="el" href="network__factory_8cuh_source.html">network_factory.cuh</a>.</p>
+
+</div>
+</div>
+<a id="a5fe25a10482ebc660572bb4c83924428"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5fe25a10482ebc660572bb4c83924428">&#9670;&nbsp;</a></span>GetCpuOffsetsIntoIndices()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">thrust::host_vector&lt;int&gt; const&amp; Network::GetCpuOffsetsIntoIndices </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Getter for offsets_in_indices on CPU. </p>
+
+<p class="definition">Definition at line <a class="el" href="network__factory_8cuh_source.html#l00037">37</a> of file <a class="el" href="network__factory_8cuh_source.html">network_factory.cuh</a>.</p>
 
 </div>
 </div>
@@ -204,75 +263,6 @@ Protected Attributes</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>The adjacency list. </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="network__factory_8cu_source.html#l00005">5</a> of file <a class="el" href="network__factory_8cu_source.html">network_factory.cu</a>.</p>
-
-</div>
-</div>
-<a id="a7a621755596ebf2217dcbbf9e9b70ec9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7a621755596ebf2217dcbbf9e9b70ec9">&#9670;&nbsp;</a></span>ToChunkedAdjacencyList()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="struct_chunked_adjacency_list.html">ChunkedAdjacencyList</a> Network::ToChunkedAdjacencyList </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> *&amp;&#160;</td>
-          <td class="paramname"><em>Tcount</em></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Generates a <a class="el" href="struct_chunked_adjacency_list.html">ChunkedAdjacencyList</a> on the GPU and returns it. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramdir">[out]</td><td class="paramname">Tcount</td><td>Number of upstream connections per neuron. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>The chunked adjacency list. </dd></dl>
-
-<p class="definition">Definition at line <a class="el" href="network__factory_8cu_source.html#l00023">23</a> of file <a class="el" href="network__factory_8cu_source.html">network_factory.cu</a>.</p>
-
-</div>
-</div>
-<a id="a82f6ed06747e808e7b5db1a29d2d000e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a82f6ed06747e808e7b5db1a29d2d000e">&#9670;&nbsp;</a></span>ToUpstreamSparseMatrix()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="struct_cu_sparse_adjacency_matrix.html">CuSparseAdjacencyMatrix</a> Network::ToUpstreamSparseMatrix </td>
-          <td>(</td>
-          <td class="paramtype">cusparseHandle_t &amp;&#160;</td>
-          <td class="paramname"><em>handle</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="struct_adjacency_list.html">AdjacencyList</a> &amp;&#160;</td>
-          <td class="paramname"><em>list</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td> const</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Generates a <a class="el" href="struct_cu_sparse_adjacency_matrix.html" title="Stored in CSC format!">CuSparseAdjacencyMatrix</a> on the GPU which gives upstream neuron connections (transpose of downstream). </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramdir">[in,out]</td><td class="paramname">handle</td><td>The cusparse handle to use. </td></tr>
-    <tr><td class="paramdir">[in,out]</td><td class="paramname">list</td><td>Connectivity stored in <a class="el" href="struct_adjacency_list.html">AdjacencyList</a> format. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>The sparse matrix coupling. </dd></dl>
-
-<p class="definition">Definition at line <a class="el" href="network__factory_8cu_source.html#l00076">76</a> of file <a class="el" href="network__factory_8cu_source.html">network_factory.cu</a>.</p>
 
 </div>
 </div>

@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['doelectrodemeasurements_247',['DoElectrodeMeasurements',['../class_electrode_net.html#a96b8ed6df4ebc2f9a44a209dbfefc9d5',1,'ElectrodeNet']]],
-  ['dxdt_5fan_5fie_5fmodel_248',['dxdt_an_ie_model',['../main_8cu.html#a5618c80d4bb9b9f891f6d0a795d91b42',1,'main.cu']]]
+  ['doelectrodemeasurements_379',['DoElectrodeMeasurements',['../class_electrode_net.html#a068c59904058329938a7f211c591a16f',1,'ElectrodeNet']]],
+  ['dt_380',['Dt',['../class_ephys.html#a0978d63c61b81b7ebcd1413b4a1ff248',1,'Ephys']]],
+  ['dxdt_5fan_5fie_5fmodel_381',['dxdt_an_ie_model',['../ephys_8cu.html#a9039ce83a2ac395bc643aca848c6a18c',1,'ephys.cu']]]
 ];

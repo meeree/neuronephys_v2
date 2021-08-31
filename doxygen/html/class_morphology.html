@@ -78,12 +78,15 @@ Inheritance diagram for Morphology:</div>
  <div class="center">
   <img src="class_morphology.png" usemap="#Morphology_map" alt=""/>
   <map id="Morphology_map" name="Morphology_map">
-<area href="class_file_morphology.html" title="Morphology read in from a file with format inferred in constructor." alt="FileMorphology" shape="rect" coords="0,56,101,80"/>
-<area href="class_hollow_sphere.html" title="Hollow Sphere shell. 2D Manifold." alt="HollowSphere" shape="rect" coords="111,56,212,80"/>
-<area href="class_implicit_solid.html" alt="ImplicitSolid" shape="rect" coords="222,56,323,80"/>
-<area href="class_unit_cube.html" title="3D Square [-1,1] X [-1,1] X [-1,1]." alt="UnitCube" shape="rect" coords="333,56,434,80"/>
-<area href="class_unit_square.html" title="2D Square [-1,1] X [-1,1]. 2D Manifold." alt="UnitSquare" shape="rect" coords="444,56,545,80"/>
-<area href="class_solid_sphere.html" title="Solid unit sphere implemented as an implicit solid." alt="SolidSphere" shape="rect" coords="222,112,323,136"/>
+<area href="class_file_morphology.html" title="Morphology read in from a file with format inferred in constructor." alt="FileMorphology" shape="rect" coords="0,56,167,80"/>
+<area href="class_hollow_sphere.html" title="Hollow Sphere shell. 2D Manifold." alt="HollowSphere" shape="rect" coords="177,56,344,80"/>
+<area href="class_implicit_solid.html" alt="ImplicitSolid" shape="rect" coords="354,56,521,80"/>
+<area href="class_mouse_brain2_d.html" title="2D Mouse brain scan generated from a BMP binary image." alt="MouseBrain2D" shape="rect" coords="531,56,698,80"/>
+<area href="class_unit_cube.html" title="3D Square [-1,1] X [-1,1] X [-1,1]." alt="UnitCube" shape="rect" coords="708,56,875,80"/>
+<area href="class_unit_square.html" title="2D Square [-1,1] X [-1,1]. 2D Manifold." alt="UnitSquare" shape="rect" coords="885,56,1052,80"/>
+<area href="class_user_point_cloud.html" title="Point cloud provided by user." alt="UserPointCloud" shape="rect" coords="1062,56,1229,80"/>
+<area href="class_simple_wrinkled_solid_sphere.html" title="Sphere with &quot;wrinkles&quot; that are polar oscillations in the radius." alt="SimpleWrinkledSolidSphere" shape="rect" coords="265,112,432,136"/>
+<area href="class_solid_sphere.html" title="Solid unit sphere implemented as an implicit solid." alt="SolidSphere" shape="rect" coords="442,112,609,136"/>
   </map>
 </div></div>
 <table class="memberdecls">
@@ -103,12 +106,41 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a8d0dd5453132f66838ddf44a8e63fbaa"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_morphology.html#a8d0dd5453132f66838ddf44a8e63fbaa">Scale</a> (glm::vec3 const &amp;scale)</td></tr>
 <tr class="memdesc:a8d0dd5453132f66838ddf44a8e63fbaa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Scale the positions and overrites the old positions.  <a href="class_morphology.html#a8d0dd5453132f66838ddf44a8e63fbaa">More...</a><br /></td></tr>
 <tr class="separator:a8d0dd5453132f66838ddf44a8e63fbaa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a89849292a40c16cc5026cde757c2df76"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_morphology.html#a89849292a40c16cc5026cde757c2df76">Rotate</a> (float const angle, glm::vec3 const &amp;axis)</td></tr>
+<tr class="memdesc:a89849292a40c16cc5026cde757c2df76"><td class="mdescLeft">&#160;</td><td class="mdescRight">Rotates the positions and overrites the old positions.  <a href="class_morphology.html#a89849292a40c16cc5026cde757c2df76">More...</a><br /></td></tr>
+<tr class="separator:a89849292a40c16cc5026cde757c2df76"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7ccb89804ef34b310a6d5c2f8a393193"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_morphology.html#a7ccb89804ef34b310a6d5c2f8a393193">KNN</a> (int const n, int const k, std::vector&lt; int &gt; &amp;knn, std::vector&lt; ANNdist &gt; &amp;knn_dists)</td></tr>
 <tr class="memdesc:a7ccb89804ef34b310a6d5c2f8a393193"><td class="mdescLeft">&#160;</td><td class="mdescRight">Finds the k nearest neighbros to neuron n.  <a href="class_morphology.html#a7ccb89804ef34b310a6d5c2f8a393193">More...</a><br /></td></tr>
 <tr class="separator:a7ccb89804ef34b310a6d5c2f8a393193"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5e97f2f2ceb55723e6a7f4b3e0874f3f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_morphology.html#a5e97f2f2ceb55723e6a7f4b3e0874f3f">KNN</a> (ANNpoint pos, int const k, std::vector&lt; int &gt; &amp;knn, std::vector&lt; ANNdist &gt; &amp;knn_dists)</td></tr>
+<tr class="memdesc:a5e97f2f2ceb55723e6a7f4b3e0874f3f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Same as other KNN, but position, not neuron index, is sent.  <a href="class_morphology.html#a5e97f2f2ceb55723e6a7f4b3e0874f3f">More...</a><br /></td></tr>
+<tr class="separator:a5e97f2f2ceb55723e6a7f4b3e0874f3f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a967d45dc6219ab899199fd8519cbb59a"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_morphology.html#a967d45dc6219ab899199fd8519cbb59a">WithinBall</a> (int const n, <a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> dist_not_sqr, int max_n_conns, std::vector&lt; int &gt; &amp;ball, std::vector&lt; ANNdist &gt; &amp;ball_dists)</td></tr>
+<tr class="memdesc:a967d45dc6219ab899199fd8519cbb59a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Finds the neurons within a ball of neuron n.  <a href="class_morphology.html#a967d45dc6219ab899199fd8519cbb59a">More...</a><br /></td></tr>
+<tr class="separator:a967d45dc6219ab899199fd8519cbb59a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a27f68bb1cf6f201e43c42876c2255ef3"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_morphology.html#a27f68bb1cf6f201e43c42876c2255ef3">WithinBall</a> (ANNpoint pos, <a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a> dist_not_sqr, int max_n_conns, std::vector&lt; int &gt; &amp;ball, std::vector&lt; ANNdist &gt; &amp;ball_dists)</td></tr>
+<tr class="memdesc:a27f68bb1cf6f201e43c42876c2255ef3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Same as other WithinBall, but position, not neuron index, is sent.  <a href="class_morphology.html#a27f68bb1cf6f201e43c42876c2255ef3">More...</a><br /></td></tr>
+<tr class="separator:a27f68bb1cf6f201e43c42876c2255ef3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8fa24424d9a0844a79e77d28221ff1d6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_morphology.html#a8fa24424d9a0844a79e77d28221ff1d6">GenSphericalRegions</a> (thrust::host_vector&lt; int &gt; &amp;h_regions, thrust::host_vector&lt; int &gt; &amp;h_region_inds, std::vector&lt; int &gt; const &amp;electrode_inds, int const k)</td></tr>
 <tr class="memdesc:a8fa24424d9a0844a79e77d28221ff1d6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generate a list of KNN regions at specific neurons.  <a href="class_morphology.html#a8fa24424d9a0844a79e77d28221ff1d6">More...</a><br /></td></tr>
 <tr class="separator:a8fa24424d9a0844a79e77d28221ff1d6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5933275688b8f9afe9df4515a8ccaccc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_morphology.html#a5933275688b8f9afe9df4515a8ccaccc">GenSphericalRegions</a> (thrust::host_vector&lt; int &gt; &amp;h_regions, thrust::host_vector&lt; int &gt; &amp;h_region_inds, std::vector&lt; glm::vec3 &gt; const &amp;electrode_positions, int const k)</td></tr>
+<tr class="memdesc:a5933275688b8f9afe9df4515a8ccaccc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Same as other GenSphericalRegions but positions, not neuron indices, are passed.  <a href="class_morphology.html#a5933275688b8f9afe9df4515a8ccaccc">More...</a><br /></td></tr>
+<tr class="separator:a5933275688b8f9afe9df4515a8ccaccc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aca72b8c8abc3f9563708fac6bb0dacdd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_morphology.html#aca72b8c8abc3f9563708fac6bb0dacdd">GetBoundaryRegion</a> (thrust::host_vector&lt; int &gt; &amp;h_regions, thrust::host_vector&lt; int &gt; &amp;h_region_inds) const</td></tr>
+<tr class="memdesc:aca72b8c8abc3f9563708fac6bb0dacdd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function for getting the boundary points of a morphology using on IsBoundaryPoint function.  <a href="class_morphology.html#aca72b8c8abc3f9563708fac6bb0dacdd">More...</a><br /></td></tr>
+<tr class="separator:aca72b8c8abc3f9563708fac6bb0dacdd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af2325e717fc0d7992eb995fbdf20119b"><td class="memItemLeft" align="right" valign="top">virtual std::vector&lt; bool &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_morphology.html#af2325e717fc0d7992eb995fbdf20119b">ToBinaryVoxels</a> (glm::uvec3 const &amp;dims) const</td></tr>
+<tr class="separator:af2325e717fc0d7992eb995fbdf20119b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2e5500d821481d4f4e1eb142ab86d06e"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_morphology.html#a2e5500d821481d4f4e1eb142ab86d06e">GetMinimumDistance</a> ()</td></tr>
+<tr class="memdesc:a2e5500d821481d4f4e1eb142ab86d06e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Find the minimum distance between any two adjacent points.  <a href="class_morphology.html#a2e5500d821481d4f4e1eb142ab86d06e">More...</a><br /></td></tr>
+<tr class="separator:a2e5500d821481d4f4e1eb142ab86d06e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a547516b52efb1e3cdac2828d4eb37fdb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_morphology.html#a547516b52efb1e3cdac2828d4eb37fdb">ProjectNeuronsToPlane</a> (int dim=0)</td></tr>
+<tr class="separator:a547516b52efb1e3cdac2828d4eb37fdb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a61b2ce985906d7bfb9d93b436b06ccea"><td class="memTemplParams" colspan="2">template&lt;typename RegionSelector &gt; </td></tr>
+<tr class="memitem:a61b2ce985906d7bfb9d93b436b06ccea"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="class_morphology.html#a61b2ce985906d7bfb9d93b436b06ccea">GenCustomRegions</a> (RegionSelector &amp;selector, int N_regions, thrust::host_vector&lt; int &gt; &amp;h_regions, thrust::host_vector&lt; int &gt; &amp;h_region_inds) const</td></tr>
+<tr class="memdesc:a61b2ce985906d7bfb9d93b436b06ccea"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function for generating custom regions based on a functor defined by the user operating on individual points.  <a href="class_morphology.html#a61b2ce985906d7bfb9d93b436b06ccea">More...</a><br /></td></tr>
+<tr class="separator:a61b2ce985906d7bfb9d93b436b06ccea"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa4e737464d95f7d8c369b75127a0b228"><td class="memItemLeft" align="right" valign="top">std::vector&lt; glm::vec3 &gt; const  &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_morphology.html#aa4e737464d95f7d8c369b75127a0b228">GetPositions</a> ()</td></tr>
 <tr class="memdesc:aa4e737464d95f7d8c369b75127a0b228"><td class="mdescLeft">&#160;</td><td class="mdescRight">Getter for positions.  <a href="class_morphology.html#aa4e737464d95f7d8c369b75127a0b228">More...</a><br /></td></tr>
 <tr class="separator:aa4e737464d95f7d8c369b75127a0b228"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -122,6 +154,9 @@ Protected Member Functions</h2></td></tr>
 <tr class="memitem:afb9cd3ddb4d4aff41b27b6b8998c7323"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_morphology.html#afb9cd3ddb4d4aff41b27b6b8998c7323">SetupANN</a> ()</td></tr>
 <tr class="memdesc:afb9cd3ddb4d4aff41b27b6b8998c7323"><td class="mdescLeft">&#160;</td><td class="mdescRight">Positions in GLM format.  <a href="class_morphology.html#afb9cd3ddb4d4aff41b27b6b8998c7323">More...</a><br /></td></tr>
 <tr class="separator:afb9cd3ddb4d4aff41b27b6b8998c7323"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3d1a47c535e81eb2b3b1897a26c92e93"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_morphology.html#a3d1a47c535e81eb2b3b1897a26c92e93">IsBoundaryPoint</a> (glm::vec3 const &amp;p) const</td></tr>
+<tr class="memdesc:a3d1a47c535e81eb2b3b1897a26c92e93"><td class="mdescLeft">&#160;</td><td class="mdescRight">Virtual function to check if point p is on the boundary. By default returns false.  <a href="class_morphology.html#a3d1a47c535e81eb2b3b1897a26c92e93">More...</a><br /></td></tr>
+<tr class="separator:a3d1a47c535e81eb2b3b1897a26c92e93"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-attribs"></a>
 Protected Attributes</h2></td></tr>
@@ -159,7 +194,7 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="morphology_8h_source.html#l00021">21</a> of file <a class="el" href="morphology_8h_source.html">morphology.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="morphology_8h_source.html#l00024">24</a> of file <a class="el" href="morphology_8h_source.html">morphology.h</a>.</p>
 
 </div>
 </div>
@@ -186,11 +221,72 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="morphology_8h_source.html#l00071">71</a> of file <a class="el" href="morphology_8h_source.html">morphology.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="morphology_8h_source.html#l00144">144</a> of file <a class="el" href="morphology_8h_source.html">morphology.h</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a61b2ce985906d7bfb9d93b436b06ccea"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a61b2ce985906d7bfb9d93b436b06ccea">&#9670;&nbsp;</a></span>GenCustomRegions()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename RegionSelector &gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Morphology::GenCustomRegions </td>
+          <td>(</td>
+          <td class="paramtype">RegionSelector &amp;&#160;</td>
+          <td class="paramname"><em>selector</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>N_regions</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">thrust::host_vector&lt; int &gt; &amp;&#160;</td>
+          <td class="paramname"><em>h_regions</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">thrust::host_vector&lt; int &gt; &amp;&#160;</td>
+          <td class="paramname"><em>h_region_inds</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Function for generating custom regions based on a functor defined by the user operating on individual points. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">selector</td><td>Functor defined by user that operates on individual points and assigns them to a region index. If region index is -1, they are not put in any region. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">N_regions</td><td>Number of regions defined by user. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="morphology_8h_source.html#l00117">117</a> of file <a class="el" href="morphology_8h_source.html">morphology.h</a>.</p>
+
+</div>
+</div>
 <a id="a37dac9502dcec8d76412c215715badbe"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a37dac9502dcec8d76412c215715badbe">&#9670;&nbsp;</a></span>Generate()</h2>
 
@@ -224,12 +320,56 @@ Protected Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>If the function is successful for not. </dd></dl>
 
-<p>Implemented in <a class="el" href="class_file_morphology.html#a7ffa1d04ec8a2635c7a77a3dc7c05392">FileMorphology</a>, <a class="el" href="class_implicit_solid.html#a470488c73cc8948be0dda00ee0a397b1">ImplicitSolid</a>, <a class="el" href="class_unit_cube.html#a409e16c959b7b7f0562276b436341b2b">UnitCube</a>, <a class="el" href="class_unit_square.html#a9db9fee3445d0eb9117654edd1461998">UnitSquare</a>, and <a class="el" href="class_hollow_sphere.html#aab39106d6a51b8b5b59dd2e52e81c516">HollowSphere</a>.</p>
+<p>Implemented in <a class="el" href="class_mouse_brain2_d.html#a0db90673b5d6f63f938da3a4df0ba08d">MouseBrain2D</a>, <a class="el" href="class_user_point_cloud.html#a06002420c37709d4e1530eb20b896d91">UserPointCloud</a>, <a class="el" href="class_file_morphology.html#a7ffa1d04ec8a2635c7a77a3dc7c05392">FileMorphology</a>, <a class="el" href="class_implicit_solid.html#a470488c73cc8948be0dda00ee0a397b1">ImplicitSolid</a>, <a class="el" href="class_unit_cube.html#a409e16c959b7b7f0562276b436341b2b">UnitCube</a>, <a class="el" href="class_unit_square.html#a9db9fee3445d0eb9117654edd1461998">UnitSquare</a>, and <a class="el" href="class_hollow_sphere.html#aab39106d6a51b8b5b59dd2e52e81c516">HollowSphere</a>.</p>
+
+</div>
+</div>
+<a id="a5933275688b8f9afe9df4515a8ccaccc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5933275688b8f9afe9df4515a8ccaccc">&#9670;&nbsp;</a></span>GenSphericalRegions() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Morphology::GenSphericalRegions </td>
+          <td>(</td>
+          <td class="paramtype">thrust::host_vector&lt; int &gt; &amp;&#160;</td>
+          <td class="paramname"><em>h_regions</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">thrust::host_vector&lt; int &gt; &amp;&#160;</td>
+          <td class="paramname"><em>h_region_inds</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; glm::vec3 &gt; const &amp;&#160;</td>
+          <td class="paramname"><em>electrode_positions</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int const&#160;</td>
+          <td class="paramname"><em>k</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Same as other GenSphericalRegions but positions, not neuron indices, are passed. </p>
+
+<p class="definition">Definition at line <a class="el" href="morphology_8cpp_source.html#l00087">87</a> of file <a class="el" href="morphology_8cpp_source.html">morphology.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a8fa24424d9a0844a79e77d28221ff1d6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8fa24424d9a0844a79e77d28221ff1d6">&#9670;&nbsp;</a></span>GenSphericalRegions()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a8fa24424d9a0844a79e77d28221ff1d6">&#9670;&nbsp;</a></span>GenSphericalRegions() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -277,7 +417,67 @@ Protected Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="morphology_8cpp_source.html#l00036">36</a> of file <a class="el" href="morphology_8cpp_source.html">morphology.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="morphology_8cpp_source.html#l00061">61</a> of file <a class="el" href="morphology_8cpp_source.html">morphology.cpp</a>.</p>
+
+</div>
+</div>
+<a id="aca72b8c8abc3f9563708fac6bb0dacdd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aca72b8c8abc3f9563708fac6bb0dacdd">&#9670;&nbsp;</a></span>GetBoundaryRegion()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Morphology::GetBoundaryRegion </td>
+          <td>(</td>
+          <td class="paramtype">thrust::host_vector&lt; int &gt; &amp;&#160;</td>
+          <td class="paramname"><em>h_regions</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">thrust::host_vector&lt; int &gt; &amp;&#160;</td>
+          <td class="paramname"><em>h_region_inds</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Function for getting the boundary points of a morphology using on IsBoundaryPoint function. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[out]</td><td class="paramname">h_regions</td><td>Column indices for region adjacency list. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">h_region_inds</td><td>Row offsets for region adjacency list. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="morphology_8cpp_source.html#l00112">112</a> of file <a class="el" href="morphology_8cpp_source.html">morphology.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a2e5500d821481d4f4e1eb142ab86d06e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2e5500d821481d4f4e1eb142ab86d06e">&#9670;&nbsp;</a></span>GetMinimumDistance()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float Morphology::GetMinimumDistance </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Find the minimum distance between any two adjacent points. </p>
+
+<p class="definition">Definition at line <a class="el" href="morphology_8cpp_source.html#l00153">153</a> of file <a class="el" href="morphology_8cpp_source.html">morphology.cpp</a>.</p>
 
 </div>
 </div>
@@ -306,7 +506,7 @@ Protected Attributes</h2></td></tr>
 
 <p>Getter for positions. </p>
 
-<p class="definition">Definition at line <a class="el" href="morphology_8h_source.html#l00068">68</a> of file <a class="el" href="morphology_8h_source.html">morphology.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="morphology_8h_source.html#l00141">141</a> of file <a class="el" href="morphology_8h_source.html">morphology.h</a>.</p>
 
 </div>
 </div>
@@ -333,12 +533,88 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="morphology_8h_source.html#l00069">69</a> of file <a class="el" href="morphology_8h_source.html">morphology.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="morphology_8h_source.html#l00142">142</a> of file <a class="el" href="morphology_8h_source.html">morphology.h</a>.</p>
+
+</div>
+</div>
+<a id="a3d1a47c535e81eb2b3b1897a26c92e93"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3d1a47c535e81eb2b3b1897a26c92e93">&#9670;&nbsp;</a></span>IsBoundaryPoint()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual bool Morphology::IsBoundaryPoint </td>
+          <td>(</td>
+          <td class="paramtype">glm::vec3 const &amp;&#160;</td>
+          <td class="paramname"><em>p</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">protected</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Virtual function to check if point p is on the boundary. By default returns false. </p>
+
+<p>Reimplemented in <a class="el" href="class_implicit_solid.html#af980b9b956854eb09979e2d5950aed0b">ImplicitSolid</a>.</p>
+
+<p class="definition">Definition at line <a class="el" href="morphology_8h_source.html#l00021">21</a> of file <a class="el" href="morphology_8h_source.html">morphology.h</a>.</p>
+
+</div>
+</div>
+<a id="a5e97f2f2ceb55723e6a7f4b3e0874f3f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5e97f2f2ceb55723e6a7f4b3e0874f3f">&#9670;&nbsp;</a></span>KNN() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Morphology::KNN </td>
+          <td>(</td>
+          <td class="paramtype">ANNpoint&#160;</td>
+          <td class="paramname"><em>pos</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int const&#160;</td>
+          <td class="paramname"><em>k</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; int &gt; &amp;&#160;</td>
+          <td class="paramname"><em>knn</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; ANNdist &gt; &amp;&#160;</td>
+          <td class="paramname"><em>knn_dists</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Same as other KNN, but position, not neuron index, is sent. </p>
+
+<p class="definition">Definition at line <a class="el" href="morphology_8cpp_source.html#l00042">42</a> of file <a class="el" href="morphology_8cpp_source.html">morphology.cpp</a>.</p>
 
 </div>
 </div>
 <a id="a7ccb89804ef34b310a6d5c2f8a393193"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7ccb89804ef34b310a6d5c2f8a393193">&#9670;&nbsp;</a></span>KNN()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a7ccb89804ef34b310a6d5c2f8a393193">&#9670;&nbsp;</a></span>KNN() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -386,7 +662,72 @@ Protected Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="morphology_8cpp_source.html#l00028">28</a> of file <a class="el" href="morphology_8cpp_source.html">morphology.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="morphology_8cpp_source.html#l00037">37</a> of file <a class="el" href="morphology_8cpp_source.html">morphology.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a547516b52efb1e3cdac2828d4eb37fdb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a547516b52efb1e3cdac2828d4eb37fdb">&#9670;&nbsp;</a></span>ProjectNeuronsToPlane()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Morphology::ProjectNeuronsToPlane </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>dim</em> = <code>0</code></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Project neurons to a plane in some dimension. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">dim</td><td>Dimension to project. Defaults to 0 (X dimension). </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="morphology_8cpp_source.html#l00147">147</a> of file <a class="el" href="morphology_8cpp_source.html">morphology.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a89849292a40c16cc5026cde757c2df76"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a89849292a40c16cc5026cde757c2df76">&#9670;&nbsp;</a></span>Rotate()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Morphology::Rotate </td>
+          <td>(</td>
+          <td class="paramtype">float const&#160;</td>
+          <td class="paramname"><em>angle</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">glm::vec3 const &amp;&#160;</td>
+          <td class="paramname"><em>axis</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Rotates the positions and overrites the old positions. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">angle</td><td>Angle of rotation. </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">axis</td><td>Axis of rotation. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="morphology_8cpp_source.html#l00030">30</a> of file <a class="el" href="morphology_8cpp_source.html">morphology.cpp</a>.</p>
 
 </div>
 </div>
@@ -414,7 +755,7 @@ Protected Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="morphology_8cpp_source.html#l00022">22</a> of file <a class="el" href="morphology_8cpp_source.html">morphology.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="morphology_8cpp_source.html#l00024">24</a> of file <a class="el" href="morphology_8cpp_source.html">morphology.cpp</a>.</p>
 
 </div>
 </div>
@@ -444,7 +785,42 @@ Protected Attributes</h2></td></tr>
 <p>Positions in GLM format. </p>
 <p>Creates kd_tree using positions. </p>
 
-<p class="definition">Definition at line <a class="el" href="morphology_8cpp_source.html#l00061">61</a> of file <a class="el" href="morphology_8cpp_source.html">morphology.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="morphology_8cpp_source.html#l00125">125</a> of file <a class="el" href="morphology_8cpp_source.html">morphology.cpp</a>.</p>
+
+</div>
+</div>
+<a id="af2325e717fc0d7992eb995fbdf20119b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af2325e717fc0d7992eb995fbdf20119b">&#9670;&nbsp;</a></span>ToBinaryVoxels()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; bool &gt; Morphology::ToBinaryVoxels </td>
+          <td>(</td>
+          <td class="paramtype">glm::uvec3 const &amp;&#160;</td>
+          <td class="paramname"><em>dims</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Creates a vector of binary voxels that are true if they contain a point and false otherwise. To access (i,j,k) voxel, index into vector is i+dims[0]*(j+dims[1]*k).</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">dims</td><td>Dimensions of voxel grid in X, Y, Z, respectively. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="morphology_8cpp_source.html#l00135">135</a> of file <a class="el" href="morphology_8cpp_source.html">morphology.cpp</a>.</p>
 
 </div>
 </div>
@@ -472,7 +848,7 @@ Protected Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="morphology_8cpp_source.html#l00016">16</a> of file <a class="el" href="morphology_8cpp_source.html">morphology.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="morphology_8cpp_source.html#l00018">18</a> of file <a class="el" href="morphology_8cpp_source.html">morphology.cpp</a>.</p>
 
 </div>
 </div>
@@ -500,7 +876,107 @@ Protected Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="morphology_8cpp_source.html#l00008">8</a> of file <a class="el" href="morphology_8cpp_source.html">morphology.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="morphology_8cpp_source.html#l00010">10</a> of file <a class="el" href="morphology_8cpp_source.html">morphology.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a27f68bb1cf6f201e43c42876c2255ef3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a27f68bb1cf6f201e43c42876c2255ef3">&#9670;&nbsp;</a></span>WithinBall() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int Morphology::WithinBall </td>
+          <td>(</td>
+          <td class="paramtype">ANNpoint&#160;</td>
+          <td class="paramname"><em>pos</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a>&#160;</td>
+          <td class="paramname"><em>dist_not_sqr</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>max_n_conns</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; int &gt; &amp;&#160;</td>
+          <td class="paramname"><em>ball</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; ANNdist &gt; &amp;&#160;</td>
+          <td class="paramname"><em>ball_dists</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Same as other WithinBall, but position, not neuron index, is sent. </p>
+
+<p class="definition">Definition at line <a class="el" href="morphology_8cpp_source.html#l00054">54</a> of file <a class="el" href="morphology_8cpp_source.html">morphology.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a967d45dc6219ab899199fd8519cbb59a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a967d45dc6219ab899199fd8519cbb59a">&#9670;&nbsp;</a></span>WithinBall() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int Morphology::WithinBall </td>
+          <td>(</td>
+          <td class="paramtype">int const&#160;</td>
+          <td class="paramname"><em>n</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="defines_8cuh.html#a07afd7094cb489cbd514c76e6f55d34f">Float</a>&#160;</td>
+          <td class="paramname"><em>dist_not_sqr</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>max_n_conns</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; int &gt; &amp;&#160;</td>
+          <td class="paramname"><em>ball</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::vector&lt; ANNdist &gt; &amp;&#160;</td>
+          <td class="paramname"><em>ball_dists</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Finds the neurons within a ball of neuron n. </p>
+
+<p class="definition">Definition at line <a class="el" href="morphology_8cpp_source.html#l00049">49</a> of file <a class="el" href="morphology_8cpp_source.html">morphology.cpp</a>.</p>
 
 </div>
 </div>
