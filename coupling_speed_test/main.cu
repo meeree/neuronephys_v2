@@ -11,6 +11,43 @@ int NumIncsSecond(float dt=HH::leapfrog_dt)
     return int(1000 / dt); 
 }
 
+void ElectrodesExample(int N)
+{
+    MouseCortex mouse_cortex(N);
+
+    int KNN_value = 1000;
+
+    // Setup 5 electrodes.
+    std::vector<int> electrode_inds = { 0, 1, 2, 3, N - 1 };
+    
+    // Generate spherical regions at indices.
+    thrust::host_vector<int> h_regions, h_regions_inds;
+    mouse_cortex.morphology->GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, KNN_value);
+
+    // Construct ElectrodeNet class.
+    ElectrodeNet electrode_net(h_regions, h_regions_inds);
+
+    // Get pointer to voltages. 
+    Float const* V_ptr = mouse_cortex.ephys->SimVarsCpu()[HH::Params::V];
+
+    // Output file.
+    std::ofstream fout("ELECTRODES_OUT.txt");
+    for(int i = 0; i < NumIncsSecond() * 3; ++i)
+    {
+        mouse_cortex.Simulate();
+
+        // Measure average for each individual electrode.
+        electrode_net.DoElectrodeMeasurements(V_ptr, mouse_cortex.white_ampa_connectivity->is_firing);
+
+        // Write electrode measurements to file.
+        Float const* handle = electrode_net.ElectrodeOutputHandle();
+        for (int j = 0; j < electrode_inds.size(); ++j)
+            fout << handle[j] << ',';
+        fout << std::endl;
+    }
+    fout.close();
+}
+
 void VisualizationTest(int N, int render_N=-1, int electrodeK=10)
 {
     if (render_N < 0)
@@ -336,5 +373,5 @@ void SimulatedERP(int const N)
 
 int main()
 {
-    VisualizationTest(1e5, 1e5);
+    ElectrodesExample(1e5);
 }
