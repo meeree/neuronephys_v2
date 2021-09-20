@@ -2,12 +2,15 @@
 #include "network_factory.cuh"
 #include <unordered_set>
 
-AdjacencyList Network::ToAdjacencyList(Float*& Tcount) const
+AdjacencyList Network::ToAdjacencyList(Float*& Tcount, bool use_weights) const
 {
     // Generate coupling
     AdjacencyList list;
 	list.indices = indices;
 	list.offset_in_indices = offset_in_indices;
+
+	if (use_weights)
+		list.weights = thrust::device_vector<Float>(list.indices.size(), (Float)1);
 
     // Calculate numer of upstream neurons for each neuron based on synaptic coupling
 	int N = offset_in_indices.size() - 1;

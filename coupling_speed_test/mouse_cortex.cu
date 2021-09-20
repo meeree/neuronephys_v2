@@ -3,6 +3,7 @@
 std::string MouseCortex::excitatory_conns_file_name = "cortex_connectivity_1m_1k_exc.h5";
 std::string MouseCortex::inhibitory_conns_file_name = "cortex_connectivity_1m_1k_inh.h5";
 int MouseCortex::uniform_random_Ncouple = 1000;
+bool MouseCortex::use_weights_network = false;
 
 MouseCortex::MouseCortex(int N, std::string neuron_model, bool uniform_random_white, bool use_gray)
 {
@@ -46,13 +47,13 @@ MouseCortex::MouseCortex(int N, std::string neuron_model, bool uniform_random_wh
         AdjacencyList e_list, i_list;
         if (uniform_random_white)
         {
-            e_list = uniform_e_net.ToAdjacencyList(sim_vars_cpu[Params::ECOUNT]);
-            i_list = uniform_i_net.ToAdjacencyList(sim_vars_cpu[Params::ICOUNT]);
+            e_list = uniform_e_net.ToAdjacencyList(sim_vars_cpu[Params::ECOUNT], use_weights_network);
+            i_list = uniform_i_net.ToAdjacencyList(sim_vars_cpu[Params::ICOUNT], use_weights_network);
         }
         else
         {
-            e_list = realistic_e_net.ToAdjacencyList(sim_vars_cpu[Params::ECOUNT]);
-            i_list = realistic_i_net.ToAdjacencyList(sim_vars_cpu[Params::ICOUNT]);
+            e_list = realistic_e_net.ToAdjacencyList(sim_vars_cpu[Params::ECOUNT], use_weights_network);
+            i_list = realistic_i_net.ToAdjacencyList(sim_vars_cpu[Params::ICOUNT], use_weights_network);
         }
         white_ampa_connectivity.reset(
             new AtomicCoupling( N, e_list, sim_vars_cpu[Params::EIN], sim_vars_cpu[Params::EOUTPUT] )
@@ -63,7 +64,7 @@ MouseCortex::MouseCortex(int N, std::string neuron_model, bool uniform_random_wh
         
         if (use_gray)
         {
-            AdjacencyList loc_list{ loc_net.ToAdjacencyList(sim_vars_cpu[Params::LOCAL_COUNT]) };
+            AdjacencyList loc_list{ loc_net.ToAdjacencyList(sim_vars_cpu[Params::LOCAL_COUNT], use_weights_network) };
             gray_gaba_connectivity.reset(
                 new AtomicCoupling( N, loc_list, sim_vars_cpu[Params::LOCAL_IN], sim_vars_cpu[Params::LOCAL_OUTPUT] )
             );
@@ -75,13 +76,13 @@ MouseCortex::MouseCortex(int N, std::string neuron_model, bool uniform_random_wh
         AdjacencyList e_list, i_list;
         if (uniform_random_white)
         {
-            e_list = uniform_e_net.ToAdjacencyList(sim_vars_cpu[Params::ECOUNT]);
-            i_list = uniform_i_net.ToAdjacencyList(sim_vars_cpu[Params::ICOUNT]);
+            e_list = uniform_e_net.ToAdjacencyList(sim_vars_cpu[Params::ECOUNT], use_weights_network);
+            i_list = uniform_i_net.ToAdjacencyList(sim_vars_cpu[Params::ICOUNT], use_weights_network);
         }
         else
         {
-            e_list = realistic_e_net.ToAdjacencyList(sim_vars_cpu[Params::ECOUNT]);
-            i_list = realistic_i_net.ToAdjacencyList(sim_vars_cpu[Params::ICOUNT]);
+            e_list = realistic_e_net.ToAdjacencyList(sim_vars_cpu[Params::ECOUNT], use_weights_network);
+            i_list = realistic_i_net.ToAdjacencyList(sim_vars_cpu[Params::ICOUNT], use_weights_network);
         }
         white_ampa_connectivity.reset(
             new AtomicCoupling( N, e_list, sim_vars_cpu[Params::EIN], sim_vars_cpu[Params::EOUTPUT] )
@@ -92,7 +93,7 @@ MouseCortex::MouseCortex(int N, std::string neuron_model, bool uniform_random_wh
         
         if (use_gray)
         {
-            AdjacencyList loc_list{ loc_net.ToAdjacencyList(sim_vars_cpu[Params::LOCAL_COUNT]) };
+            AdjacencyList loc_list{ loc_net.ToAdjacencyList(sim_vars_cpu[Params::LOCAL_COUNT], use_weights_network) };
             gray_gaba_connectivity.reset(
                 new AtomicCoupling( N, loc_list, sim_vars_cpu[Params::LOCAL_IN], sim_vars_cpu[Params::LOCAL_OUTPUT] )
             );

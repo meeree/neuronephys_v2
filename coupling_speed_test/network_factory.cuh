@@ -26,9 +26,10 @@ public:
 	//! Generates an AdjacencyList on the GPU and returns it.
 	/*!
 	  \param [out] Tcount Number of upstream connections per neuron. 
+	  \param [in] use_weights If true, weights are allocated for adjacency list and set to 1.
       \return The adjacency list.
 	*/
-	AdjacencyList ToAdjacencyList(Float*& Tcount) const;
+	AdjacencyList ToAdjacencyList(Float*& Tcount, bool use_weights=false) const;
 
 	//! Getter for indices on cpu.
 	thrust::host_vector<int> const& GetCpuIndices() const { return indices; }

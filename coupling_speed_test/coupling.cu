@@ -6,6 +6,7 @@ AtomicCoupling::AtomicCoupling(int const N, AdjacencyList& list_, Float* downstr
 	// Move contents of list_ to list. This makes list_ now empty!
 	std::swap(list.indices, list_.indices);
 	std::swap(list.offset_in_indices, list_.offset_in_indices);
+	std::swap(list.weights, list_.weights);
 }
 
 inline __global__ void signal_spikes_kernel(int const num_firing,

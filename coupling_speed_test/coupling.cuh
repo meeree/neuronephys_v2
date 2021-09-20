@@ -7,10 +7,12 @@
 //! indices contains all the entries per row.
 //! The ith element of offset_in_indices is the number of non-zero entries in the matrix up until row i.
 //! Note that offset_in_indices has size ROWS + 1, where the last entry is the total number of non-zero elements (i.e., total number of connections).
+//! WEIGHTS are used for learning stuff. The vector of weights is empty unless specifically constructed.
 struct AdjacencyList
 {
 	thrust::device_vector<int> indices;
 	thrust::device_vector<int> offset_in_indices;
+	thrust::device_vector<Float> weights;
 };
 
 //! This is a struct that contains all the relevant stuff for coupling. 

@@ -13,6 +13,7 @@ public:
     static int uniform_random_Ncouple;
     static std::string excitatory_conns_file_name;
     static std::string inhibitory_conns_file_name;
+    static bool use_weights_network;
 
     //! Pointer to brain morphology.
     std::unique_ptr<FileMorphology> morphology;

@@ -5,6 +5,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <chrono>
 #include "regions_tree.h"
+#include "hebbian.cuh"
 
 int NumIncsSecond(float dt=HH::leapfrog_dt)
 {
@@ -132,6 +133,47 @@ void RecordNumFiring(int N, std::string fl_suffix="")
     }
     std::cout << std::endl;
     fout.close();
+}
+
+/// n_incs_hebbian_sample is the number of simulation increments to do before we output hebbian weights to a file.
+void HebbianLearningExample(int N, int n_incs_hebbian_sample = 1000)
+{
+    MouseCortex::use_weights_network = true;
+
+    // Note we are using uniform random weights here and no local connections.
+    MouseCortex mouse_cortex(N, "SAN", true, false);
+    auto& conns{ mouse_cortex.white_ampa_connectivity->list };
+    auto& is_firing{ mouse_cortex.white_ampa_connectivity->is_firing };
+    auto& firing_inds{ mouse_cortex.white_ampa_connectivity->is_firing };
+    Hebbian heb(300, 0.1, conns.indices.size());
+    thrust::host_vector<Float> h_weights = conns.weights;
+
+    // Transient.
+    for(int i = 0; i < NumIncsSecond() * 3; ++i)
+        mouse_cortex.Simulate();
+
+    int const n_incs = NumIncsSecond() * 10;
+    for (int i = 0; i < n_incs; ++i)
+    {
+        if (i % 1000 == 0)
+            std::cout << "\r" << i / (float)n_incs * 100 << "%";
+
+        // Simulation!
+        mouse_cortex.Simulate();
+
+        // Perform Hebbian update.
+        heb.UpdateWeights(conns, is_firing, firing_inds);
+
+        if (i % n_incs_hebbian_sample == 0)
+        {
+            // Write hebbian weights to a file.
+            std::ofstream fout("HEBBIAN_WEIGHTS_" + std::to_string(i) + ".txt");
+            h_weights = conns.weights;
+            for (auto& weight : h_weights)
+                fout << weight << ',';
+            fout.close();
+        }
+    }
 }
 
 // NOTE THAT: this benchmark defaults to using uniform random connections and no gray matter. 
@@ -373,5 +415,6 @@ void SimulatedERP(int const N)
 
 int main()
 {
-    ElectrodesExample(1e5);
+    HebbianLearningExample(1000);
+//    ElectrodesExample(1e5);
 }
