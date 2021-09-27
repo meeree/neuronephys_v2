@@ -382,7 +382,6 @@ void FileMorphology::GenRegionsFromIDs(thrust::host_vector<int>& h_regions, thru
 	int const N_regions = unique_regions.size();
     h_regions.resize(N);
     h_region_inds.resize(N_regions + 1, 0);
-    associated_ids.resize(N_regions);
     auto it = h_regions.begin();
     std::vector<int> sizes;
     for (int n = 0; n < N_regions; ++n)
@@ -395,9 +394,9 @@ void FileMorphology::GenRegionsFromIDs(thrust::host_vector<int>& h_regions, thru
         }
 
         h_region_inds[n + 1] = (it - h_regions.begin());
-        associated_ids[n] = region_id;
         sizes.push_back(h_region_inds[n + 1] - h_region_inds[n]);
     }
+    associated_ids = unique_regions;
 }
 
 MouseBrain2D::MouseBrain2D(std::string const& bmp_scan_)

@@ -124,11 +124,11 @@ def run():
     #         plt.title('Lowpass Filtered SAN; Sample Rate = %d Hz' % int(fs))
     #  #       plt.axhline(y=np.mean(y[fs:]) - 1.5*np.std(y[fs:]), color='r', linestyle='-')
      
-    firing = pd.read_csv("..\coupling_speed_test\FIRING_OUT_GRAY_WHITE_VIS.csv", delimiter=',').to_numpy()[:, :-1]
+    firing = pd.read_csv("..\coupling_speed_test\FIRING_OUT_GRAY_WHITE_VIS.csv", delimiter=',', header=None).to_numpy()[:, :-1]
     total_firing = np.sum(firing, axis=0)
 
     # Plot total firing.
-    plt.figure(3, dpi=600)
+    plt.figure(dpi=600)
     plt.barh(range(total_firing.shape[0]), total_firing)
     plt.yticks(range(total_firing.shape[0]), region_names)
     plt.title('Total Firing Per Region, Stimulating VIS Region')
@@ -137,10 +137,22 @@ def run():
     plt.figure(dpi = 600)
     region_sizes = np.genfromtxt("..\coupling_speed_test\REGION_SIZES.csv")
     sorted_names = [name for _, name in sorted(zip(region_sizes, region_names))]
-    region_sizes = sorted(region_sizes)
+    region_sizes = np.array(sorted(region_sizes))
     plt.barh(range(len(region_sizes)), region_sizes)
     plt.yticks(range(len(region_sizes)), sorted_names)
     plt.show()
+    
+    # Plot physical connections as probability a connection is formed from region i to j. 
+    plt.figure(dpi=600)
+    physical_conns = pd.read_csv("..\coupling_speed_test\PHYSICAL_CONNECTIVITY.csv", delimiter=',', header=None).to_numpy()[:, :-1]    
+    max_conns = np.outer(region_sizes, region_sizes) # entry i,j is region_sizes[i] * region_sizes[j]
+    physical_conns /= max_conns # Compute probabilities
+    axp = plt.imshow(physical_conns)
+    plt.colorbar(axp,ax=[plt.gca()],label="Probability of Connection", location='left')
+    plt.xticks(range(firing.shape[1]), region_names, rotation=90)
+    plt.yticks(range(firing.shape[1]), region_names)
+    plt.show()
+
 
     # ttl = np.zeros(functional.shape[0])
     # for w in windows:
@@ -167,7 +179,9 @@ def run():
     # Plot firing traces with filtering to range [0.009, 0.08] Hz. This is tricky and 
     # we accomplish it by a sequence of downsampling and then filtering.
     plt.figure(dpi=600)
-    
+    plt.plot(firing[::100, 0], firing[::100, 1])
+    plt.title("Phase Space %i, %i" % (0, 1))
+           
     # First downsample from 2500 to 1000. This can be done by upsampling by a factor of 2 then downsample by a factor of 5.
     filtered_firing = firing
     filtered_firing = np.repeat(filtered_firing, 2, axis=0)
