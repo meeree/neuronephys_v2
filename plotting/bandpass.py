@@ -124,7 +124,7 @@ def run():
     #         plt.title('Lowpass Filtered SAN; Sample Rate = %d Hz' % int(fs))
     #  #       plt.axhline(y=np.mean(y[fs:]) - 1.5*np.std(y[fs:]), color='r', linestyle='-')
      
-    firing = pd.read_csv("..\coupling_speed_test\FIRING_OUT_GRAY_WHITE_VIS.csv", delimiter=',', header=None).to_numpy()[:, :-1]
+    firing = pd.read_csv("..\coupling_speed_test\FMRI_VIS.csv", delimiter=',', header=None).to_numpy()[:, :-1]
     total_firing = np.sum(firing, axis=0)
 
     # Plot total firing.

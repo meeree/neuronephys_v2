@@ -21,6 +21,8 @@ public:
     //! Pure virtual function intended to simulate electrophysiology.
     virtual void SimulateEphys() = 0;
 
+    virtual void SetVariablesRandomly() = 0;
+
     //! Getter for struct of arrays storing variables. 
     thrust::device_vector<Float*> SimVars() const { return sim_vars; }
 
@@ -40,12 +42,13 @@ class HHEphys : public Ephys
 public:
     HHEphys(int const N_);
     virtual void SimulateEphys() override;
+    virtual void SetVariablesRandomly() override;
 };
 //! HH parameters and constants.
 namespace HH
 {
     constexpr static const Float rk4_dt = 0.04;                                                          // Timestep used with RK4 numerical method (ms)
-    constexpr static const Float leapfrog_dt = 0.4;                                                      // Timestep used with leapfrog numerical method (ms)
+    constexpr static const Float leapfrog_dt = 0.025;                                                      // Timestep used with leapfrog numerical method (ms)
     constexpr static const Float C = 1;
     constexpr static const Float gna = 120;  constexpr static const Float ena = 55;                      // Sodium conductance and potential 
     constexpr static const Float gk = 36; constexpr static const Float ek = -72;                         // Potassium conductance and potential
@@ -53,9 +56,9 @@ namespace HH
     constexpr static const Float Tmax = 1.0;                                                             // Max neurotransmitter output
     constexpr static const Float Vt = -20.0; constexpr static const Float Kp = 3.0;                      // Neurotransmitter potential and scalar 
     constexpr const static Float Ar = 5.0; constexpr const static Float Ad = 0.18;                       // alpha and beta for GABA gating variable
-    constexpr static const Float g_ampa_white = 0.0; constexpr static const Float e_ampa = 0.0; // Coupling conductance and potential for AMPA in white matter
+    constexpr static const Float g_ampa_white = 0.1; constexpr static const Float e_ampa = 0.0; // Coupling conductance and potential for AMPA in white matter
     constexpr static const Float g_ampa_grey = 0.1; // Coupling conductance and potential for AMPA in grey matter
-    constexpr static const Float g_gaba = 0.0; constexpr static const Float e_gaba = -70.0; // Coupling conductance and potential for GABA
+    constexpr static const Float g_gaba = 0.03; constexpr static const Float e_gaba = -70.0; // Coupling conductance and potential for GABA
     constexpr static const Float appcur = 0.0;                                                            // Base current to apply when we only apply a constant current. 
     constexpr static const Float white_noise_mean = 0.0f;
     constexpr static const Float white_noise_intensity = 2.0f; // Controls stddev of white noise.
@@ -73,6 +76,7 @@ namespace HH
         IOUTPUT, IIN, ICOUNT,
         // Applied current:
         APPCUR,
+        G_AMPA_WHITE, G_AMPA_GREY,
         // Number of parameters:
         PARAM_COUNT 
     };
@@ -84,6 +88,7 @@ class SANEphys : public Ephys
 public:
     SANEphys(int const N_);
     virtual void SimulateEphys() override;
+    virtual void SetVariablesRandomly() override;
 };
 //! SAN parameters and constants.
 namespace SAN

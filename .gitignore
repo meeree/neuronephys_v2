@@ -38,3 +38,10 @@ coupling_speed_test/x64/Release/vc142.pdb
 coupling_speed_test/x64/Release/coupling.FA320A07.tlog/coupling_speed_test.lastbuildstate
 coupling_speed_test/x64/Release/coupling_speed_test.log
 x64/Release/coupling_speed_test.exp
+plotting/*.png
+plotting/*.pdf
+plotting/*.gif
+plotting/*.mp4
+coupling_speed_test/*.txt
+coupling_speed_test/*.h5
+coupling_speed_test/*.csv

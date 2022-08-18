@@ -15,11 +15,19 @@
     <CudaCompile Include="network_factory.cu">
       <Filter>Source</Filter>
     </CudaCompile>
-    <CudaCompile Include="defines.cu" />
-    <CudaCompile Include="electrode_net.cu" />
-    <CudaCompile Include="ephys.cu" />
-    <CudaCompile Include="mouse_cortex.cu" />
     <CudaCompile Include="hebbian.cu">
+      <Filter>Source</Filter>
+    </CudaCompile>
+    <CudaCompile Include="defines.cu">
+      <Filter>Source</Filter>
+    </CudaCompile>
+    <CudaCompile Include="electrode_net.cu">
+      <Filter>Source</Filter>
+    </CudaCompile>
+    <CudaCompile Include="ephys.cu">
+      <Filter>Source</Filter>
+    </CudaCompile>
+    <CudaCompile Include="mouse_cortex.cu">
       <Filter>Source</Filter>
     </CudaCompile>
   </ItemGroup>
@@ -39,13 +47,19 @@
     <ClInclude Include="morphology.h">
       <Filter>Source</Filter>
     </ClInclude>
-    <ClInclude Include="electrode_net.cuh" />
-    <ClInclude Include="ephys.cuh" />
-    <ClInclude Include="mouse_cortex.cuh" />
     <ClInclude Include="regions_tree.h">
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="hebbian.cuh">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="electrode_net.cuh">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="ephys.cuh">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="mouse_cortex.cuh">
       <Filter>Source</Filter>
     </ClInclude>
   </ItemGroup>

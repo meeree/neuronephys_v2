@@ -49,6 +49,111 @@ void ElectrodesExample(int N)
     fout.close();
 }
 
+void ParamSweep(int N)
+{
+    MouseCortex mouse_cortex(N);
+
+    // Get pointer to voltages. 
+    Float const* V_ptr = mouse_cortex.ephys->SimVarsCpu()[HH::Params::V];
+
+    // Output file.
+    std::ofstream fout("SWEEP_OUT_ENTIRE_NETWORK_RUN2_" + std::to_string(N) + ".txt");
+    
+    // Vary conductances logarithmically.
+    std::vector<Float> g_vals(20);
+    Float g_min = -2, g_max = 0;
+    for (int i = 0; i < g_vals.size(); ++i)
+        g_vals[i] = pow(10, g_min + (g_max - g_min) * i / float(g_vals.size() - 1));
+    
+    for (int i = 0; i < g_vals.size(); ++i)
+    {
+        for (int j = 0; j < g_vals.size(); ++j)
+        {
+            std::cout << i << ',' << j << std::endl;
+            // Randomize initial conditions.
+            mouse_cortex.ephys->SetVariablesRandomly();
+
+            // Set constants.
+//            thrust::fill_n(mouse_cortex.white_ampa_connectivity->list.weights.begin(), N, g_vals[i]);
+//            thrust::fill_n(mouse_cortex.gray_gaba_connectivity->list.weights.begin(), N, g_vals[j]);
+            thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_AMPA_GREY]), N, g_vals[i]);
+            thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_AMPA_WHITE]), N, g_vals[j]);
+
+            // Write constants to file.
+            fout << g_vals[i] << ',' << g_vals[j] << ',';
+
+            // Transient.
+            auto start = std::chrono::steady_clock::now();
+            for(int n = 0; n < NumIncsSecond(); ++n)
+                mouse_cortex.Simulate();
+            auto end = std::chrono::steady_clock::now();
+            std::cout << "FINISHED TRANSIENT : " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / 1000.0 << "s" << std::endl;
+
+            // Simulate and record row for file.
+            start = std::chrono::steady_clock::now();
+            for (int n = 0; n < 5 * NumIncsSecond(); ++n)
+            {
+                mouse_cortex.Simulate();
+
+                if (n % 10 == 0)
+                {
+                    // Measure average for each individual electrode.
+//                    electrode_net.DoElectrodeMeasurements(V_ptr, mouse_cortex.white_ampa_connectivity->is_firing);
+                    // Measure average for ENTIRE cortex.
+                    Float avg_entire = ElectrodeNet::MeasureAverageEntireNetwork(V_ptr, N);
+
+                    // Write electrode measurement to file.
+//                    Float const* handle = electrode_net.ElectrodeOutputHandle();
+                    fout << avg_entire << ',';
+                }
+            }
+            end = std::chrono::steady_clock::now();
+            std::cout << "FINISHED SIMULATION : " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / 1000.0 << "s" << std::endl;
+            fout << '\n';
+        }
+    }
+    fout.close();
+}
+
+// Render the indivudal regions of the mouse cortex! 
+void RenderRegions(int N)
+{
+    MouseCortex mouse_cortex(N, "HH", false, false);
+    float* graphics_voltage_handle;
+    Graphics::setup(graphics_voltage_handle, mouse_cortex.morphology->GetPositionsRaw(), N, N);
+
+    // Use super-regions at a specific depth in the regions json tree.
+    thrust::host_vector<int> h_regions, h_regions_inds, associated_ids;
+    try
+    {
+        RegionsTree tree("CUBIC_regionID_lookup_no_comma.json");
+        mouse_cortex.morphology->SpecfiyRegionsDepth(6, tree);
+        mouse_cortex.morphology->GenRegionsFromIDs(h_regions, h_regions_inds, associated_ids);
+    }
+    catch (std::runtime_error& e)
+    {
+        std::cerr << e.what() << std::endl;
+        exit(1);
+    }
+
+    // EXPLANATION. 
+    // We use a trick in the visualzation here. Because the visualization just takes a float per neuron, we send a float 
+    // corresponding to the region index and we set the normalization parameters to be 1/N_regions!
+    int N_regions = h_regions_inds.size() - 1;
+    Graphics::set_color_params(N_regions, 0.0, 0.0);
+
+    bool pause = false;
+    for (int j = 0; j < N; ++j)
+    {
+        int unique_region_idx = std::find(associated_ids.begin(), associated_ids.end(), mouse_cortex.morphology->GetRegions()[j]) - associated_ids.begin();
+        graphics_voltage_handle[j] = unique_region_idx;
+    }
+    for(;;)
+        Graphics::render(graphics_voltage_handle, nullptr, 0, 0, pause);
+}
+
+
+// A simple test where the visual regions are stimulated. This is a GOOD REFERENCE for visualization and for setting up regions.
 void VisualizationTest(int N, int render_N=-1, int electrodeK=10)
 {
     if (render_N < 0)
@@ -100,7 +205,15 @@ void VisualizationTest(int N, int render_N=-1, int electrodeK=10)
         exit(1);
     }
 
-    int switch_incs = NumIncsSecond();
+    auto start = std::chrono::steady_clock::now();
+    for(int n = 0; n < NumIncsSecond(); ++n)
+        mouse_cortex.Simulate();
+    auto end = std::chrono::steady_clock::now();
+    std::cout << "FINISHED TRANSIENT : " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / 1000.0 << "s" << std::endl;
+
+    thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_AMPA_GREY]), N, 1e0);
+    thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_AMPA_WHITE]), N, 1e-2);
+
     bool pause = false;
     for(int i = 0; i < NumIncsSecond() * 3; ++i)
     {
@@ -445,7 +558,7 @@ void FunctionalData(int const N=1e6, std::string stim_region="VIS")
     std::ofstream region_sizes_fout("REGION_SIZES.csv");
     std::ofstream region_names("REGION_NAMES.txt");
     {
-        MouseCortex mouse_cortex(N, "HH", false, false);
+        MouseCortex mouse_cortex(N, "HH", false, true);
 
         // Use super-regions at a specific depth in the regions json tree.
         try
@@ -531,6 +644,6 @@ void FunctionalData(int const N=1e6, std::string stim_region="VIS")
 
 int main()
 {
-    FunctionalData(1e6);
+    ParamSweep(1e4);
 //    ElectrodesExample(1e5);
 }
