@@ -1,4 +1,5 @@
 #include "defines.cuh"
+#include <ctime>
 namespace Utility
 {
     std::default_random_engine& UnseededRandomEngine()
@@ -13,7 +14,7 @@ namespace Utility
     {
         // This random engine is seeded with the first time the function is called.
         // This means that randomness will be DIFFERENT between runs. 
-        static std::default_random_engine gen(std::chrono::system_clock::now().time_since_epoch().count());
+        static std::default_random_engine gen(time(NULL));
         return gen;
     }
 };

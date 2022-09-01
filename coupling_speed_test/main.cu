@@ -3,7 +3,7 @@
 #include <set>
 #include <glm/gtx/norm.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <chrono>
+//#include <chrono>
 #include "regions_tree.h"
 #include "hebbian.cuh"
 
@@ -83,14 +83,14 @@ void ParamSweep(int N)
             fout << g_vals[i] << ',' << g_vals[j] << ',';
 
             // Transient.
-            auto start = std::chrono::steady_clock::now();
+//            auto start = std::chrono::steady_clock::now();
             for(int n = 0; n < NumIncsSecond(); ++n)
                 mouse_cortex.Simulate();
-            auto end = std::chrono::steady_clock::now();
-            std::cout << "FINISHED TRANSIENT : " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / 1000.0 << "s" << std::endl;
+//            auto end = std::chrono::steady_clock::now();
+//            std::cout << "FINISHED TRANSIENT : " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / 1000.0 << "s" << std::endl;
 
             // Simulate and record row for file.
-            start = std::chrono::steady_clock::now();
+//            start = std::chrono::steady_clock::now();
             for (int n = 0; n < 5 * NumIncsSecond(); ++n)
             {
                 mouse_cortex.Simulate();
@@ -107,8 +107,8 @@ void ParamSweep(int N)
                     fout << avg_entire << ',';
                 }
             }
-            end = std::chrono::steady_clock::now();
-            std::cout << "FINISHED SIMULATION : " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / 1000.0 << "s" << std::endl;
+//            end = std::chrono::steady_clock::now();
+//            std::cout << "FINISHED SIMULATION : " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / 1000.0 << "s" << std::endl;
             fout << '\n';
         }
     }
@@ -205,11 +205,11 @@ void VisualizationTest(int N, int render_N=-1, int electrodeK=10)
         exit(1);
     }
 
-    auto start = std::chrono::steady_clock::now();
+//    auto start = std::chrono::steady_clock::now();
     for(int n = 0; n < NumIncsSecond(); ++n)
         mouse_cortex.Simulate();
-    auto end = std::chrono::steady_clock::now();
-    std::cout << "FINISHED TRANSIENT : " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / 1000.0 << "s" << std::endl;
+//    auto end = std::chrono::steady_clock::now();
+//    std::cout << "FINISHED TRANSIENT : " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / 1000.0 << "s" << std::endl;
 
     thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_AMPA_GREY]), N, 1e0);
     thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_AMPA_WHITE]), N, 1e-2);
@@ -226,11 +226,16 @@ void VisualizationTest(int N, int render_N=-1, int electrodeK=10)
     }
 }
 
-void RecordNumFiring(int N, std::string fl_suffix="")
+void RecordNumFiring(int N, Float I0)
 {
-    std::ofstream fout("N_FIRING_" + fl_suffix + ".txt");
+    std::ofstream fout("N_FIRING_APPCUR=" + std::to_string(I0) + ".txt");
     MouseCortex mouse_cortex(N, "HH", false, false);
     Float const* V_ptr = mouse_cortex.ephys->SimVarsCpu()[HH::Params::V];
+
+    // Set applied current to appcur everywhere.
+    thrust::host_vector<Float> appcur(N, I0);
+    thrust::device_vector<Float> d_appcur(appcur);
+    thrust::copy_n(d_appcur.begin(), N, thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::APPCUR]));
 
     // Transient.
     for(int i = 0; i < NumIncsSecond() * 3; ++i)
@@ -303,13 +308,13 @@ void SweepBenchmark(std::vector<int> const& choices_of_N, bool uniform_random_wh
             MouseCortex mouse_cortex(N, "HH", uniform_random_white, use_gray);
 
             // Start of simulation.
-            auto start = std::chrono::steady_clock::now();
+//            auto start = std::chrono::steady_clock::now();
             for (int i = 0; i < n_incs; ++i)
                 mouse_cortex.Simulate();
-            auto stop = std::chrono::steady_clock::now();
+//            auto stop = std::chrono::steady_clock::now();
 
             // Measure elapsed time and write to row of file in format <N> <TIME>
-            float time = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() / 1000.0f;
+//            float time = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() / 1000.0f;
             fout << N << ',' << time << std::endl;
         }
     }
@@ -642,8 +647,16 @@ void FunctionalData(int const N=1e6, std::string stim_region="VIS")
     firing_fout.close();
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-    ParamSweep(1e4);
+    if(argc < 2)
+        std::cout << "Usage: ./main <case> [parameters...]. Where <case> is the case you want to run (e.g. RecordNumFiring) and you provide parameters based on the case." << std::endl;
+
+    std::string case_id = argv[1];
+    if(case_id == "RecordNumFiring" && argc == 4)
+    {
+        std::cout << "Running case " << case_id << " with N = " << argv[2] << " and I0 = " << argv[3] << std::endl;
+        RecordNumFiring(atoi(argv[2]), std::stof(argv[3]));
+    } 
 //    ElectrodesExample(1e5);
 }

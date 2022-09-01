@@ -1,6 +1,8 @@
 #define _USE_MATH_DEFINES
 #include "graphics.h"
 
+#if USE_GRAPHICS
+
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #define GLM_FORCE_RADIANS
@@ -625,4 +627,35 @@ int get_width() { return g_attrs.width; }
 int get_height() { return g_attrs.height; }
 int get_slice_index() { return g_attrs.slice_index; }
 
-}; // Graphics namespacew
+}; // Graphics namespace
+
+#else // No Graphics! functions all do nothing. We need to still implement them so the compiler doesn't complain about them being unresolved.
+
+namespace Graphics
+{
+    int setup(float*&, float const*, size_t, size_t) {return -1;}
+    bool render(float const*, void const*, int const, int const, bool&) {return false;}
+    void terminate_graphics() {}
+    void set_max_raw_video_size(int const) {}
+    void write_frame(FILE*, uint8_t*) {}
+    void setup_replay(int) {}
+    void record_for_replay(float const*) {}
+    void set_window_title(const char* title) {}
+    int get_width () {return -1;}
+    int get_height () {return -1;}
+    int get_slice_index() {return -1;}
+    void add_points(float const*, int const) {}
+    void add_lines(int const*, int const) {}
+
+    void load_in_connectivity(
+        int const*, int const*,
+        int const, int const,
+        LinePredicate) {}
+
+    void set_color_params(float, float, float) {}
+    float get_color_divisor() {return 0;}
+    float get_color_offset() {return 0;}
+    float get_color_cutoff() {return 0;}
+};
+
+#endif 
