@@ -4,8 +4,8 @@
 #include <cstdint>
 
 // IMPORTANT: This macro allows you to enable/disable graphics use. Set to 0 for no graphics and 1 for graphics.
-// If disabled, none of the graphics libraries are needed for linking or including! This is useful on machines without graphics, e.g. running on the cluster.
-#define USE_GRAPHICS 0
+// If disabled, none of the graphics libraries are needed for linking or including! This is useful on machines without graphics, e.g. running on a cluster.
+#define USE_GRAPHICS 1
 
 namespace Graphics
 {
