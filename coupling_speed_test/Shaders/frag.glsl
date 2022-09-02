@@ -38,4 +38,15 @@ void main(void)
     if(t < color_cutoff)
         discard;
     color = mix(vec4(1.0, 0.0, 1.0, 1.0), vec4(1.0, 1.0, 0.0, 1.0), (t - color_cutoff) / (1 - color_cutoff));
+
+    t = (t - color_cutoff) / (1 - color_cutoff);
+    color = mix(vec4(1.0, 0.0, 0.0, 1.0), vec4(0.0, 1.0, 0.0, 1.0), t / 0.2);
+    if(t > 0.2)
+        color = mix(vec4(0.0, 1.0, 0.0, 1.0), vec4(0.0, 0.0, 1.0, 1.0), (t - 0.2) / 0.2);
+    if(t > 0.4)
+        color = mix(vec4(0.0, 0.0, 1.0, 1.0), vec4(1.0, 0.0, 1.0, 1.0), (t - 0.4) / 0.2);
+    if(t > 0.6)
+        color = mix(vec4(1.0, 0.0, 1.0, 1.0), vec4(1.0, 1.0, 1.0, 1.0), (t - 0.6) / 0.2);
+    if(t > 0.8)
+        color = mix(vec4(1.0, 1.0, 1.0, 1.0), vec4(0.0, 1.0, 1.0, 1.0), (t - 0.8) / 0.2);
 }

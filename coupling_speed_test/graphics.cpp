@@ -495,7 +495,7 @@ int setup(float*& voltages, float const* positions, size_t N, size_t render_N)
         g_attrs.world_max = glm::vec3(1.0f);
 
         // setup render points 
-        int render_sparsity{ (int)N / (int)render_N };
+        int render_sparsity{ render_N > 0 ? (int)N / (int)render_N : 0 };
         g_attrs.points.resize(render_N);
         for (int i = 0; i < render_N; ++i)
             g_attrs.points[i] = ((glm::vec3*)positions)[i * render_sparsity];

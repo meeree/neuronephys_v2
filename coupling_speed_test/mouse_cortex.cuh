@@ -22,7 +22,7 @@ public:
 
     std::unique_ptr<AtomicCoupling> white_ampa_connectivity; //! Long range AMPA connections.
     std::unique_ptr<AtomicCoupling> white_gaba_connectivity; //! Long range GABA connections.
-    std::unique_ptr<AtomicCoupling> gray_gaba_connectivity; //! Short range GABA connections.
+    std::unique_ptr<AtomicCoupling> gray_ampa_connectivity; //! Short range AMPA connections.
 
     //! Construct the mouse brain model.
     //! \param[in] N Number of neurons to use for simulations. These will be sampled uniformly from the full population of 13 million neurons.

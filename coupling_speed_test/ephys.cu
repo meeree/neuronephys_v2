@@ -43,18 +43,18 @@ void HHEphys::SetVariablesRandomly()
         val = gating_var_dist(gen);
     cudaMemcpy(sim_vars_cpu[Params::M], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
-//    for (auto& val : cpu_arr)
-//        val = gating_var_dist(gen);
-//    cudaMemcpy(sim_vars_cpu[Params::N], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-//
-//    for (auto& val : cpu_arr)
-//        val = 1-gating_var_dist(gen);
-//    cudaMemcpy(sim_vars_cpu[Params::H], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-//
-//    thrust::fill_n(cpu_arr.begin(), N, 0.0);
-//    cudaMemcpy(sim_vars_cpu[Params::LOCAL_Y], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-//    cudaMemcpy(sim_vars_cpu[Params::IY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-//    cudaMemcpy(sim_vars_cpu[Params::EY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    for (auto& val : cpu_arr)
+        val = gating_var_dist(gen);
+    cudaMemcpy(sim_vars_cpu[Params::N], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+    for (auto& val : cpu_arr)
+        val = 1-gating_var_dist(gen);
+    cudaMemcpy(sim_vars_cpu[Params::H], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+    thrust::fill_n(cpu_arr.begin(), N, 0.0);
+    cudaMemcpy(sim_vars_cpu[Params::LOCAL_Y], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::IY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::EY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
     // No neurotransmitter input/output or connections
     cudaMemcpy(sim_vars_cpu[Params::LOCAL_OUTPUT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);

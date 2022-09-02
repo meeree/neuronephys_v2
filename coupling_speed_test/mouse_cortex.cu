@@ -65,7 +65,7 @@ MouseCortex::MouseCortex(int N, std::string neuron_model, bool uniform_random_wh
         if (use_gray)
         {
             AdjacencyList loc_list{ loc_net.ToAdjacencyList(sim_vars_cpu[Params::LOCAL_COUNT], use_weights_network) };
-            gray_gaba_connectivity.reset(
+            gray_ampa_connectivity.reset(
                 new AtomicCoupling( N, loc_list, sim_vars_cpu[Params::LOCAL_IN], sim_vars_cpu[Params::LOCAL_OUTPUT] )
             );
         }
@@ -94,7 +94,7 @@ MouseCortex::MouseCortex(int N, std::string neuron_model, bool uniform_random_wh
         if (use_gray)
         {
             AdjacencyList loc_list{ loc_net.ToAdjacencyList(sim_vars_cpu[Params::LOCAL_COUNT], use_weights_network) };
-            gray_gaba_connectivity.reset(
+            gray_ampa_connectivity.reset(
                 new AtomicCoupling( N, loc_list, sim_vars_cpu[Params::LOCAL_IN], sim_vars_cpu[Params::LOCAL_OUTPUT] )
             );
         }
@@ -105,8 +105,8 @@ int MouseCortex::Simulate()
 {
     // Perform coupling. The number of neurons firing is returned by each of these calls. 
     int n_firing;
-    if(gray_gaba_connectivity)
-        n_firing = gray_gaba_connectivity->PerformCoupling();
+    if(gray_ampa_connectivity)
+        n_firing = gray_ampa_connectivity->PerformCoupling();
     if(white_gaba_connectivity)
         n_firing = white_gaba_connectivity->PerformCoupling();
     if(white_ampa_connectivity)
