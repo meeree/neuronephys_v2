@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <random>
 #include <H5Cpp.h>
-#include <chrono>
+//#include <chrono>
 #include <vector>
 
 // we need these includes for CUDA's random number stuff

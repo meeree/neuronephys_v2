@@ -73,7 +73,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;WIN64;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\james hazelden\Desktop\HFSP\neuronephys_v2\coupling_speed_test\external_libs\ArrayFire\include;external_libs\glm\include;external_libs\GLFW\include;external_libs\GLEW\include;external_libs\ann_1.1.2\include;external_libs\hdf5-1.10.5\include;external_libs\json\single_include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>external_libs\glm\include;external_libs\GLFW\include;external_libs\GLEW\include;external_libs\ann_1.1.2\include;external_libs\hdf5-1.10.5\include;external_libs\json\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
