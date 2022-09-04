@@ -27,7 +27,7 @@ HHEphys::HHEphys(int const N_)
 void HHEphys::SetVariablesRandomly()
 {
     using namespace HH;
-    thrust::host_vector<Float> cpu_arr(N, 0);
+    thrust::host_vector<Float> cpu_arr(N, 0.0);
 
     thrust::fill_n(cpu_arr.begin(), N, g_ampa_white);
     cudaMemcpy(sim_vars_cpu[Params::G_AMPA_WHITE], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
@@ -72,13 +72,14 @@ void HHEphys::SetVariablesRandomly()
         val = gating_var_dist(gen);
     cudaMemcpy(sim_vars_cpu[Params::R], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
-    thrust::fill_n(cpu_arr.begin(), N, 0.0);
+    thrust::fill_n(cpu_arr.begin(), N, 0.1);
     cudaMemcpy(sim_vars_cpu[Params::LOCAL_IY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
     cudaMemcpy(sim_vars_cpu[Params::LOCAL_EY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
     cudaMemcpy(sim_vars_cpu[Params::IY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
     cudaMemcpy(sim_vars_cpu[Params::EY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
     // No neurotransmitter input/output or connections
+    thrust::fill_n(cpu_arr.begin(), N, 0.0);
     cudaMemcpy(sim_vars_cpu[Params::LOCAL_IOUTPUT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
     cudaMemcpy(sim_vars_cpu[Params::LOCAL_IIN], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
     cudaMemcpy(sim_vars_cpu[Params::LOCAL_ICOUNT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
@@ -386,14 +387,21 @@ __global__ void Leapfrog_HH(Float** sim_vars, const int N, const Float timestep,
 
         // Update gating variables first.
         Float aM = -0.32 * (V - Vt - 13) / (exp(-(V - Vt - 13) / 4) - 1);
+        if ((V - Vt) == 13)
+            aM = 0.32 * 4;
         Float bM = 0.28 * (V - Vt - 40) / (exp((V - Vt - 40) / 5) - 1);
+        if ((V - Vt) == 40)
+            bM = 0.28 * 5;
         const float new_M = (aM * timestep + (1 - timestep / 2 * (aM + bM)) * M) / (timestep / 2 * (aM + bM) + 1);
 
         Float aH = 0.128 * exp(-(V - Vt - 17) / 18);
         Float bH = 4.0 / (1 + exp(-(V - Vt - 40) / 5));
+
         const float new_H = (aH * timestep + (1 - timestep / 2 * (aH + bH)) * H) / (timestep / 2 * (aH + bH) + 1);
 
         Float aN = -0.032 * (V - Vt - 15) / (exp(-(V - Vt - 15) / 5) - 1);
+        if ((V - Vt) == 15)
+            aN = 0.032 * 5;
         Float bN = 0.5 * exp(-(V - Vt - 10) / 40);
         const float new_N = (aN * timestep + (1 - timestep / 2 * (aN + bN)) * N) / (timestep / 2 * (aN + bN) + 1);
 
@@ -407,6 +415,8 @@ __global__ void Leapfrog_HH(Float** sim_vars, const int N, const Float timestep,
         
 
         Float aQ = 0.055 * (-27 - V) / (exp((-27 - V) / 3.8) - 1);
+        if (V == -27)
+            aQ = 0.055 * 3.8;
         Float bQ = 0.94 * exp((-75 - V) / 17);
         const float new_Q = (aQ * timestep + (1 - timestep / 2 * (aQ + bQ)) * Q) / (timestep / 2 * (aQ + bQ) + 1);
 
@@ -459,7 +469,7 @@ __global__ void Leapfrog_HH(Float** sim_vars, const int N, const Float timestep,
 
         // Calculate amount of neurotransmitter outputted AFTER update
         sim_vars[Params::LOCAL_IOUTPUT][idx] = sim_vars[Params::LOCAL_EOUTPUT][idx] = sim_vars[Params::IOUTPUT][idx] = sim_vars[Params::EOUTPUT][idx] = 
-            1.0 / (1.0 + exp(-(*V_ptr - Vt) / Kp));
+            1.0 / (1.0 + exp(-(*V_ptr - Vtc) / Kp));
     }
 }
 

@@ -56,14 +56,14 @@ namespace HH
 
     constexpr static const Float appcur = 1;                                                            // Base current to apply when we only apply a constant current. 
     constexpr static const Float white_noise_mean = 0.0f;
-    constexpr static const Float white_noise_intensity = 0.0f; // Controls stddev of white noise.
+    constexpr static const Float white_noise_intensity = 1.0f; // Controls stddev of white noise.
 
     constexpr static const Float g_ampa_white = 0.1; constexpr static const Float e_ampa = 0.0; // Coupling conductance and potential for AMPA in white matter
     constexpr static const Float g_ampa_grey = 0.1; // Coupling conductance and potential for AMPA in grey matter
     constexpr static const Float g_gaba = 0.33; constexpr static const Float e_gaba = -70.0; // Coupling conductance and potential for GABA
 
     constexpr static const Float leapfrog_dt = 0.025;                                                      // Timestep used with leapfrog numerical method (ms)
-    constexpr static const Float Vt = -61.5; constexpr static const Float Kp = 3.0;                      // Neurotransmitter potential and scalar 
+    constexpr static const Float Vt = -61.5; constexpr static const Float Vtc = -20; constexpr static const Float Kp = 3.0;                      // Neurotransmitter potential and scalar 
     constexpr const static Float ampaR = 0.5; constexpr const static Float ampaD = 2.4;                       // alpha and beta for AMPA gating variable
     constexpr const static Float gabaR = 1.0; constexpr const static Float gabaD = 7.0;                       // alpha and beta for GABA gating variable
     enum Params
