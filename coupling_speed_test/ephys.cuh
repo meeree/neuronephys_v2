@@ -36,7 +36,7 @@ public:
     virtual ~Ephys();
 };
 
-//! Hodgkin-Huxley model (https://neuronaldynamics.epfl.ch/online/Ch2.S2.html)
+//! Cortical Hodgkin-Huxley model (https://pubmed.ncbi.nlm.nih.gov/19011929/)
 class HHEphys : public Ephys
 {
 public:
@@ -46,6 +46,58 @@ public:
 };
 //! HH parameters and constants.
 namespace HH
+{
+    constexpr static const Float gna = 50;  constexpr static const Float ena = 50;                      // Sodium conductance and potential 
+    constexpr static const Float gkd = 5; constexpr static const Float ek = -90;                        // Delayed-rectifier potassium conductance and potential
+    constexpr static const Float gks = 0.13;                         // Slow potassium conductance and potential
+    constexpr static const Float tau_max = 1123; // Timeframe of slow potassium
+    constexpr static const Float gl = 0.003 ; constexpr static const Float el = -70;                        // Leak conductance and potential 
+    constexpr static const Float gca = 0.0; constexpr static const Float eca = 120;                      // Calcium conductance and reversal potential
+
+    constexpr static const Float appcur = 1;                                                            // Base current to apply when we only apply a constant current. 
+    constexpr static const Float white_noise_mean = 0.0f;
+    constexpr static const Float white_noise_intensity = 0.0f; // Controls stddev of white noise.
+
+    constexpr static const Float g_ampa_white = 0.1; constexpr static const Float e_ampa = 0.0; // Coupling conductance and potential for AMPA in white matter
+    constexpr static const Float g_ampa_grey = 0.1; // Coupling conductance and potential for AMPA in grey matter
+    constexpr static const Float g_gaba = 0.33; constexpr static const Float e_gaba = -70.0; // Coupling conductance and potential for GABA
+
+    constexpr static const Float leapfrog_dt = 0.025;                                                      // Timestep used with leapfrog numerical method (ms)
+    constexpr static const Float Vt = -61.5; constexpr static const Float Kp = 3.0;                      // Neurotransmitter potential and scalar 
+    constexpr const static Float ampaR = 0.5; constexpr const static Float ampaD = 2.4;                       // alpha and beta for AMPA gating variable
+    constexpr const static Float gabaR = 1.0; constexpr const static Float gabaD = .0;                       // alpha and beta for GABA gating variable
+    enum Params
+    {
+        // Main parameters:
+        V=0, M, H, N, P, Q, R,
+        // Coupling gating variables:
+        LOCAL_EY, LOCAL_IY, EY, IY,
+        // Local excitatory coupling parameters:
+        LOCAL_EOUTPUT, LOCAL_EIN, LOCAL_ECOUNT,
+        // Local inhibitory coupling parameters:
+        LOCAL_IOUTPUT, LOCAL_IIN, LOCAL_ICOUNT,
+        // Excitatory coupling parameters:
+        EOUTPUT, EIN, ECOUNT,
+        // Inhibitory coupling parameters:
+        IOUTPUT, IIN, ICOUNT,
+        // Applied current:
+        APPCUR,
+        G_GABA, G_AMPA_WHITE, G_AMPA_GREY,
+        // Number of parameters:
+        PARAM_COUNT 
+    };
+};
+
+//! SCN model (Dewoskian, Forger, et al.)
+class SCNEphys : public Ephys
+{
+public:
+    SCNEphys(int const N_);
+    virtual void SimulateEphys() override;
+    virtual void SetVariablesRandomly() override;
+};
+//! SCN parameters and constants.
+namespace SCN
 {
     constexpr static const Float rk4_dt = 0.04;                                                          // Timestep used with RK4 numerical method (ms)
     constexpr static const Float leapfrog_dt = 0.025;                                                      // Timestep used with leapfrog numerical method (ms)
@@ -61,7 +113,7 @@ namespace HH
     constexpr static const Float g_gaba = 0.03; constexpr static const Float e_gaba = -70.0; // Coupling conductance and potential for GABA
     constexpr static const Float appcur = 0.0;                                                            // Base current to apply when we only apply a constant current. 
     constexpr static const Float white_noise_mean = 0.0f;
-    constexpr static const Float white_noise_intensity = 2.0f; // Controls stddev of white noise.
+    constexpr static const Float white_noise_intensity = 6.0f; // Controls stddev of white noise.
     enum Params
     {
         // Main parameters:

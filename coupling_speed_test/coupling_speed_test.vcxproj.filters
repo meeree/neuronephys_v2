@@ -30,6 +30,9 @@
     <CudaCompile Include="mouse_cortex.cu">
       <Filter>Source</Filter>
     </CudaCompile>
+    <CudaCompile Include="paracrine.cu">
+      <Filter>Source</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="coupling.cuh">
@@ -60,6 +63,9 @@
       <Filter>Source</Filter>
     </ClInclude>
     <ClInclude Include="mouse_cortex.cuh">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="paracrine.cuh">
       <Filter>Source</Filter>
     </ClInclude>
   </ItemGroup>

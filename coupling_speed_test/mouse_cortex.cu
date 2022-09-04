@@ -23,7 +23,7 @@ MouseCortex::MouseCortex(int N, std::string neuron_model, bool uniform_random_wh
         throw std::runtime_error("Error: invalid neuron model string: " + neuron_model);
 
     // Generate connectivity.
-    NormalNetwork loc_net(morphology.get(), 0.045);
+    NormalNetwork loc_e_net(morphology.get(), 0.045, 0.9), loc_i_net(morphology.get(), 0.045, 0.1);
     FileNetwork realistic_e_net(excitatory_conns_file_name), realistic_i_net(inhibitory_conns_file_name);
     UniformRandomNetwork uniform_e_net(0.9 * uniform_random_Ncouple), uniform_i_net(0.1 * uniform_random_Ncouple);
     if (uniform_random_white)
@@ -36,10 +36,13 @@ MouseCortex::MouseCortex(int N, std::string neuron_model, bool uniform_random_wh
         realistic_e_net.Generate(N);
         realistic_i_net.Generate(N);
     }
-    if (use_gray)
-        loc_net.Generate(N);
 
-    // This code duplicates the exact same thing because I need different namespaces. This is ugly. 
+    if (use_gray)
+    {
+        loc_e_net.Generate(N);
+        loc_i_net.Generate(N);
+    }
+
     auto sim_vars_cpu = ephys->SimVarsCpu();
     if (neuron_model == "HH")
     {
@@ -64,38 +67,14 @@ MouseCortex::MouseCortex(int N, std::string neuron_model, bool uniform_random_wh
         
         if (use_gray)
         {
-            AdjacencyList loc_list{ loc_net.ToAdjacencyList(sim_vars_cpu[Params::LOCAL_COUNT], use_weights_network) };
+            AdjacencyList loc_e_list{ loc_e_net.ToAdjacencyList(sim_vars_cpu[Params::LOCAL_ECOUNT], use_weights_network) };
             gray_ampa_connectivity.reset(
-                new AtomicCoupling( N, loc_list, sim_vars_cpu[Params::LOCAL_IN], sim_vars_cpu[Params::LOCAL_OUTPUT] )
+                new AtomicCoupling( N, loc_e_list, sim_vars_cpu[Params::LOCAL_EIN], sim_vars_cpu[Params::LOCAL_EOUTPUT] )
             );
-        }
-    }
-    else
-    {
-        using namespace SAN;
-        AdjacencyList e_list, i_list;
-        if (uniform_random_white)
-        {
-            e_list = uniform_e_net.ToAdjacencyList(sim_vars_cpu[Params::ECOUNT], use_weights_network);
-            i_list = uniform_i_net.ToAdjacencyList(sim_vars_cpu[Params::ICOUNT], use_weights_network);
-        }
-        else
-        {
-            e_list = realistic_e_net.ToAdjacencyList(sim_vars_cpu[Params::ECOUNT], use_weights_network);
-            i_list = realistic_i_net.ToAdjacencyList(sim_vars_cpu[Params::ICOUNT], use_weights_network);
-        }
-        white_ampa_connectivity.reset(
-            new AtomicCoupling( N, e_list, sim_vars_cpu[Params::EIN], sim_vars_cpu[Params::EOUTPUT] )
-        );
-        white_gaba_connectivity.reset(
-            new AtomicCoupling( N, i_list, sim_vars_cpu[Params::IIN], sim_vars_cpu[Params::IOUTPUT] )
-        );
-        
-        if (use_gray)
-        {
-            AdjacencyList loc_list{ loc_net.ToAdjacencyList(sim_vars_cpu[Params::LOCAL_COUNT], use_weights_network) };
-            gray_ampa_connectivity.reset(
-                new AtomicCoupling( N, loc_list, sim_vars_cpu[Params::LOCAL_IN], sim_vars_cpu[Params::LOCAL_OUTPUT] )
+
+            AdjacencyList loc_i_list{ loc_i_net.ToAdjacencyList(sim_vars_cpu[Params::LOCAL_ICOUNT], use_weights_network) };
+            gray_gaba_connectivity.reset(
+                new AtomicCoupling( N, loc_i_list, sim_vars_cpu[Params::LOCAL_IIN], sim_vars_cpu[Params::LOCAL_IOUTPUT] )
             );
         }
     }

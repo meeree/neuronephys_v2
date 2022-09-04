@@ -75,6 +75,7 @@ class NormalNetwork : public Network
 protected:
 	Morphology* morphology_handle;
 	Float stddev;
+	Float probability_scalar;
     int n_stddevs; 
 
 public:
@@ -82,10 +83,11 @@ public:
 	  \param [in] morphology_handle_ A pointer to the morphology which handles finding neighbors.
 	  \param [in] stddev_ Standard deviation in world coordinates for normal blobs.
 	  \param [in] max_n_conns_ Number of neurons to couple to per neuron.
+	  \param [in] probability_ Scalar used for probability of connection formation. For example if we set to 0.1, connections are 10% as likely as if set to 1. Defaults to 1.
 	  \param [in] n_stddevs_ Number of standard deviations to use for connections. Since 95% is within 2 stddevs, this defaults to 2.
 	*/
-	NormalNetwork(Morphology* morphology_handle_, Float stddev_, int n_stddevs_=2) 
-		: morphology_handle{ morphology_handle_ }, stddev{ stddev_ }, n_stddevs{ n_stddevs_ } {}
+	NormalNetwork(Morphology* morphology_handle_, Float stddev_, Float probability_ = 1, int n_stddevs_=2) 
+		: morphology_handle{ morphology_handle_ }, stddev{ stddev_ }, probability_scalar{ probability_ }, n_stddevs{ n_stddevs_ } {}
 	virtual bool Generate(int const N) override;
 };
 

@@ -99,6 +99,7 @@
     </CudaCompile>
     <CudaCompile Include="mouse_cortex.cu" />
     <CudaCompile Include="network_factory.cu" />
+    <CudaCompile Include="paracrine.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="coupling.cuh" />
@@ -110,6 +111,7 @@
     <ClInclude Include="morphology.h" />
     <ClInclude Include="mouse_cortex.cuh" />
     <ClInclude Include="network_factory.cuh" />
+    <ClInclude Include="paracrine.cuh" />
     <ClInclude Include="regions_tree.h" />
   </ItemGroup>
   <ItemGroup>

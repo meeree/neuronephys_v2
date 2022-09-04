@@ -124,7 +124,8 @@ bool NormalNetwork::Generate(int const N)
             ANNdist unit_sample = unit_dist(gen);
 
 			// We have prob chance of this condition being true, so the distribution of points will be normal.
-            if (unit_sample < prob)
+			// Scaled by probability specified by user so, for example, if this scalar is 0.1, we have at most a 10% chance of forming connection.
+            if (unit_sample < probability_scalar * prob)
                 indices.push_back(ball[i]);
         }
         offset_in_indices[from_idx + 1] = indices.size();

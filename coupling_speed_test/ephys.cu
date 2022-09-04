@@ -29,6 +29,107 @@ void HHEphys::SetVariablesRandomly()
     using namespace HH;
     thrust::host_vector<Float> cpu_arr(N, 0);
 
+    thrust::fill_n(cpu_arr.begin(), N, g_ampa_white);
+    cudaMemcpy(sim_vars_cpu[Params::G_AMPA_WHITE], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+    thrust::fill_n(cpu_arr.begin(), N, g_ampa_grey);
+    cudaMemcpy(sim_vars_cpu[Params::G_AMPA_GREY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+    thrust::fill_n(cpu_arr.begin(), N, g_gaba);
+    cudaMemcpy(sim_vars_cpu[Params::G_GABA], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+    // Set voltages randomly
+    auto& gen{ Utility::SeededRandomEngine() };
+    std::normal_distribution<> voltage_dist(-55, 25);
+    for (auto& val : cpu_arr)
+        val = voltage_dist(gen);
+    cudaMemcpy(sim_vars_cpu[Params::V], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+    // Set gating variables  
+    std::uniform_real_distribution<Float> gating_var_dist(0.2, 0.4);
+
+    for (auto& val : cpu_arr)
+        val = gating_var_dist(gen);
+    cudaMemcpy(sim_vars_cpu[Params::M], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+    for (auto& val : cpu_arr)
+        val = gating_var_dist(gen);
+    cudaMemcpy(sim_vars_cpu[Params::H], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+    for (auto& val : cpu_arr)
+        val = gating_var_dist(gen);
+    cudaMemcpy(sim_vars_cpu[Params::N], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+    for (auto& val : cpu_arr)
+        val = gating_var_dist(gen);
+    cudaMemcpy(sim_vars_cpu[Params::P], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+    for (auto& val : cpu_arr)
+        val = gating_var_dist(gen);
+    cudaMemcpy(sim_vars_cpu[Params::Q], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+    for (auto& val : cpu_arr)
+        val = gating_var_dist(gen);
+    cudaMemcpy(sim_vars_cpu[Params::R], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+    thrust::fill_n(cpu_arr.begin(), N, 0.0);
+    cudaMemcpy(sim_vars_cpu[Params::LOCAL_IY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::LOCAL_EY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::IY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::EY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+    // No neurotransmitter input/output or connections
+    cudaMemcpy(sim_vars_cpu[Params::LOCAL_IOUTPUT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::LOCAL_IIN], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::LOCAL_ICOUNT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::LOCAL_EOUTPUT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::LOCAL_EIN], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::LOCAL_ECOUNT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::IOUTPUT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::IIN], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::ICOUNT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::EOUTPUT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::EIN], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    cudaMemcpy(sim_vars_cpu[Params::ECOUNT], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+    // Set applied current
+    thrust::fill_n(cpu_arr.begin(), N, appcur);
+    cudaMemcpy(sim_vars_cpu[Params::APPCUR], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    gpuErrchk(cudaDeviceSynchronize());
+
+    // Copy pointers from CPU to GPU 
+    sim_vars = sim_vars_cpu;
+}
+
+SCNEphys::SCNEphys(int const N_)
+    : Ephys(N_, SCN::leapfrog_dt)
+{
+    using namespace SCN;
+    // Set up simulation variables. Stored in a struct of arrays.
+    sim_vars_cpu.resize(Params::PARAM_COUNT);
+    thrust::host_vector<Float> cpu_arr(N, 0);
+
+    // Zero arrays.
+    for (Float*& arr : sim_vars_cpu)
+    {
+        cudaMalloc(&arr, N * sizeof(Float));
+        cudaMemcpy(arr, cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    }
+    sim_vars = sim_vars_cpu;
+    SetVariablesRandomly();
+}
+
+void SCNEphys::SetVariablesRandomly()
+{
+    using namespace SCN;
+    thrust::host_vector<Float> cpu_arr(N, 0);
+
+    thrust::fill_n(cpu_arr.begin(), N, g_ampa_white);
+    cudaMemcpy(sim_vars_cpu[Params::G_AMPA_WHITE], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
+    thrust::fill_n(cpu_arr.begin(), N, g_ampa_grey);
+    cudaMemcpy(sim_vars_cpu[Params::G_AMPA_GREY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
     // Set voltages randomly
     auto& gen{ Utility::SeededRandomEngine() };
     std::normal_distribution<> voltage_dist(-55, 25);
@@ -160,9 +261,9 @@ Ephys::Ephys(int const N_, Float const dt_) : N{ N_ }, dt{ dt_ }, random_states(
 	gpuErrchk( cudaDeviceSynchronize() );
 }
 
-__global__ void Leapfrog_HH(Float** sim_vars, const int N, const Float timestep, curandState_t* random_states)
+__global__ void Leapfrog_SCN(Float** sim_vars, const int N, const Float timestep, curandState_t* random_states)
 {
-    using namespace HH;
+    using namespace SCN;
     for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < N; idx += gridDim.x * blockDim.x)
     {
         Float* V_ptr = sim_vars[Params::V] + idx;
@@ -231,6 +332,134 @@ __global__ void Leapfrog_HH(Float** sim_vars, const int N, const Float timestep,
 
         // Calculate amount of neurotransmitter outputted AFTER update
         sim_vars[Params::LOCAL_OUTPUT][idx] = sim_vars[Params::IOUTPUT][idx] = sim_vars[Params::EOUTPUT][idx] = Tmax / (1.0 + exp(-(*V_ptr - Vt) / Kp));
+    }
+}
+
+void SCNEphys::SimulateEphys()
+{
+    Leapfrog_SCN<<<NBLOCKS, NTHREADS>>>(thrust::raw_pointer_cast(sim_vars.data()), N, dt, thrust::raw_pointer_cast(random_states.data()));
+    gpuErrchk( cudaPeekAtLastError() );
+    gpuErrchk( cudaDeviceSynchronize() );
+}
+
+__global__ void Leapfrog_HH(Float** sim_vars, const int N, const Float timestep, curandState_t* random_states)
+{
+    using namespace HH;
+    for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < N; idx += gridDim.x * blockDim.x)
+    {
+        Float* V_ptr = sim_vars[Params::V] + idx;
+        Float* M_ptr = sim_vars[Params::M] + idx;
+        Float* H_ptr = sim_vars[Params::H] + idx;
+        Float* N_ptr = sim_vars[Params::N] + idx;
+        Float* P_ptr = sim_vars[Params::P] + idx;
+        Float* Q_ptr = sim_vars[Params::Q] + idx;
+        Float* R_ptr = sim_vars[Params::R] + idx;
+        Float* local_IY_ptr = sim_vars[Params::LOCAL_IY] + idx;
+        Float* local_EY_ptr = sim_vars[Params::LOCAL_EY] + idx;
+        Float* IY_ptr = sim_vars[Params::IY] + idx;
+        Float* EY_ptr = sim_vars[Params::EY] + idx;
+
+        const Float local_Iin = sim_vars[Params::LOCAL_IIN][idx];
+        const Float local_Inum_in = sim_vars[Params::LOCAL_ICOUNT][idx];
+        const Float local_Ein = sim_vars[Params::LOCAL_EIN][idx];
+        const Float local_Enum_in = sim_vars[Params::LOCAL_ECOUNT][idx];
+        const Float Iin = sim_vars[Params::IIN][idx];
+        const Float Inum_in = sim_vars[Params::ICOUNT][idx];
+        const Float Ein = sim_vars[Params::EIN][idx];
+        const Float Enum_in = sim_vars[Params::ECOUNT][idx];
+        const Float appcur = sim_vars[Params::APPCUR][idx];
+        const Float GAMPA_WHITE = sim_vars[Params::G_AMPA_WHITE][idx];
+        const Float GAMPA_GREY = sim_vars[Params::G_AMPA_GREY][idx];
+        const Float GGABA = sim_vars[Params::G_GABA][idx];
+
+        const Float V = *V_ptr;
+        const Float M = *M_ptr;
+        const Float H = *H_ptr;
+        const Float N = *N_ptr;
+        const Float P = *P_ptr;
+        const Float Q = *Q_ptr;
+        const Float R = *R_ptr;
+        const Float local_IY = *local_IY_ptr;
+        const Float local_EY = *local_EY_ptr;
+        const Float IY = *IY_ptr;
+        const Float EY = *EY_ptr;
+
+        // Update gating variables first.
+        Float aM = -0.32 * (V - Vt - 13) / (exp(-(V - Vt - 13) / 4) - 1);
+        Float bM = 0.28 * (V - Vt - 40) / (exp((V - Vt - 40) / 5) - 1);
+        const float new_M = (aM * timestep + (1 - timestep / 2 * (aM + bM)) * M) / (timestep / 2 * (aM + bM) + 1);
+
+        Float aH = 0.128 * exp(-(V - Vt - 17) / 18);
+        Float bH = 4.0 / (1 + exp(-(V - Vt - 40) / 5));
+        const float new_H = (aH * timestep + (1 - timestep / 2 * (aH + bH)) * H) / (timestep / 2 * (aH + bH) + 1);
+
+        Float aN = -0.032 * (V - Vt - 15) / (exp(-(V - Vt - 15) / 5) - 1);
+        Float bN = 0.5 * exp(-(V - Vt - 10) / 40);
+        const float new_N = (aN * timestep + (1 - timestep / 2 * (aN + bN)) * N) / (timestep / 2 * (aN + bN) + 1);
+
+        Float P_inf = 1 / (1 + exp(-(V + 35) / 10));
+        Float tau_P = tau_max / (3.3 * exp((V + 35) / 20) + exp(-(V + 35) / 20));
+        
+        //const float new_P = (bP * timestep + (1 - timestep / 2 * (aP + bP)) * P) / (timestep / 2 * (aP + bP) + 1);
+        const float new_P = 2 * timestep / (2 * tau_P + timestep) * P_inf + (2 * tau_P - timestep) / (2 * tau_P + timestep) * P;
+            //(P + timestep / tau_P * P_inf) / (1 + timestep / tau_P);
+        //const float new_P = P + timestep * (P_inf - P) / tau_P;
+        
+
+        Float aQ = 0.055 * (-27 - V) / (exp((-27 - V) / 3.8) - 1);
+        Float bQ = 0.94 * exp((-75 - V) / 17);
+        const float new_Q = (aQ * timestep + (1 - timestep / 2 * (aQ + bQ)) * Q) / (timestep / 2 * (aQ + bQ) + 1);
+
+        Float aR = 0.000457 * exp((-13 - V) / 50);
+        Float bR = 0.0065 / (exp((-15 - V) / 28) + 1);
+        const float new_R = (aR * timestep + (1 - timestep / 2 * (aR + bR)) * R) / (timestep / 2 * (aR + bR) + 1);
+
+        const Float local_ITin_avg = local_Inum_in > 0 ? local_Iin / local_Inum_in : 0;
+        const Float new_local_IY = (ampaR * local_ITin_avg * timestep + (1 - timestep / 2 * (ampaR * local_ITin_avg + ampaD)) * local_IY) / (timestep / 2 * (ampaR * local_ITin_avg + ampaD) + 1);
+
+        const Float local_ETin_avg = local_Enum_in > 0 ? local_Ein / local_Enum_in : 0;
+        const Float new_local_EY = (ampaR * local_ETin_avg * timestep + (1 - timestep / 2 * (ampaR * local_ETin_avg + ampaD)) * local_EY) / (timestep / 2 * (ampaR * local_ETin_avg + ampaD) + 1);
+
+        const Float Iin_avg = Inum_in > 0 ? Iin / Inum_in : 0;
+        const Float new_IY = (gabaR * Iin_avg * timestep + (1 - timestep / 2 * (gabaR * Iin_avg + gabaD)) * IY) / (timestep / 2 * (gabaR * Iin_avg + gabaD) + 1);
+
+        const Float Ein_avg = Enum_in > 0 ? Ein / Enum_in : 0;
+        const Float new_EY = (ampaR * Ein_avg * timestep + (1 - timestep / 2 * (ampaR * Ein_avg + ampaD)) * EY) / (timestep / 2 * (ampaR * Ein_avg + ampaD) + 1);
+
+        // Use updated gating variables to update voltage.
+        const Float leak_term = gl;
+        const Float Na_term = gna * new_M * new_M * new_M * new_H;
+        const Float Kd_term = gkd * powf(new_N, 4);
+        const Float Ks_term = gks * new_P;
+        const Float Ca_term = gca * new_Q * new_Q * new_R;
+
+        const Float local_gaba_term = GAMPA_GREY * new_local_IY;
+        const Float local_ampa_term = GAMPA_GREY * new_local_EY;
+        const Float global_gaba_term = GGABA * new_IY;
+        const Float global_ampa_term = GAMPA_WHITE * new_EY;
+
+        const Float G = leak_term + Na_term + Kd_term + Ks_term + Ca_term + local_gaba_term + local_ampa_term + global_gaba_term + global_ampa_term;
+        const Float E = leak_term * el + Na_term * ena + Kd_term * ek + Ks_term * ek + Ca_term * eca + local_gaba_term * e_gaba + local_ampa_term * e_ampa + global_gaba_term * e_gaba + global_ampa_term * e_ampa;
+
+        // Add random white noise to V.
+        Float white_noise = white_noise_intensity * curand_normal(random_states + idx) + white_noise_mean;
+
+        // Copy back to sim_vars
+        *V_ptr = ((white_noise + appcur) * timestep + E * timestep + (1 - timestep / 2 * G)*V) / (1 + timestep / 2 * G);
+        *M_ptr = new_M;
+        *H_ptr = new_H;
+        *N_ptr = new_N;
+        *P_ptr = new_P;
+        *Q_ptr = new_Q;
+        *R_ptr = new_R;
+        *local_IY_ptr = new_local_IY;
+        *local_EY_ptr = new_local_EY;
+        *IY_ptr = new_IY;
+        *EY_ptr = new_EY;
+
+        // Calculate amount of neurotransmitter outputted AFTER update
+        sim_vars[Params::LOCAL_IOUTPUT][idx] = sim_vars[Params::LOCAL_EOUTPUT][idx] = sim_vars[Params::IOUTPUT][idx] = sim_vars[Params::EOUTPUT][idx] = 
+            1.0 / (1.0 + exp(-(*V_ptr - Vt) / Kp));
     }
 }
 
