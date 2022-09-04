@@ -86,6 +86,8 @@ int MouseCortex::Simulate()
     int n_firing;
     if(gray_ampa_connectivity)
         n_firing = gray_ampa_connectivity->PerformCoupling();
+    if(gray_gaba_connectivity)
+        n_firing = gray_gaba_connectivity->PerformCoupling();
     if(white_gaba_connectivity)
         n_firing = white_gaba_connectivity->PerformCoupling();
     if(white_ampa_connectivity)

@@ -65,7 +65,7 @@ namespace HH
     constexpr static const Float leapfrog_dt = 0.025;                                                      // Timestep used with leapfrog numerical method (ms)
     constexpr static const Float Vt = -61.5; constexpr static const Float Kp = 3.0;                      // Neurotransmitter potential and scalar 
     constexpr const static Float ampaR = 0.5; constexpr const static Float ampaD = 2.4;                       // alpha and beta for AMPA gating variable
-    constexpr const static Float gabaR = 1.0; constexpr const static Float gabaD = .0;                       // alpha and beta for GABA gating variable
+    constexpr const static Float gabaR = 1.0; constexpr const static Float gabaD = 7.0;                       // alpha and beta for GABA gating variable
     enum Params
     {
         // Main parameters:
