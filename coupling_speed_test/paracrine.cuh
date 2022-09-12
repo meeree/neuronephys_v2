@@ -1,9 +1,35 @@
-#pragma once
-#include "defines.cuh"
 #include <iostream>
+#include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
 #include <thrust/functional.h>
 #include <thrust/inner_product.h>
 #include <thrust/transform.h>
+#include "cuda_runtime.h"
+
+
+
+#define USE_DOUBLE_PRECISION 0 
+#if USE_DOUBLE_PRECISION
+typedef double Float;
+#else
+typedef float Float;
+#endif // USE_DOUBLE_PRECISION
+
+
+#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char* file, int line, bool abort = true)
+{
+	if (code != cudaSuccess)
+	{
+		fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+		if (abort) exit(code);
+	}
+}
+
+
+//#define NBLOCKS=32;
+//#define NTHREADS=512;
+
 
 //Create Paracrine Class
 class paracrine {
@@ -63,13 +89,14 @@ class paracrine {
 
 		//Member functions
 		void initialize();
-		thrust::device_vector<Float> paracrine::interpolate(int nnz, int grid_size, thrust::device_vector<Float> grid);
+		thrust::device_vector<Float> paracrine::interpolate(thrust::device_vector<Float> grid);
 		thrust::device_vector<Float> paracrine::spread(Float generation_constant,thrust::device_vector<Float> grid, thrust::device_vector<Float> neuron_concentrations);
 		thrust::device_vector<Float> paracrine::convolve(thrust::device_vector<Float> grid, thrust::device_vector<Float> mask);
 		thrust::device_vector <Float> paracrine::diffusion_stepper(thrust::device_vector<Float> grid);
 		Float paracrine::inner_product(thrust::device_vector<Float> A, thrust::device_vector<Float> B);
-		thrust::device_vector<Float> paracrine::CG(thrust::device_vector<Float> A, thrust::device_vector<Float> b,thrust::device_vector<Float> grid, thrust::device_vector<Float> laplacian_grid, int max_iterations, Float error_tol);
+		thrust::device_vector<Float> paracrine::CG(thrust::device_vector<Float> A, thrust::device_vector<Float> b);
 		thrust::device_vector<Float> paracrine::update_density(thrust::device_vector<Float> grid);
 		thrust::device_vector<Float> paracrine::initial_guess(thrust::device_vector<Float> grid, thrust::device_vector<Float> laplacian_grid);
 
 };
+
