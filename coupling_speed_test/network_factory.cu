@@ -37,7 +37,7 @@ AdjacencyList Network::ToAdjacencyList(Float*& Tcount, bool use_weights) const
 bool UniformRandomNetwork::Generate(int const N)
 {
     std::cout << "Generating uniform random coupling..." << std::endl;
-    auto& gen{ Utility::UnseededRandomEngine() };
+    auto& gen{ Utility::GetRandomEngine() };
 	std::uniform_int_distribution<> int_dist(0, N-1);
 
 	indices.resize(N * Ncouple);
@@ -97,7 +97,7 @@ bool NormalNetwork::Generate(int const N)
     std::cout << "Generating connections... " << std::endl;
     std::vector<int> ball(N); 
     std::vector<ANNdist> ball_dists(N);
-    auto& gen{ Utility::UnseededRandomEngine() };
+    auto& gen{ Utility::GetRandomEngine() };
 
     indices.reserve(N * 100);
     offset_in_indices.resize(N + 1, 0);

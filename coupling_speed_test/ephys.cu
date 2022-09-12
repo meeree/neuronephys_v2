@@ -39,7 +39,7 @@ void HHEphys::SetVariablesRandomly()
     cudaMemcpy(sim_vars_cpu[Params::G_GABA], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
     // Set voltages randomly
-    auto& gen{ Utility::SeededRandomEngine() };
+    auto& gen{ Utility::GetRandomEngine() };
     std::normal_distribution<> voltage_dist(-55, 25);
     for (auto& val : cpu_arr)
         val = voltage_dist(gen);
@@ -132,7 +132,7 @@ void SCNEphys::SetVariablesRandomly()
     cudaMemcpy(sim_vars_cpu[Params::G_AMPA_GREY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
     // Set voltages randomly
-    auto& gen{ Utility::SeededRandomEngine() };
+    auto& gen{ Utility::GetRandomEngine() };
     std::normal_distribution<> voltage_dist(-55, 25);
     for (auto& val : cpu_arr)
         val = voltage_dist(gen);
@@ -201,7 +201,7 @@ void SANEphys::SetVariablesRandomly ()
     thrust::host_vector<Float> cpu_arr(N, 0);
 
     // Set voltages randomly
-    auto& gen{ Utility::SeededRandomEngine() };
+    auto& gen{ Utility::GetRandomEngine() };
     std::normal_distribution<> voltage_dist(-80, 20);
     for (auto& val : cpu_arr)
         val = voltage_dist(gen);
@@ -443,7 +443,7 @@ __global__ void Leapfrog_HH(Float** sim_vars, const int N, const Float timestep,
         const Float Ks_term = gks * new_P;
         const Float Ca_term = gca * new_Q * new_Q * new_R;
 
-        const Float local_gaba_term = GAMPA_GREY * new_local_IY;
+        const Float local_gaba_term = GGABA * new_local_IY;
         const Float local_ampa_term = GAMPA_GREY * new_local_EY;
         const Float global_gaba_term = GGABA * new_IY;
         const Float global_ampa_term = GAMPA_WHITE * new_EY;

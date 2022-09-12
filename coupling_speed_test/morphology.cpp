@@ -172,7 +172,7 @@ float Morphology::GetMinimumDistance()
 bool HollowSphere::Generate(int const N)
 {
     std::cout << "Generating hollow sphere morphology..." << std::endl;
-    auto& gen{ Utility::UnseededRandomEngine() };
+    auto& gen{ Utility::GetRandomEngine() };
     std::uniform_real_distribution<float> dist(0, 2 * M_PI);
     positions.resize(N);
     for (int i = 0; i < N; ++i)
@@ -186,7 +186,7 @@ bool HollowSphere::Generate(int const N)
 bool UnitSquare::Generate(int const N)
 {
     std::cout << "Generating unit square morphology..." << std::endl;
-    auto& gen{ Utility::UnseededRandomEngine() };
+    auto& gen{ Utility::GetRandomEngine() };
     std::uniform_real_distribution<float> dist(-1, 1);
     positions.resize(N);
     for (int i = 0; i < N; ++i)
@@ -200,7 +200,7 @@ bool UnitSquare::Generate(int const N)
 bool UnitCube::Generate(int const N)
 {
     std::cout << "Generating unit cube morphology..." << std::endl;
-    auto& gen{ Utility::UnseededRandomEngine() };
+    auto& gen{ Utility::GetRandomEngine() };
     std::uniform_real_distribution<float> dist(-1, 1);
     positions.resize(N);
     for (int i = 0; i < N; ++i)
@@ -215,7 +215,7 @@ bool ImplicitSolid::Generate(int const N)
 {
     // Generate points uniformly in unit cube and only keep those for which F(p) <= 0.
     std::cout << "Generating implicit solid morphology..." << std::endl;
-    auto& gen{ Utility::UnseededRandomEngine() };
+    auto& gen{ Utility::GetRandomEngine() };
     std::uniform_real_distribution<float> dist(-1, 1);
     positions.resize(N);
     int pos_size = 0;
@@ -440,7 +440,7 @@ bool MouseBrain2D::Generate(int const N)
 
     // Generate points uniformly in square [-aspect, aspect] X [-1, 1]
     // and only keep those for which BMP value is black.
-    auto& gen{ Utility::UnseededRandomEngine() };
+    auto& gen{ Utility::GetRandomEngine() };
     std::uniform_real_distribution<float> x_dist(-aspect, aspect), y_dist(-1, 1);
     positions.resize(N);
     int pos_size = 0;

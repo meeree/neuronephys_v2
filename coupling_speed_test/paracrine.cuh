@@ -1,3 +1,4 @@
+#include "defines.cuh"
 #include <iostream>
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
@@ -5,30 +6,6 @@
 #include <thrust/inner_product.h>
 #include <thrust/transform.h>
 #include "cuda_runtime.h"
-
-
-
-#define USE_DOUBLE_PRECISION 0 
-#if USE_DOUBLE_PRECISION
-typedef double Float;
-#else
-typedef float Float;
-#endif // USE_DOUBLE_PRECISION
-
-
-#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
-inline void gpuAssert(cudaError_t code, const char* file, int line, bool abort = true)
-{
-	if (code != cudaSuccess)
-	{
-		fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
-		if (abort) exit(code);
-	}
-}
-
-
-//#define NBLOCKS=32;
-//#define NTHREADS=512;
 
 
 //Create Paracrine Class

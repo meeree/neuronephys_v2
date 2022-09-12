@@ -27,13 +27,17 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
    }
 }
 
+//! Toggle for using random seed that is fixed. If fixed, code is easier to reproduce.
+#define USE_FIXED_RANDOM_SEED 1 
+
 //! Just some utility functions that can be used throughout the codebase.
 namespace Utility
 {
-    std::default_random_engine& UnseededRandomEngine();
-	std::default_random_engine& SeededRandomEngine();
+    //! Get random engine. This is defined to be seeded/unseeded based on macro USE_FIXED_RANDOM_SEED in defines.cuh.
+    std::default_random_engine& GetRandomEngine();
 };
 
+//! Toggle for enabling/disabling double precision.
 #define USE_DOUBLE_PRECISION 0 
 #if USE_DOUBLE_PRECISION
 typedef double Float;

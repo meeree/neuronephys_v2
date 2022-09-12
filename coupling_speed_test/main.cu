@@ -245,7 +245,7 @@ void RenderRegions(int N)
 
 
 // A simple test where the visual regions are stimulated. This is a GOOD REFERENCE for visualization and for setting up regions.
-void VisualizationTest(int N, int render_N=-1, int electrodeK=10)
+void VisualizationTest(int N, int render_N=-1, int electrodeK=10)// electrodeK sets the number of neurons to sample for electrode
 {
     if (render_N < 0)
         render_N = N;
@@ -253,15 +253,6 @@ void VisualizationTest(int N, int render_N=-1, int electrodeK=10)
     MouseCortex mouse_cortex(N);
     std::vector<int> electrode_inds(render_N);
     int const render_stride = N / render_N;
-
-    int sum_exc = 0, sum_inh = 0;
-    for (int i = 0; i < N; ++i)
-    {
-        sum_exc += mouse_cortex.white_ampa_connectivity->list.offset_in_indices[i+1] - mouse_cortex.white_ampa_connectivity->list.offset_in_indices[i];
-        sum_inh += mouse_cortex.white_gaba_connectivity->list.offset_in_indices[i+1] - mouse_cortex.white_gaba_connectivity->list.offset_in_indices[i];
-    }
-    std::cout << sum_exc << ',' << sum_inh << std::endl;
-    exit(0);
 
     // Generate electrodes by sampling render_N neurons uniformly from the N and creating electrodes at every such neuron.
     for (int i = 0; i < render_N; ++i)
@@ -293,9 +284,9 @@ void VisualizationTest(int N, int render_N=-1, int electrodeK=10)
         visual_region_idx = std::find(associated_ids.begin(), associated_ids.end(), ID) - associated_ids.begin();
 
         // Set applied current to zero everywhere but the visual regions.
-        thrust::host_vector<Float> appcur(N, 4);
+        thrust::host_vector<Float> appcur(N, 1);//setting applied current
         for (int i = h_regions_inds_allen[visual_region_idx]; i < h_regions_inds_allen[visual_region_idx + 1]; ++i)
-            appcur[h_regions_allen[i]] = 12;
+            appcur[h_regions_allen[i]] = 1;// sets in some visual region
         thrust::device_vector<Float> d_appcur(appcur);
         thrust::copy_n(d_appcur.begin(), N, thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::APPCUR]));
     }
@@ -305,20 +296,28 @@ void VisualizationTest(int N, int render_N=-1, int electrodeK=10)
         exit(1);
     }
 
-//    auto start = std::chrono::steady_clock::now();
-//    for(int n = 0; n < NumIncsSecond(); ++n)
-//        mouse_cortex.Simulate();
-//    auto end = std::chrono::steady_clock::now();
-//    std::cout << "FINISHED TRANSIENT : " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / 1000.0 << "s" << std::endl;
+    thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_AMPA_GREY]), N, 0);
+    thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_AMPA_WHITE]), N, 1);
 
-//    thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_AMPA_GREY]), N, 1e0);
-//    thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_AMPA_WHITE]), N, 1e-2);
+    thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_GABA]), N, 0);
+
+//    auto start = std::chrono::steady_clock::now();
+    for (int n = 0; n < 5 * NumIncsSecond(); ++n)
+    {
+        if (n % 1000 == 0)
+            std::cout << n / float(NumIncsSecond()) << std::endl;
+        mouse_cortex.Simulate();
+    }
+ //   auto end = std::chrono::steady_clock::now();
+ //   std::cout << "FINISHED TRANSIENT : " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / 1000.0 << "s" << std::endl;
 
 //    int const* connectivity_inds = thrust::raw_pointer_cast(mouse_cortex.white_ampa_connectivity->list.indices.data());
 //    int const* offset_into_inds = thrust::raw_pointer_cast(mouse_cortex.white_ampa_connectivity->list.offset_in_indices.data());
 //    Graphics::load_in_connectivity(connectivity_inds, offset_into_inds, N, N);
 
     bool pause = false;
+    Float voltage;
+    std::ofstream fout_single("SINGLE_NEURON_VISUALIZATION_TEST.csv");
     for(int i = 0; i < NumIncsSecond() * 3; ++i)
     {
         mouse_cortex.Simulate();
@@ -327,7 +326,11 @@ void VisualizationTest(int N, int render_N=-1, int electrodeK=10)
         for (int j = 0; j < h_regions_inds.size() - 1; ++j)
             graphics_voltage_handle[j] = avg_V_handle[j];
         Graphics::render(graphics_voltage_handle, nullptr, 0, 0, pause);
+
+        cudaMemcpy(&voltage, V_ptr, 1, cudaMemcpyDeviceToHost); // Copy single neuron voltage 
+        fout_single << voltage << std::endl;
     }
+    fout_single.close();
 }
 
 void RecordNumFiring(int N, std::string fl_suffix="")
@@ -1405,109 +1408,113 @@ void Spreadtest() {
 
 
 
-//void update_paracrine(MouseCortex const& mouse_cortex, thrust::device_vector<Float>& grid, paracrine& par)
-//{
-//Float const* T_ptr = mouse_cortex.ephys->SimVarsCpu()[HH::Params::EOUTPUT];
-//thrust::device_vector<Float> concentrations(par.nnz);
-//thrust::copy_n(thrust::device_ptr<Float const>(T_ptr), par.nnz, concentrations.begin());
-//grid = par.spread(0, grid, concentrations);
-//grid = par.update_density(grid);
-//par.interpolate(par.nnz, par.grid_size, grid);
-//}
+void update_paracrine(MouseCortex const& mouse_cortex, thrust::device_vector<Float>& grid, paracrine& par)
+{
+    Float const* T_ptr = mouse_cortex.ephys->SimVarsCpu()[HH::Params::EOUTPUT];
+    thrust::device_vector<Float> concentrations(par.nnz);
+    thrust::copy_n(thrust::device_ptr<Float const>(T_ptr), par.nnz, concentrations.begin());
+    grid = par.spread(1, grid, concentrations); // THE FIRST PARAMETER IS THE GENERATION CONSTANT
+    grid = par.update_density(grid);
+    par.interpolate(grid); // NOT USED
+}
 
 // Visualization of 3d paracrine density simulation.
-//  void DiffusionTest (int N) {
-//      //Get all variables set so we can create paracrine object
-//      int grid_size = 32;
-//      int nnz = N;
-//      Float dx = 0.0625; //dx from Ningyuan's code
-//      Float dt = 0.02;
-//      Float diffusion = 0.0001;
-//      Float decay = 0;
-//      std::ofstream fout("test.txt");
-//      thrust::host_vector<Float> neuron_locations_x(nnz);
-//      thrust::host_vector<Float> neuron_locations_y(nnz);
-//      thrust::host_vector<Float> neuron_locations_z(nnz);
-//      thrust::host_vector<Float> neuron_IC(nnz);
-//      thrust::host_vector<Float> grid(grid_size * grid_size * grid_size);
-//      thrust::device_vector<Float> grid_gpu(grid_size * grid_size * grid_size);
-//  
-//      MouseCortex mouse_cortex(N);
-//      auto const& positions = mouse_cortex.morphology->GetPositions();
-//  
-//      // Copy neuron locations to paracrine. Need to do some scaling and translating.
-//      for (int i = 0; i < N; i++) {
-//          glm::vec3 pos = positions[i];
-//  
-//          // Transform from [-1, 1] to [0, grid_size]
-//          // This is done by the sequence of transforms: [-1, 1] -> [0, 2] -> [0, 1] -> [0, grid_size].
-//          pos = (pos + 1.0f) * 0.5f * float(grid_size);
-//          neuron_locations_x[i] = pos.x;
-//          neuron_locations_y[i] = pos.y;
-//          neuron_locations_z[i] = pos.z;
-//      }
-//  
-//      // Set initial conditions on grid.
-//      for (int i = 0; i < grid_size * grid_size * grid_size; i++) {
-//          grid[i] = 0.001;
-//      }
-//      grid[grid_size * grid_size * 16 + grid_size * 16 + 16] = 1;
-//  
-//      // Initialize paracrine object.
-//      paracrine par(grid_size, nnz, dx, dt,
-//          diffusion, decay, neuron_locations_x,
-//          neuron_locations_y, neuron_locations_z, grid, neuron_IC);
-//      par.initialize();
-//  
-//      std::cout << "Paracrine initialization finished" << std::endl;
-//  
-//      // How many seconds would you like the simulation to run for?
-//      Float time = 100;
-//  
-//      // Get number of diffusion steps.
-//      int total_steps = ceil(time / dt);
-//  
-//      float* graphics_voltage_handle;
-//      Graphics::setup(graphics_voltage_handle, mouse_cortex.morphology->GetPositionsRaw(), N, N);
-//  
-//      bool pause = false;
-//      thrust::host_vector<float> slice(grid_size * grid_size);
-//      std::cout <<"Initial:" << grid[grid_size * grid_size * 16 + grid_size * 16 + 16] << std::endl;
-//      for (int timestep = 0; timestep < total_steps;)
-//      {
-//          if (!pause)
-//          {
-//              // Simulate mouse cortex and update paracrine.
-//              mouse_cortex.Simulate();
-//              update_paracrine(mouse_cortex, grid_gpu, par);
-//              grid = grid_gpu; // Copy device to host.
-//              timestep += 1;
-//          }
-//          //if (timestep % (total_steps / 100) == 0)
-//             // std::cout << 100 * (Float(timestep) / Float(total_steps)) << "%" << std::endl;
-//          std::cout <<"Center Concentration at timestep " << std::to_string(timestep) <<": "<< grid[grid_size * grid_size * 16 + grid_size * 16 + 16] << std::endl;
-//          for (int k = 0; k < grid_size; ++k)
-//              fout << grid[grid_size * grid_size * 16 + grid_size * 16 + k] << ',';
-//          fout << std::endl;
-//          // Slice density at index specified by Graphics.
-//          int sidx = Graphics::get_slice_index();
-//          std::cout << sidx << std::endl;
-//          auto it = grid.begin();
-//          thrust::copy(grid.begin() + grid_size * grid_size * sidx, grid.begin() + grid_size * grid_size * (sidx + 1), slice.begin());
-//          Graphics::render(graphics_voltage_handle, slice.data(), grid_size, grid_size, pause);
-//      }
-//      fout.close();
-//  }
+void DiffusionTest (int N) {
+    //Get all variables set so we can create paracrine object
+    int grid_size = 32;
+    int nnz = N;
+    Float dx = 0.0625; //dx from Ningyuan's code
+    Float dt = 0.02;
+    Float diffusion = 0.0001;
+    Float decay = 0;
+    std::ofstream fout("test.txt");
+    thrust::host_vector<Float> neuron_locations_x(nnz);
+    thrust::host_vector<Float> neuron_locations_y(nnz);
+    thrust::host_vector<Float> neuron_locations_z(nnz);
+    thrust::host_vector<Float> neuron_IC(nnz);
+    thrust::host_vector<Float> grid(grid_size * grid_size * grid_size);
+    thrust::device_vector<Float> grid_gpu(grid_size * grid_size * grid_size);
+
+    MouseCortex mouse_cortex(N);
+    auto const& positions = mouse_cortex.morphology->GetPositions();
+
+    // Copy neuron locations to paracrine. Need to do some scaling and translating.
+    for (int i = 0; i < N; i++) {
+        glm::vec3 pos = positions[i];
+
+        // Transform from [-1, 1] to [0, grid_size]
+        // This is done by the sequence of transforms: [-1, 1] -> [0, 2] -> [0, 1] -> [0, grid_size].
+        // Note we also need to transpose coordinates here because of different (x,y,z) convention in morphology vs paracrine.
+        pos = (pos + 1.0f) * 0.5f * float(grid_size);
+        neuron_locations_x[i] = pos.x;
+        neuron_locations_y[i] = pos.y;
+        neuron_locations_z[i] = pos.z;
+    }
+
+    // Set initial conditions on grid.
+    for (int i = 0; i < grid_size * grid_size * grid_size; i++) {
+        grid[i] = 0.001;
+    }
+    grid[grid_size * grid_size * 16 + grid_size * 16 + 16] = 1;
+
+    // Initialize paracrine object.
+    paracrine par(grid_size, nnz, dx, dt,
+        diffusion, decay, neuron_locations_x,
+        neuron_locations_y, neuron_locations_z, grid, neuron_IC);
+    par.initialize();
+
+    std::cout << "Paracrine initialization finished" << std::endl;
+
+    // How many seconds would you like the simulation to run for?
+    Float time = 100;
+
+    // Get number of diffusion steps.
+    int total_steps = ceil(time / dt);
+
+    float* graphics_voltage_handle;
+    Graphics::setup(graphics_voltage_handle, mouse_cortex.morphology->GetPositionsRaw(), N, N);
+    Graphics::set_color_params(30, -60, 0.0);
+
+    // Set applied current to 6 everywhere.
+    thrust::host_vector<Float> appcur(N, 6);
+    thrust::device_vector<Float> d_appcur(appcur);
+    thrust::copy_n(d_appcur.begin(), N, thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::APPCUR]));
+
+    bool pause = false;
+    thrust::host_vector<float> slice(grid_size * grid_size);
+    std::cout <<"Initial:" << grid[grid_size * grid_size * 16 + grid_size * 16 + 16] << std::endl;
+    for (int timestep = 0; timestep < total_steps;)
+    {
+        if (!pause)
+        {
+            // Simulate mouse cortex and update paracrine.
+            mouse_cortex.Simulate();
+            update_paracrine(mouse_cortex, grid_gpu, par);
+            grid = grid_gpu; // Copy device to host.
+            timestep += 1;
+        }
+        //if (timestep % (total_steps / 100) == 0)
+           // std::cout << 100 * (Float(timestep) / Float(total_steps)) << "%" << std::endl;
+        std::cout <<"Center Concentration at timestep " << std::to_string(timestep) <<": "<< grid[grid_size * grid_size * 16 + grid_size * 16 + 16] << std::endl;
+        for (int k = 0; k < grid_size; ++k)
+            fout << grid[grid_size * grid_size * 16 + grid_size * 16 + k] << ',';
+        fout << std::endl;
+        // Slice density at index specified by Graphics.
+        int sidx = Graphics::get_slice_index();
+        std::cout << sidx << std::endl;
+        auto it = grid.begin();
+        thrust::copy(grid.begin() + grid_size * grid_size * sidx, grid.begin() + grid_size * grid_size * (sidx + 1), slice.begin());
+        Graphics::render(graphics_voltage_handle, slice.data(), grid_size, grid_size, pause);
+    }
+    fout.close();
+}
 
 int main()
 {
-    //VisualizationTest(1e5);
-   // ParamSweep(1e4);
-//    ElectrodesExample(1e5);
-    //UncoupledNeurons(1e3);
+    // RUN NEURONEPHYS
+    VisualizationTest(1e5);
+    
+    // RUN PARACRINE
     //DiffusionTest(1e5);
-    update_density_test();
-//    update_paracrine();
-     //paracrine_test();
 }
 
