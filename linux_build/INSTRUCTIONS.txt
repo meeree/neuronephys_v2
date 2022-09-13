@@ -1,0 +1,12 @@
+# FIRST RUN THESE FOR MODULES WE NEED
+module load cuda/11.3.0 
+module load gcc/10.3.0
+module load hdf5/1.10.8
+
+# RUN THIS TO COMPILE THE CODE
+make -j4 EXTRA=-w
+
+# RUN THIS TO LAUNCH CODE ON A SLURM NODE
+# <case> IS THE SIMULATION CASE, 
+# [params...] ARE THE PARAMETERS TO THE CASE.
+sbatch run_script.sh <case> [params...]

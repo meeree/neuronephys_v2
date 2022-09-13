@@ -45,3 +45,6 @@ plotting/*.mp4
 coupling_speed_test/*.txt
 coupling_speed_test/*.h5
 coupling_speed_test/*.csv
+linux_build/*
+!linux_build/INSTRUCTIONS.txt
+!linux_build/Makefile
