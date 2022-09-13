@@ -3,7 +3,6 @@
 #include <set>
 #include <glm/gtx/norm.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <chrono>
 #include "regions_tree.h"
 #include "hebbian.cuh"
 #include "paracrine.cuh"
@@ -87,14 +86,10 @@ void ParamSweep(int N)
             fout << g_vals[i] << ',' << g_vals[j] << ',';
 
             // Transient.
-            auto start = std::chrono::steady_clock::now();
             for(int n = 0; n < NumIncsSecond(); ++n)
                 mouse_cortex.Simulate();
-            auto end = std::chrono::steady_clock::now();
-            std::cout << "FINISHED TRANSIENT : " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / 1000.0 << "s" << std::endl;
 
             // Simulate and record row for file.
-            start = std::chrono::steady_clock::now();
             for (int n = 0; n < 5 * NumIncsSecond(); ++n)
             {
                 mouse_cortex.Simulate();
@@ -111,8 +106,6 @@ void ParamSweep(int N)
                     fout << avg_entire << ',';
                 }
             }
-            end = std::chrono::steady_clock::now();
-            std::cout << "FINISHED SIMULATION : " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / 1000.0 << "s" << std::endl;
             fout << '\n';
         }
     }
@@ -154,11 +147,8 @@ void MichiganMathSecretCode(int N, int white_ind, int grey_ind)
     //Graphics::set_color_params(30, -60, 0.0);
 
     // Transient.
-    auto start = std::chrono::steady_clock::now();
 //    for(int n = 0; n < NumIncsSecond(); ++n)
 //        mouse_cortex.Simulate();
-    auto end = std::chrono::steady_clock::now();
-    std::cout << "FINISHED TRANSIENT : " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / 1000.0 << "s" << std::endl;
 
     bool pause = false;
     std::ofstream fout("GUANHUA_DATA_noise6_wakecoupling.csv");
@@ -481,13 +471,10 @@ void SweepBenchmark(std::vector<int> const& choices_of_N, bool uniform_random_wh
             MouseCortex mouse_cortex(N, "HH", uniform_random_white, use_gray);
 
             // Start of simulation.
-            auto start = std::chrono::steady_clock::now();
             for (int i = 0; i < n_incs; ++i)
                 mouse_cortex.Simulate();
-            auto stop = std::chrono::steady_clock::now();
 
             // Measure elapsed time and write to row of file in format <N> <TIME>
-            float time = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() / 1000.0f;
             fout << N << ',' << time << std::endl;
         }
     }
@@ -1623,9 +1610,29 @@ void SimulateSynapticStrengths(int N, float g_ampa_grey, float g_ampa_white, flo
     SimulateAndRecord(mouse_cortex, electrode_net, 5 * NumIncsSecond(), 10, fname);
 }
 
-int main()
+int main(int argc, char* argv[])
 {
-    SimulateSynapticStrengths(1e5, 1.0, 0.0, 0.0);
+    if(argc < 2)
+    {
+        std::cout << """No case specified in command line arguments.\n Usage: ./executable <case> [parameters...]"""
+		     """where <case> is one of the functions in mains.cu"""
+		     """and [parameters...] are the list of parameters to send to this specific function."""
+		  << std::endl;
+        return -1;
+    }
+    
+    std::string case_str = argv[1];
+    if(case_str == "SimulateSynapticStrength")
+    {
+        if(argc != 6)
+	{
+	    std::cout << """Incorrect number of parameters for SimulateSynapticStrength. Four parameters required are:"""
+		         """<# of neurons> <g_ampa_grey> <g_ampa_white> <g_gaba>"""
+                      << std::endl;
+	    return -1;
+	}
+        SimulateSynapticStrengths(atoi(argv[2]), atof(argv[3]), atof(argv[4]), atof(argv[5]));
+    }
 
     // RUN NEURONEPHYS
     VisualizationTest(1e5);
