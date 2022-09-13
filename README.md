@@ -16,7 +16,7 @@ Neuronephys is a simulation framework for large-scale neural networks with reali
   - Linux OS 
 1. Install CUDA 11.1 with visual studio integration. The version does not really matter. If on a cluster, load the CUDA module.
 2. Cd into neuronephys_v2/linux_build using the terminal
-3. Run "make" or "make -j<THREAD COUNT>" to make the library.
+3. Run "make" or "make -j<THREAD COUNT>" to make the library. IF NOT USING GRAPHICS: change USE_GRAPHICS in coupling_speed_test/graphics.h to 0. This will disable compilation of graphics libraries.
 4. The executable "mainS" can be run to execute the code. More instructions in INSTRUCTIONS.txt
 
 # Requirements for mouse brain:
