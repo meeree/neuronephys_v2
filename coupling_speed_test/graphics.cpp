@@ -401,7 +401,9 @@ void keyCallback(GLFWwindow* window, int key, int, int action, int)
         g_attrs.cam_pos += 0.1f * g_attrs.up;
 #endif 
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, 1);
+    {
+        terminate_graphics();
+    }
     else if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
     {
         g_attrs.pause = !g_attrs.pause; // Toggle pause

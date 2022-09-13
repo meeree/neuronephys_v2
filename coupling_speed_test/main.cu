@@ -302,14 +302,18 @@ void VisualizationTest(int N, int render_N=-1, int electrodeK=10)// electrodeK s
     thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_GABA]), N, 0);
 
 //    auto start = std::chrono::steady_clock::now();
+ //   int T = 5 * NumIncsSecond() / 10;
+ //   std::vector<Float> test(N * T);
     for (int n = 0; n < 5 * NumIncsSecond(); ++n)
     {
         if (n % 1000 == 0)
             std::cout << n / float(NumIncsSecond()) << std::endl;
+ //       if (n % 10 == 0)
+ //           thrust::copy_n(thrust::device_ptr<const Float>(V_ptr), N, test.begin() + N * (n / 10));
+
         mouse_cortex.Simulate();
     }
- //   auto end = std::chrono::steady_clock::now();
- //   std::cout << "FINISHED TRANSIENT : " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / 1000.0 << "s" << std::endl;
+//    Utility::WriteDataToHDF("test.h5", test.data(), { (hsize_t)T, (hsize_t)N });
 
 //    int const* connectivity_inds = thrust::raw_pointer_cast(mouse_cortex.white_ampa_connectivity->list.indices.data());
 //    int const* offset_into_inds = thrust::raw_pointer_cast(mouse_cortex.white_ampa_connectivity->list.offset_in_indices.data());
@@ -331,6 +335,59 @@ void VisualizationTest(int N, int render_N=-1, int electrodeK=10)// electrodeK s
         fout_single << voltage << std::endl;
     }
     fout_single.close();
+}
+
+// Play pre-recorded voltage traces or electrode data through visualization.
+// This is useful if you want to run graphics-less on a remote machine then visualize locally on a crappy machine.
+void PlayBackData(std::string fl_name)
+{
+    std::cout << "Loading data from file : " << fl_name << std::endl;
+
+    // First read in three individual axes, then put into positions,
+    // finally scale and transform into range [-1, 1].
+    std::vector<Float> record;
+    int T, N; // Number of timesteps and number of neurons.
+    using namespace H5;
+    try
+    {
+
+        H5File file(fl_name, H5F_ACC_RDONLY);
+
+        DataSet dataset = file.openDataSet("data");
+        DataSpace dataspace = dataset.getSpace();
+
+        hsize_t dims_out[2];
+        dataspace.getSimpleExtentDims(dims_out, NULL);
+
+        T = dims_out[0]; N = dims_out[1];
+
+        record.resize(T * N);
+        dataset.read(record.data(), sizeof(Float) == sizeof(float) ? PredType::NATIVE_FLOAT : PredType::NATIVE_DOUBLE);
+    }
+    catch (...)
+    {
+        exit(-1);
+    }
+
+    std::cout << "Loaded data:\n  Number of timesteps : " << T << "\n  Number of samples : " << N << std::endl;
+
+    MouseCortex mouse_cortex(N);
+
+    // Play through graphics.
+    float* graphics_voltage_handle;
+    Graphics::setup(graphics_voltage_handle, mouse_cortex.morphology->GetPositionsRaw(), N, N);
+    // Hodgkin-Huxley normalized coloring.
+    Graphics::set_color_params(15, -60, 0.0);
+    
+    bool pause = false;
+    for (int i = 0; i < T;)
+    {
+        std::copy(record.begin() + N * i, record.begin() + N * (i + 1), graphics_voltage_handle);
+        Graphics::render(graphics_voltage_handle, nullptr, 0, 0, pause);
+
+        if (!pause)
+            i += 1; // next frame.
+    }
 }
 
 void RecordNumFiring(int N, std::string fl_suffix="")
@@ -1511,6 +1568,7 @@ void DiffusionTest (int N) {
 
 int main()
 {
+    PlayBackData("12_09_2022_19_49_37_test.h5");
     // RUN NEURONEPHYS
     VisualizationTest(1e5);
     

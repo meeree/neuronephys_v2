@@ -27,4 +27,40 @@ namespace Utility
         return RandomEngineDynamicSeed();
 #endif
     }
+
+    std::string GetTimestampString()
+    {
+        time_t rawtime;
+        struct tm* timeinfo;
+        char buffer[80];
+        time(&rawtime);
+        timeinfo = localtime(&rawtime);
+
+        // Day_month_year_hour_minute_second format.
+        strftime(buffer, sizeof(buffer), "%d_%m_%Y_%H_%M_%S", timeinfo);
+        return std::string(buffer);
+    }
+
+    bool WriteDataToHDF(std::string file_name, Float const* data, std::vector<hsize_t> dims, bool prepend_timestamp)
+    {
+        using namespace H5;
+        if (prepend_timestamp)
+            file_name = GetTimestampString() + "_" + file_name;
+
+        try
+        {
+            H5File file(file_name, H5F_ACC_TRUNC);
+            DataSpace dataspace(dims.size(), dims.data());
+            
+            auto pred_type = sizeof(Float) == sizeof(float) ? PredType::NATIVE_FLOAT : PredType::NATIVE_DOUBLE;
+            FloatType datatype(pred_type);
+
+            DataSet dataset = file.createDataSet("data", datatype, dataspace);
+            dataset.write(data, pred_type);
+        } 
+        catch (...)
+        {
+            return false;
+        }
+    }
 };
