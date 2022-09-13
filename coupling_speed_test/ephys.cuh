@@ -5,13 +5,15 @@
 //! EPhys is an abstract class that handles electrophysiological details for a certain model.
 class Ephys
 {
-protected:
+public:
     int const N;
+protected:
     Float dt;
     thrust::device_vector<curandState_t> random_states;
     thrust::host_vector<Float*> sim_vars_cpu;
     thrust::device_vector<Float*> sim_vars;
 public:
+
     //! Default constructor. This constructor sets up the random_states variable which is a collection of random seeds for curand.
     //! Most Ephys models need random seeds for noise, etc. 
     //! \param [in] N_ Number of neurons.

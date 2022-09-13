@@ -256,8 +256,13 @@ __global__ void get_random_test(curandState_t* states, int const N, int* numbers
 
 Ephys::Ephys(int const N_, Float const dt_) : N{ N_ }, dt{ dt_ }, random_states(N_)
 {
+#if USE_FIXED_RANDOM_SEED 
+    unsigned int seed = 0;
+#else
+    unsigned int seed = time(NULL);
+#endif
     // Setup random seeds. 
-    init_random<<<NBLOCKS, NTHREADS>>>(0, N, thrust::raw_pointer_cast(random_states.data()));
+    init_random<<<NBLOCKS, NTHREADS>>>(seed, N, thrust::raw_pointer_cast(random_states.data()));
 	gpuErrchk( cudaPeekAtLastError() );
 	gpuErrchk( cudaDeviceSynchronize() );
 }

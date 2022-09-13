@@ -5,9 +5,10 @@
 //! Regions are stored as an adjacency list.
 class ElectrodeNet 
 {
+public:
+	int N_regions;
 private:
 	AdjacencyList d_regions;
-	int N_regions;
 	thrust::device_vector<Float> d_avg_voltages;
 	thrust::host_vector<Float> h_avg_voltages;
 	thrust::device_vector<int> d_firing_per_region;
@@ -15,8 +16,8 @@ private:
 public:
 	ElectrodeNet (thrust::host_vector<int> const& regions_inds, 
 	              thrust::host_vector<int> const& regions_offsets)
-		: d_regions{regions_inds, regions_offsets}, 
-		  N_regions{(int)regions_offsets.size() - 1},
+		: N_regions{(int)regions_offsets.size() - 1},
+          d_regions{regions_inds, regions_offsets}, 
 		  d_avg_voltages(N_regions, 0),
 		  h_avg_voltages(N_regions, 0),
 		  d_firing_per_region(N_regions, 0),
@@ -30,6 +31,11 @@ public:
 
 	//! Computes the average voltage over the ENTIRE network of neurons.
 	static Float MeasureAverageEntireNetwork (Float const* V_ptr, int const N);
+	
+	thrust::host_vector<Float> const& ElectrodeOutput () const
+	{
+		return h_avg_voltages;
+	}
 	
 	Float const* ElectrodeOutputHandle () const
 	{
