@@ -301,27 +301,19 @@ void VisualizationTest(int N, int render_N=-1, int electrodeK=10)// electrodeK s
 
     thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_GABA]), N, 0);
 
-//    auto start = std::chrono::steady_clock::now();
- //   int T = 5 * NumIncsSecond() / 10;
- //   std::vector<Float> test(N * T);
-    for (int n = 0; n < 5 * NumIncsSecond(); ++n)
+    for (int n = 0; n < 0 * NumIncsSecond(); ++n)
     {
         if (n % 1000 == 0)
             std::cout << n / float(NumIncsSecond()) << std::endl;
- //       if (n % 10 == 0)
- //           thrust::copy_n(thrust::device_ptr<const Float>(V_ptr), N, test.begin() + N * (n / 10));
 
         mouse_cortex.Simulate();
     }
-//    Utility::WriteDataToHDF("test.h5", test.data(), { (hsize_t)T, (hsize_t)N });
 
 //    int const* connectivity_inds = thrust::raw_pointer_cast(mouse_cortex.white_ampa_connectivity->list.indices.data());
 //    int const* offset_into_inds = thrust::raw_pointer_cast(mouse_cortex.white_ampa_connectivity->list.offset_in_indices.data());
 //    Graphics::load_in_connectivity(connectivity_inds, offset_into_inds, N, N);
 
     bool pause = false;
-    Float voltage;
-    std::ofstream fout_single("SINGLE_NEURON_VISUALIZATION_TEST.csv");
     for(int i = 0; i < NumIncsSecond() * 3; ++i)
     {
         mouse_cortex.Simulate();
@@ -330,12 +322,9 @@ void VisualizationTest(int N, int render_N=-1, int electrodeK=10)// electrodeK s
         for (int j = 0; j < h_regions_inds.size() - 1; ++j)
             graphics_voltage_handle[j] = avg_V_handle[j];
         Graphics::render(graphics_voltage_handle, nullptr, 0, 0, pause);
-
-        cudaMemcpy(&voltage, V_ptr, 1, cudaMemcpyDeviceToHost); // Copy single neuron voltage 
-        fout_single << voltage << std::endl;
     }
-    fout_single.close();
 }
+
 
 // Play pre-recorded voltage traces or electrode data through visualization.
 // This is useful if you want to run graphics-less on a remote machine then visualize locally on a crappy machine.
@@ -371,7 +360,7 @@ void PlayBackData(std::string fl_name)
 
     std::cout << "Loaded data:\n  Number of timesteps : " << T << "\n  Number of samples : " << N << std::endl;
 
-    MouseCortex mouse_cortex(N);
+    MouseCortex mouse_cortex(N, "HH", true, false);
 
     // Play through graphics.
     float* graphics_voltage_handle;
@@ -1565,10 +1554,79 @@ void DiffusionTest (int N) {
     }
     fout.close();
 }
+// Record mouse_cortex simulation to an HDF file. 
+// sample_rate is number of timesteps to simulate before sampling. So a value of 1 is every timestep.
+// output is in h5 format.
+void SimulateAndRecord(MouseCortex& mouse_cortex, ElectrodeNet& eeg, size_t total_timesteps, size_t sample_rate, std::string h5_out_name)
+{
+    size_t eeg_N = eeg.N_regions;
+    auto eeg_out = eeg.ElectrodeOutput();
+    Float const* V_ptr = mouse_cortex.ephys->SimVarsCpu()[HH::Params::V];
+
+    hsize_t T = total_timesteps / sample_rate;
+    std::vector<Float> out(eeg_N * T, 0.0);
+    for (int i = 0; i < total_timesteps; ++i)
+    {
+        if (i % 1000 == 0)
+            std::cout << " Sim time in seconds : " << i / float(NumIncsSecond()) << std::endl;
+
+        if (i % sample_rate == 0)
+        {
+            eeg.DoElectrodeMeasurements(V_ptr, mouse_cortex.white_ampa_connectivity->is_firing);
+            thrust::copy_n(eeg_out.begin(), eeg_N, out.begin() + eeg_N * (i / sample_rate));
+        }
+        mouse_cortex.Simulate();
+    }
+    Utility::WriteDataToHDF(h5_out_name, out.data(), { T, (hsize_t)eeg_N });
+}
+
+// Setup uniform electrodes that measure K nearest neighbors.
+// Electrodes are chosen uniformly from neurons indices. 
+ElectrodeNet SetupElectrodes(MouseCortex const& mouse_cortex, int knn, int eeg_N = -1)
+{
+    if (eeg_N < 0)
+        eeg_N = mouse_cortex.ephys->N;
+
+    std::vector<int> electrode_inds(eeg_N);
+    int const stride = mouse_cortex.ephys->N / eeg_N;
+
+    for (int i = 0; i < eeg_N; ++i)
+        electrode_inds[i] = stride * i;
+    thrust::host_vector<int> h_regions, h_regions_inds;
+    mouse_cortex.morphology->GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, knn);
+    return ElectrodeNet(h_regions, h_regions_inds);
+}
+
+// Case where we simulate neurons with condutances for synapses selected by user.
+void SimulateSynapticStrengths(int N, float g_ampa_grey, float g_ampa_white, float g_gaba)
+{
+    MouseCortex mouse_cortex(N);
+
+    int eeg_N = N / 10;
+    if (eeg_N < 0)
+        eeg_N = mouse_cortex.ephys->N;
+
+    std::vector<int> electrode_inds(eeg_N);
+    int const stride = mouse_cortex.ephys->N / eeg_N;
+
+    for (int i = 0; i < eeg_N; ++i)
+        electrode_inds[i] = stride * i;
+    thrust::host_vector<int> h_regions, h_regions_inds;
+    mouse_cortex.morphology->GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 10);
+    ElectrodeNet electrode_net(h_regions, h_regions_inds);
+
+    thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_AMPA_GREY]), N, g_ampa_grey);
+    thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_AMPA_WHITE]), N, g_ampa_white);
+    thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_GABA]), N, g_gaba);
+
+    auto fname = "SimSynStrength_GAMPAGREY=" + std::to_string(g_ampa_grey) + "_GAMPAWHITE=" + std::to_string(g_ampa_white) + "_GGABA=" + std::to_string(g_gaba);
+    SimulateAndRecord(mouse_cortex, electrode_net, 5 * NumIncsSecond(), 10, fname);
+}
 
 int main()
 {
-    PlayBackData("12_09_2022_19_49_37_test.h5");
+    SimulateSynapticStrengths(1e5, 1.0, 0.0, 0.0);
+
     // RUN NEURONEPHYS
     VisualizationTest(1e5);
     
