@@ -1547,7 +1547,7 @@ void DiffusionTest (int N) {
 void SimulateAndRecord(MouseCortex& mouse_cortex, ElectrodeNet& eeg, size_t total_timesteps, size_t sample_rate, std::string h5_out_name)
 {
     size_t eeg_N = eeg.N_regions;
-    auto eeg_out = eeg.ElectrodeOutput();
+    auto const& eeg_out = eeg.ElectrodeOutput();
     Float const* V_ptr = mouse_cortex.ephys->SimVarsCpu()[HH::Params::V];
 
     hsize_t T = total_timesteps / sample_rate;
@@ -1606,7 +1606,7 @@ void SimulateSynapticStrengths(int N, float g_ampa_grey, float g_ampa_white, flo
     thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_AMPA_WHITE]), N, g_ampa_white);
     thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_GABA]), N, g_gaba);
 
-    auto fname = "SimSynStrength_GAMPAGREY=" + std::to_string(g_ampa_grey) + "_GAMPAWHITE=" + std::to_string(g_ampa_white) + "_GGABA=" + std::to_string(g_gaba);
+    auto fname = "SimSynStrength_GAMPAGREY=" + std::to_string(g_ampa_grey) + "_GAMPAWHITE=" + std::to_string(g_ampa_white) + "_GGABA=" + std::to_string(g_gaba) + ".h5";
     SimulateAndRecord(mouse_cortex, electrode_net, 5 * NumIncsSecond(), 10, fname);
 }
 
