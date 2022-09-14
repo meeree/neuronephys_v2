@@ -1596,7 +1596,7 @@ void SimulateFixedCouplingThreshold(int N, Float thresh)
     cudaEventElapsedTime(&time, events[0], events[1]);
     auto fname2 = Utility::GetTimestampString() + "TIMING_CoupThreshold_thresh=" + std::to_string(thresh) + ".csv";
     std::ofstream time_out(fname2);
-    time_out << "time (seconds)\n" << time << '\n';
+    time_out << "time (milliseconds)\n" << time << '\n';
     time_out.close();
 
     AtomicCoupling::threshold = old_val; // reset
