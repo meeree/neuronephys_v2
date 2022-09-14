@@ -391,31 +391,6 @@ void RecordNumFiring(int N, std::string fl_suffix="")
     fout.close();
 }
 
-// Simulate uncoupled independent neurons to get an idea of how they behave individually and get F-I curve.
-void UncoupledNeurons(int N, std::string fl_suffix="")
-{
-    std::ofstream fout("UNCOUPLED_" + fl_suffix + ".txt");
-    MouseCortex mouse_cortex(N, "HH", false, false);
-    Float const* V_ptr = mouse_cortex.ephys->SimVarsCpu()[HH::Params::V];
-    Float const* app_ptr = mouse_cortex.ephys->SimVarsCpu()[HH::appcur];
-    // Turn off all coupling.
-    thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_GABA]), N, 0);
-    thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_AMPA_WHITE]), N, 0);
-    thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_AMPA_GREY]), N, 0);
-
-    int const n_incs = NumIncsSecond() * 1;
-    thrust::host_vector<Float> V_host(N);
-    for (int i = 0; i < n_incs; ++i)
-    {
-        thrust::copy_n(thrust::device_ptr<Float const>(V_ptr), N, V_host.begin());
-        fout << mouse_cortex.Simulate() << ',';  // Number of neurons firing.
-        for (Float& val : V_host)
-            fout << val << ',';
-        fout << std::endl;
-    }
-    fout.close();
-}
-
 /// n_incs_hebbian_sample is the number of simulation increments to do before we output hebbian weights to a file.
 void HebbianLearningExample(int N, int n_incs_hebbian_sample = 1000)
 {
@@ -1585,22 +1560,10 @@ ElectrodeNet SetupElectrodes(MouseCortex const& mouse_cortex, int knn, int eeg_N
 }
 
 // Case where we simulate neurons with condutances for synapses selected by user.
-void SimulateSynapticStrengths(int N, float g_ampa_grey, float g_ampa_white, float g_gaba)
+void SimulateSynapticStrength(int N, float g_ampa_grey, float g_ampa_white, float g_gaba)
 {
     MouseCortex mouse_cortex(N);
-
-    int eeg_N = N / 10;
-    if (eeg_N < 0)
-        eeg_N = mouse_cortex.ephys->N;
-
-    std::vector<int> electrode_inds(eeg_N);
-    int const stride = mouse_cortex.ephys->N / eeg_N;
-
-    for (int i = 0; i < eeg_N; ++i)
-        electrode_inds[i] = stride * i;
-    thrust::host_vector<int> h_regions, h_regions_inds;
-    mouse_cortex.morphology->GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, 10);
-    ElectrodeNet electrode_net(h_regions, h_regions_inds);
+    ElectrodeNet electrode_net = SetupElectrodes(mouse_cortex, 10, N / 10);
 
     thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_AMPA_GREY]), N, g_ampa_grey);
     thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_AMPA_WHITE]), N, g_ampa_white);
@@ -1608,6 +1571,38 @@ void SimulateSynapticStrengths(int N, float g_ampa_grey, float g_ampa_white, flo
 
     auto fname = "SimSynStrength_GAMPAGREY=" + std::to_string(g_ampa_grey) + "_GAMPAWHITE=" + std::to_string(g_ampa_white) + "_GGABA=" + std::to_string(g_gaba) + ".h5";
     SimulateAndRecord(mouse_cortex, electrode_net, 5 * NumIncsSecond(), 10, fname);
+}
+
+// Simulate uncoupled independent neurons to get an idea of how they behave individually and get F-I curve.
+void UncoupledNeurons(int N, Float n_seconds)
+{
+    float time_to_setup_ms, time_to_simulate_ms;
+    cudaEvent_t events[3];
+    for(int i = 0; i < 3; ++i)
+        cudaEventCreate(&events[i]);
+
+    // Setup ephys.
+    cudaEventRecord(events[0]);
+    HHEphys ephys(N);
+
+    cudaEventRecord(events[1]);
+    cudaEventSynchronize(events[1]);
+    cudaEventElapsedTime(&time_to_setup_ms, events[0], events[1]);
+
+    // Simulate ephys.
+    int const n_incs = NumIncsSecond() * n_seconds;
+    for (int i = 0; i < n_incs; ++i)
+        ephys.SimulateEphys();
+
+    cudaEventRecord(events[2]);
+    cudaEventSynchronize(events[2]);
+    cudaEventElapsedTime(&time_to_simulate_ms, events[1], events[2]);
+
+    std::string fname = Utility::GetTimestampString() + "UncoupledNeuronsTiming_N=" + std::to_string(N) + ".csv";
+    std::ofstream fout(fname);
+    fout << "N,n_seconds,time_to_setup_ms,time_to_simulate_ms\n"
+         << N << ',' << n_seconds << ',' << time_to_setup_ms << ',' << time_to_simulate_ms << '\n';
+    fout.close();
 }
 
 int main(int argc, char* argv[])
@@ -1625,19 +1620,24 @@ int main(int argc, char* argv[])
     if(case_str == "SimulateSynapticStrength")
     {
         if(argc != 6)
-	{
-	    std::cout << """Incorrect number of parameters for SimulateSynapticStrength. Four parameters required are:"""
-		         """<# of neurons> <g_ampa_grey> <g_ampa_white> <g_gaba>"""
+	    {
+	        std::cout << """Incorrect number of parameters for SimulateSynapticStrength. Four parameters required are:"""
+	    	             """<# of neurons> <g_ampa_grey> <g_ampa_white> <g_gaba>"""
                       << std::endl;
-	    return -1;
-	}
-        SimulateSynapticStrengths(atoi(argv[2]), atof(argv[3]), atof(argv[4]), atof(argv[5]));
+	        return -1;
+	    }
+        SimulateSynapticStrength(atoi(argv[2]), atof(argv[3]), atof(argv[4]), atof(argv[5]));
     }
-
-    // RUN NEURONEPHYS
-    VisualizationTest(1e5);
-    
-    // RUN PARACRINE
-    //DiffusionTest(1e5);
+    else if (case_str == "UncoupledNeurons")
+    {
+        if(argc != 4)
+	    {
+	        std::cout << """Incorrect number of parameters for UncoupledNeurons. Two parameters required are:"""
+	    	             """<# of neurons> <n_seconds>"""
+                      << std::endl;
+	        return -1;
+	    }
+        UncoupledNeurons(atoi(argv[2]), atof(argv[3]));
+    }
 }
 
