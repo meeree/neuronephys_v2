@@ -1573,6 +1573,35 @@ void SimulateSynapticStrength(int N, float g_ampa_grey, float g_ampa_white, floa
     SimulateAndRecord(mouse_cortex, electrode_net, 5 * NumIncsSecond(), 10, fname);
 }
 
+// Case where we simulate neurons with a fixed threshold in the AtomicCoupling. Used for comparing how threshold affects results and timing.
+void SimulateFixedCouplingThreshold(int N, Float thresh)
+{
+    std::cout << N << std::endl;
+    Float old_val = AtomicCoupling::threshold;
+    AtomicCoupling::threshold = thresh;
+    MouseCortex mouse_cortex(N);
+    ElectrodeNet electrode_net = SetupElectrodes(mouse_cortex, 10, N / 10);
+
+    float time;
+    cudaEvent_t events[2];
+    for(int i = 0; i < 2; ++i)
+        cudaEventCreate(&events[i]);
+    cudaEventRecord(events[0]);
+
+    auto fname = "CoupThreshold_thresh=" + std::to_string(thresh) + ".h5";
+    SimulateAndRecord(mouse_cortex, electrode_net, 5 * NumIncsSecond(), 10, fname);
+
+    cudaEventRecord(events[1]);
+    cudaEventSynchronize(events[1]);
+    cudaEventElapsedTime(&time, events[0], events[1]);
+    auto fname2 = Utility::GetTimestampString() + "TIMING_CoupThreshold_thresh=" + std::to_string(thresh) + ".csv";
+    std::ofstream time_out(fname2);
+    time_out << "time (seconds)\n" << time << '\n';
+    time_out.close();
+
+    AtomicCoupling::threshold = old_val; // reset
+}
+
 // Simulate uncoupled independent neurons to get an idea of how they behave individually and get F-I curve.
 void UncoupledNeurons(int N, Float n_seconds)
 {
@@ -1626,7 +1655,7 @@ int main(int argc, char* argv[])
                       << std::endl;
 	        return -1;
 	    }
-        SimulateSynapticStrength(atoi(argv[2]), atof(argv[3]), atof(argv[4]), atof(argv[5]));
+        SimulateSynapticStrength(atof(argv[2]), atof(argv[3]), atof(argv[4]), atof(argv[5]));
     }
     else if (case_str == "UncoupledNeurons")
     {
@@ -1637,7 +1666,18 @@ int main(int argc, char* argv[])
                       << std::endl;
 	        return -1;
 	    }
-        UncoupledNeurons(atoi(argv[2]), atof(argv[3]));
+        UncoupledNeurons(atof(argv[2]), atof(argv[3]));
+    }
+    else if (case_str == "SimulateFixedCouplingThreshold")
+    {
+        if(argc != 4)
+	    {
+	        std::cout << """Incorrect number of parameters for SimulateFixedCouplingThreshold. Two parameters required are:"""
+	    	             """<# of neurons> <threshold>"""
+                      << std::endl;
+	        return -1;
+	    }
+        SimulateFixedCouplingThreshold(atof(argv[2]), atof(argv[3]));
     }
 }
 

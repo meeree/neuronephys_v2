@@ -1,5 +1,7 @@
 #include "coupling.cuh"
 
+Float AtomicCoupling::threshold = 0.1;
+
 AtomicCoupling::AtomicCoupling(int const N, AdjacencyList& list_, Float* downstream_inputs_, Float* neuron_outputs_)
     : list{}, downstream_inputs{ downstream_inputs_ }, neuron_outputs{ neuron_outputs_ }, is_firing(N, 0), firing_neurons(N, -1)
 {
@@ -34,9 +36,11 @@ inline __global__ void signal_spikes_kernel(int const num_firing,
 
 struct CheckFiringOperator
 {
+	float threshold;
+	CheckFiringOperator(float thresh) : threshold{ thresh } {}
 	__host__ __device__ int operator()(Float const output) const
 	{
-		return output > 0.1 ? 1 : 0;
+		return output > threshold ? 1 : 0;
 	}
 };
 
@@ -46,7 +50,8 @@ int AtomicCoupling::PerformCoupling()
     thrust::fill_n(thrust::device_ptr<Float>(downstream_inputs), N, 0);
 
 	// Determine which neurons are firing by checking against threshold and that they weren't previously firing.
-	thrust::transform(thrust::device_ptr<Float const>(neuron_outputs), thrust::device_ptr<Float const>(neuron_outputs + N), is_firing.begin(), CheckFiringOperator());
+	thrust::transform(thrust::device_ptr<Float const>(neuron_outputs), thrust::device_ptr<Float const>(neuron_outputs + N), 
+		              is_firing.begin(), CheckFiringOperator(0.1));
 
 	// See second example here: https://thrust.github.io/doc/classthrust_1_1counting__iterator.html
 	auto const end_it = thrust::copy_if(thrust::make_counting_iterator(0),

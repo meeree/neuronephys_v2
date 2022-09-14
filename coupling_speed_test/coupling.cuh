@@ -33,6 +33,7 @@ public:
 	AdjacencyList list;
 	thrust::device_vector<int> is_firing;
 	thrust::device_vector<int> firing_neurons;
+	static Float threshold; //! Threshold used to determine which neurons are firing and which are not for handling in coupling (between 0 and 1). 
 
 	//! Constructor. Note that list_ will be moved to internal AtomicCoupling member variable list, so list_ SHOULD NOT BE USED AFTER SENDING IT TO THE CTOR!!!
 	AtomicCoupling(int const N, AdjacencyList& list_, Float* downstream_inputs_, Float* neuron_outputs_);
