@@ -177,9 +177,11 @@ void paracrine::initialize() {
 	eye[stencil_height * stencil_depth * 2 + stencil_depth * 1 + 1] = 1;
 	eye[stencil_height * stencil_depth * 2 + stencil_depth * 2 + 2] = 1;
 
+	Float dum = 1 / (30 * dx * dx);
+	thrust::transform(stencil.begin(), stencil.end(), stencil.begin(), dum *_1);
 	//set diffusion/decay constant (make this class wide later)
 	Float diffusion = 1;
-	Float decay = 1;
+	Float decay = 0;
 	Float dt = 0.01;
 
 	for (int i = 0; i < 27; i++) {
@@ -355,7 +357,7 @@ thrust::device_vector <Float> paracrine::interpolate(thrust::device_vector <Floa
 	int block_size = 1024; //schedule a block full of number of neurons
 	int cuda_grid_size = nnz / block_size + 1;
 
-	gpu_interpolate <<< cuda_grid_size, block_size >>> (nnz, grid_size, thrust::raw_pointer_cast(d_CT.data()), thrust::raw_pointer_cast(grid.data()),
+	gpu_interpolate << < cuda_grid_size, block_size >> > (nnz, grid_size, thrust::raw_pointer_cast(d_CT.data()), thrust::raw_pointer_cast(grid.data()),
 		thrust::raw_pointer_cast(d_neuron_concentrations.data()), thrust::raw_pointer_cast(d_Q.data()), thrust::raw_pointer_cast(x0.data()),
 		thrust::raw_pointer_cast(x1.data()), thrust::raw_pointer_cast(y0.data()), thrust::raw_pointer_cast(y1.data()),
 		thrust::raw_pointer_cast(z0.data()), thrust::raw_pointer_cast(z1.data()));
@@ -397,41 +399,41 @@ __global__ void gpu_spread(int nnz, int grid_size, Float* grid, Float* P,
 //spread function
 thrust::device_vector <Float> paracrine::spread(Float generation_constant,
 	thrust::device_vector <Float> grid, thrust::device_vector <Float> neuron_concentrations) {
-//	std::cout << "Spreading Started" << std::endl;
+	//	std::cout << "Spreading Started" << std::endl;
 
-	//calculate neurotransmitter generation (thrust vector of size nnz)
-	//	Float generation_constant = 1; //for now just have as a constant
+		//calculate neurotransmitter generation (thrust vector of size nnz)
+		//	Float generation_constant = 1; //for now just have as a constant
 
-	//---------------------------CPU SPREADING--------------------------------------------------------------------------------------
-	//int grid_width = grid_size;
-	//int grid_height = grid_size;
-	//int grid_depth = grid_size;
+		//---------------------------CPU SPREADING--------------------------------------------------------------------------------------
+		//int grid_width = grid_size;
+		//int grid_height = grid_size;
+		//int grid_depth = grid_size;
 
-	////	using namespace thrust::placeholders;
-	//thrust::host_vector <Float> generation(nnz*8, generation_constant);
-	////thrust::transform(neuron_concentrations.begin(), neuron_concentrations.end(),
-	  //generation.begin(), generation_constant * _1); //_1 is a placeholder
+		////	using namespace thrust::placeholders;
+		//thrust::host_vector <Float> generation(nnz*8, generation_constant);
+		////thrust::transform(neuron_concentrations.begin(), neuron_concentrations.end(),
+		  //generation.begin(), generation_constant * _1); //_1 is a placeholder
 
-	//thrust::host_vector <Float> P(nnz*8,0.0);
+		//thrust::host_vector <Float> P(nnz*8,0.0);
 
-	//thrust::transform(generation.begin(), generation.end(), weighted_spread.begin(), 
-	  //P.begin(), thrust::multiplies<Float>()); //P=generation * weighted_spread element by element
+		//thrust::transform(generation.begin(), generation.end(), weighted_spread.begin(), 
+		  //P.begin(), thrust::multiplies<Float>()); //P=generation * weighted_spread element by element
 
-	//for (int i=0; i<nnz; i++){ //weighted_spread[rowsize * 0 + column]
-	//	grid[grid_height * grid_depth * x0[i] + grid_depth * y0[i] + z0[i]] += P[nnz*0 + i];
-	//	grid[grid_height * grid_depth * x0[i] + grid_depth * y0[i] + z1[i]] += P[nnz*1 + i];
-	//	grid[grid_height * grid_depth * x0[i] + grid_depth * y1[i] + z0[i]] += P[nnz*2 + i];
-	//	grid[grid_height * grid_depth * x0[i] + grid_depth * y1[i] + z1[i]] += P[nnz*3 + i];
-	//	grid[grid_height * grid_depth * x1[i] + grid_depth * y0[i] + z0[i]] += P[nnz*4 + i];
-	//	grid[grid_height * grid_depth * x1[i] + grid_depth * y0[i] + z1[i]] += P[nnz*5 + i];
-	//	grid[grid_height * grid_depth * x1[i] + grid_depth * y1[i] + z0[i]] += P[nnz*6 + i];
-	//	grid[grid_height * grid_depth * x1[i] + grid_depth * y1[i] + z1[i]] += P[nnz*7 + i];
-	//}
-	//----------------------------END CPU SPREADING----------------------------------------------------------------------------------
+		//for (int i=0; i<nnz; i++){ //weighted_spread[rowsize * 0 + column]
+		//	grid[grid_height * grid_depth * x0[i] + grid_depth * y0[i] + z0[i]] += P[nnz*0 + i];
+		//	grid[grid_height * grid_depth * x0[i] + grid_depth * y0[i] + z1[i]] += P[nnz*1 + i];
+		//	grid[grid_height * grid_depth * x0[i] + grid_depth * y1[i] + z0[i]] += P[nnz*2 + i];
+		//	grid[grid_height * grid_depth * x0[i] + grid_depth * y1[i] + z1[i]] += P[nnz*3 + i];
+		//	grid[grid_height * grid_depth * x1[i] + grid_depth * y0[i] + z0[i]] += P[nnz*4 + i];
+		//	grid[grid_height * grid_depth * x1[i] + grid_depth * y0[i] + z1[i]] += P[nnz*5 + i];
+		//	grid[grid_height * grid_depth * x1[i] + grid_depth * y1[i] + z0[i]] += P[nnz*6 + i];
+		//	grid[grid_height * grid_depth * x1[i] + grid_depth * y1[i] + z1[i]] += P[nnz*7 + i];
+		//}
+		//----------------------------END CPU SPREADING----------------------------------------------------------------------------------
 
-	//-----------------------------GPU SPREADING--------------------------------------------------------------------------------------
+		//-----------------------------GPU SPREADING--------------------------------------------------------------------------------------
 
-	//Send weighted_spread (found in initialization) to gpu
+		//Send weighted_spread (found in initialization) to gpu
 	thrust::device_vector <Float> d_weighted_spread = weighted_spread;
 
 	//Create thrust vector P
@@ -469,7 +471,7 @@ thrust::device_vector <Float> paracrine::spread(Float generation_constant,
 	int block_size = 1024; //schedule a block full of threads
 	int cuda_grid_size = nnz / block_size + 1;
 
-	gpu_spread <<< cuda_grid_size, block_size >>> (nnz, grid_size, thrust::raw_pointer_cast(grid.data()),
+	gpu_spread << < cuda_grid_size, block_size >> > (nnz, grid_size, thrust::raw_pointer_cast(grid.data()),
 		thrust::raw_pointer_cast(d_P.data()), thrust::raw_pointer_cast(x0.data()),
 		thrust::raw_pointer_cast(x1.data()), thrust::raw_pointer_cast(y0.data()), thrust::raw_pointer_cast(y1.data()),
 		thrust::raw_pointer_cast(z0.data()), thrust::raw_pointer_cast(z1.data()));
@@ -573,11 +575,11 @@ thrust::device_vector <Float> paracrine::convolve(thrust::device_vector <Float> 
 	dim3 gridDim2(imageWidth, imageHeight, imageDepth);
 	dim3 blockDim(threadsPerBlock_dimension, threadsPerBlock_dimension, threadsPerBlock_dimension);
 
-	gpu_pad <<<gridDim2, blockDim >>> (thrust::raw_pointer_cast(grid.data()), thrust::raw_pointer_cast(image.data()), grid_size, image_size);
+	gpu_pad << <gridDim2, blockDim >> > (thrust::raw_pointer_cast(grid.data()), thrust::raw_pointer_cast(image.data()), grid_size, image_size);
 	gpuErrchk(cudaPeekAtLastError());
 	gpuErrchk(cudaDeviceSynchronize());
 
-	gpu_convolve <<< gridDim1, blockDim >>> (thrust::raw_pointer_cast(image.data()), thrust::raw_pointer_cast(mask.data()),
+	gpu_convolve << < gridDim1, blockDim >> > (thrust::raw_pointer_cast(image.data()), thrust::raw_pointer_cast(mask.data()),
 		thrust::raw_pointer_cast(result.data()), image_size, mask_size, grid_size);
 	gpuErrchk(cudaPeekAtLastError());
 	gpuErrchk(cudaDeviceSynchronize());
@@ -597,7 +599,7 @@ thrust::device_vector <Float> paracrine::initial_guess(thrust::device_vector <Fl
 	int block_size = 512; //schedule a block full of threads
 	int cuda_grid_size = ceil((grid_size * grid_size * grid_size) / block_size);
 
-	gpu_initial_guess <<< cuda_grid_size, block_size >>> (grid_size, diffusion, decay, dt,
+	gpu_initial_guess << < cuda_grid_size, block_size >> > (grid_size, diffusion, decay, dt,
 		thrust::raw_pointer_cast(grid.data()), thrust::raw_pointer_cast(laplacian_grid.data()), thrust::raw_pointer_cast(x.data()));
 	gpuErrchk(cudaPeekAtLastError());
 	gpuErrchk(cudaDeviceSynchronize());
@@ -625,46 +627,52 @@ thrust::device_vector <Float> paracrine::update_density(thrust::device_vector<Fl
 
 	//Apply laplace stencil to grid, will have size grid_size x grid_size x grid_size
 	laplacian_grid = convolve(grid, stencil);
-
+	//printf("laplacian is :");
+	//for (int k = 0; k < grid_size; ++k)
+	//	printf( "%g\n", (Float)laplacian_grid[grid_size * grid_size * grid_size / 2 + grid_size * k + grid_size / 2]);
 	//Want to find the following
 	//grid_next_step = (1 - dt * decay) * grid + dt * diffusion * laplacian_grid;
 	//We do this by first calculating (1-dt*decay), then multiplying it into the grid, 
 	//then calculating dt*diffusion, then multiplying it into laplacian_grid,
 	//then adding those vectors
-	thrust::device_vector<Float> grid_next_step(grid_size * grid_size * grid_size);
+	thrust::device_vector<Float> grid_next_step(grid_size * grid_size * grid_size,0.0);
 
 	//Calculate (1 - timestep * decay_coefficient) * grid 
-	Float dum = 1 - dt * decay;
+	//Float dum = 1 - dt * decay;
 	thrust::device_vector<Float> dum_array1(grid_size * grid_size * grid_size);
-	thrust::transform(grid.begin(), grid.end(), dum_array1.begin(), dum * _1);
+	//thrust::transform(grid.begin(), grid.end(), dum_array1.begin(), dum * _1);
 
 	//Calculate timestep * diffusion_coefficient * laplacian_grid
-	dum = dt * diffusion;
+	//dum = dt * diffusion;
 	thrust::device_vector<Float> dum_array2(grid_size * grid_size * grid_size);
-	thrust::transform(laplacian_grid.begin(), laplacian_grid.end(), dum_array1.begin(), dum * _1);
+	//thrust::transform(laplacian_grid.begin(), laplacian_grid.end(), dum_array1.begin(), dum * _1);
 
 	//Now add them to obtain grid_next_step
-	thrust::transform(dum_array1.begin(), dum_array1.end(), dum_array2.begin(), grid_next_step.begin(), thrust::plus <Float>());
+	//thrust::transform(dum_array1.begin(), dum_array1.end(), dum_array2.begin(), grid_next_step.begin(), thrust::plus <Float>());
 
 	//Now calculate laplace_stencil_divided
-	thrust::device_vector<Float> laplace_stencil_divided(27);
-	dum = 1 / (dx * dx * 30.0);
-	thrust::transform(stencil.begin(), stencil.end(), laplace_stencil_divided.begin(), dum * _1);
+	//thrust::device_vector<Float> laplace_stencil_divided(27);
+	//dum = 1 / (dx * dx * 30.0);
+	//thrust::transform(stencil.begin(), stencil.end(), laplace_stencil_divided.begin(), dum * _1);
 
 	//Now create A matrix
-	dum = -0.5 * diffusion * dt;
-	thrust::transform(laplace_stencil_divided.begin(), laplace_stencil_divided.end(), A.begin(), dum * _1);
+	Float lambda = diffusion * dt * 0.5;
+	//dum = -0.5 * diffusion * dt;
+	thrust::transform(stencil.begin(), stencil.end(), A.begin(), -lambda*_1);
 	A[3 * 3 * 1 + 3 * 1 + 1] = A[3 * 3 * 1 + 3 * 1 + 1] + 1 + 0.5 * dt * decay; //A(1, 1, 1) = A(1, 1, 1) + 1 + 0.5 * dt * decay;
-
-
+	//printf("The decay is %g\n", (Float)decay);
+	//printf("Values in A are: ");
+	//for (int k = 0; k < A.size(); ++k){
+	//		printf( "%g\n", (Float)A[k]);
+	//}
 	//Now create b matrix 
-	//b = (1 - dx * decay / 2) * grid + dx * diffusion / 2 * laplacian_grid;
+	//b = (1 - dt * decay / 2) * grid + dt * diffusion / 2 * laplacian_grid;
 	// b = dum_array1 + dum_array2
-	dum = 1 - dx * decay / 2;
+	Float dum = 1 - dt * decay / 2;
 	thrust::transform(grid.begin(), grid.end(), dum_array1.begin(), dum * _1);
 
-	dum = dx * diffusion / 2;
-	thrust::transform(laplacian_grid.begin(), laplacian_grid.end(), dum_array2.begin(), dum * _1);
+	//dum = dt * diffusion / 2;
+	thrust::transform(laplacian_grid.begin(), laplacian_grid.end(), dum_array2.begin(), lambda * _1);
 
 	//Add them together to get b
 	thrust::device_vector<Float> b(grid_size * grid_size * grid_size);
@@ -681,7 +689,9 @@ thrust::device_vector <Float> paracrine::update_density(thrust::device_vector<Fl
 	thrust::device_vector<Float> r(grid_size * grid_size * grid_size);
 	A_grid_next_step = convolve(grid_next_step, A);
 	thrust::transform(b.begin(), b.end(), A_grid_next_step.begin(), r.begin(), thrust::minus <Float>());
-
+	//printf("Values in r at a plane are: ");
+	//for (int k = 0; k < grid_size; ++k)
+	//	printf( "%g\n", (Float)r[grid_size * grid_size * grid_size / 2 + grid_size * k + grid_size / 2]);
 	//Set p = r 
 	thrust::device_vector<Float> p = r;
 
@@ -704,10 +714,10 @@ thrust::device_vector <Float> paracrine::update_density(thrust::device_vector<Fl
 		Ap = convolve(p, A);
 
 		//Determine p*Ap
-		thrust::transform(Ap.begin(), Ap.end(), p.begin(), dum_array1.begin(), thrust::multiplies <Float>());
+		//thrust::transform(Ap.begin(), Ap.end(), p.begin(), dum_array1.begin(), thrust::multiplies <Float>());
 		//Determine sum(pAp)
-		pAp = thrust::reduce(dum_array1.begin(), dum_array1.end());
-
+		//pAp = thrust::reduce(dum_array1.begin(), dum_array1.end());
+		pAp = inner_product(p, Ap);
 		//Determine alpha
 		alpha = r_norm / pAp;
 
@@ -716,7 +726,6 @@ thrust::device_vector <Float> paracrine::update_density(thrust::device_vector<Fl
 		thrust::transform(p.begin(), p.end(), dum_array1.begin(), alpha * _1);
 		//grid_next_step=grid_next_step and alpha*p
 		thrust::transform(grid_next_step.begin(), grid_next_step.end(), dum_array1.begin(), grid_next_step.begin(), thrust::plus <Float>());
-
 
 		//Now r = r - alpha * Ap
 		//First calculate alpha*Ap
@@ -729,7 +738,7 @@ thrust::device_vector <Float> paracrine::update_density(thrust::device_vector<Fl
 
 		//Check to see if r_norm < error
 		if (r_norm_new < error_tolerance) {
-//			std::cout << "Iteration " << i << std::endl;
+			//			std::cout << "Iteration " << i <<"The residual is" << r_norm_new << std::endl;
 			return grid_next_step;
 		}
 
@@ -746,8 +755,6 @@ thrust::device_vector <Float> paracrine::update_density(thrust::device_vector<Fl
 	grid = grid_next_step;
 	std::cout << "Used maximum iterations for conjugate gradient" << std::endl;
 	return grid;
-
-
 
 
 
@@ -829,7 +836,7 @@ thrust::device_vector<Float> paracrine::CG(thrust::device_vector<Float> A, thrus
 
 		//Check to see if r_norm < error
 		if (r_norm_new < error_tolerance) {
-//			std::cout << "Iteration " << i << std::endl;
+			//			std::cout << "Iteration " << i << std::endl;
 			return grid_next_step;
 		}
 
