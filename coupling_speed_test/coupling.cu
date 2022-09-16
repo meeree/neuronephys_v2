@@ -51,7 +51,7 @@ int AtomicCoupling::PerformCoupling()
 
 	// Determine which neurons are firing by checking against threshold and that they weren't previously firing.
 	thrust::transform(thrust::device_ptr<Float const>(neuron_outputs), thrust::device_ptr<Float const>(neuron_outputs + N), 
-		              is_firing.begin(), CheckFiringOperator(0.1));
+		              is_firing.begin(), CheckFiringOperator(threshold));
 
 	// See second example here: https://thrust.github.io/doc/classthrust_1_1counting__iterator.html
 	auto const end_it = thrust::copy_if(thrust::make_counting_iterator(0),
