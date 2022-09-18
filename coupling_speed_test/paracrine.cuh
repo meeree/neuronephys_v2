@@ -39,15 +39,15 @@ public:
 	thrust::device_vector<Float> B;
 	thrust::device_vector<Float> b;
 	thrust::device_vector<Float> laplacian_grid;
-
 	const Float diffusion;
 	const Float decay;
+	const Float growth_rate;
 
 
 	//Paracrine Constructor
-	paracrine(const int grid_size, const int nnz, const Float dx, const Float dt, const Float diffusion, const Float decay, const thrust::host_vector<Float> neuron_x, const thrust::host_vector<Float> neuron_y, \
+	paracrine(const int grid_size, const int nnz, const Float dx, const Float dt, const Float diffusion, const Float decay, const Float growth_rate, const thrust::host_vector<Float> neuron_x, const thrust::host_vector<Float> neuron_y, \
 		const thrust::host_vector<Float> neuron_z, const thrust::host_vector<Float> grid_IC, const thrust::host_vector<Float> neuron_IC)\
-		: grid_size(grid_size), nnz(nnz), dx(dx), dt(dt), diffusion(diffusion), decay(decay), neuron_x(neuron_x), neuron_y(neuron_y), neuron_z(neuron_z), grid_IC(grid_IC), neuron_IC(neuron_IC)
+		: grid_size(grid_size), nnz(nnz), dx(dx), dt(dt), diffusion(diffusion), decay(decay), growth_rate(growth_rate), neuron_x(neuron_x), neuron_y(neuron_y), neuron_z(neuron_z), grid_IC(grid_IC), neuron_IC(neuron_IC)
 	{//gather parameters by this constructor
 		std::cout << "Paracrine Parameters Saved" << std::endl;
 	};

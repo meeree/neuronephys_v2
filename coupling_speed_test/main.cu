@@ -781,9 +781,28 @@ void FunctionalData(int const N=1e6, std::string stim_region="VIS")
     firing_fout.close();
 }
 
+void update_on_ephys_timescale(MouseCortex const& mouse_cortex, thrust::device_vector<Float>& neuron_growth, Float growth_rate)
+{
+    Float const* neuron_output = mouse_cortex.ephys->SimVarsCpu()[HH::Params::EOUTPUT];
+    auto dev_ptr = thrust::device_ptr<Float const>(neuron_output);
+    Float ephys_dt = mouse_cortex.ephys->Dt();
+    // Accumulate density of neurotransmitter on ephys timescale.
+    thrust::transform(neuron_growth.begin(), neuron_growth.end(), dev_ptr,
+        neuron_growth.begin(), thrust::placeholders::_1 + thrust::placeholders::_2 * ephys_dt * growth_rate);
+
+}
+
+
+void update_on_paracrine_timescale(thrust::device_vector<Float>& neuron_growth, thrust::device_vector<Float>& grid, paracrine& par)
+{
+    grid = par.spread(grid, neuron_growth); //spread the growth
+    thrust::fill(neuron_growth.begin(), neuron_growth.end(), 0.0); //now the growth is zero
+    grid = par.update_diffusion(grid); 
+    par.interpolate(grid); // 
+}
 
 //Below are Paracrine Main Test Functions
-thrust::device_vector<Float> paracrine_test() {
+thrust::device_vector<Float> paracrine_test(int N) {
     //Start with concentration at neuron location
     //spread to grid 
     //step the diffusion equation
@@ -794,215 +813,107 @@ thrust::device_vector<Float> paracrine_test() {
     srand((unsigned)time(0));
     
     //Get all variables set so we can create paracrine object
-    int grid_size = 32; // total size of grid = (grid_size x grid_size x grid_size) 
-    int nnz = 10000; //number of neurons
-    Float dx = (Float)2/(Float)grid_size; //dx from Ningyuan's code
-    Float dt = 0.04; //seconds     (so 40 milliseconds)
-    Float diffusion = 2e-5;  //diffusion constant taken from Ningyuan's code
-    Float decay = 3e-4; //difusion constant taken from Ningyuan's code
-
+    int grid_size = 64; // total size of grid = (grid_size x grid_size x grid_size) 
+    int nnz = N; //number of neurons
+    Float dx = (Float)1/(Float)(grid_size-1); //Not using periodic BC
+    Float dt = 0.001; //seconds     (so 40 milliseconds)
+    Float diffusion = 0.005;  //diffusion constant taken from Ningyuan's code
+    Float decay = 0; //difusion constant taken from Ningyuan's code
+    Float growth_rate = 1;
     //Create empty thrust vectors
-    thrust::host_vector <Float> neuron_locations_x(nnz); //x coordinate locations of neurons
-    thrust::host_vector <Float> neuron_locations_y(nnz); //y coordinate locations of neurons
-    thrust::host_vector <Float> neuron_locations_z(nnz); //z coordinate locations of neurons
+    thrust::device_vector <Float> neuron_locations_x(nnz); //x coordinate locations of neurons
+    thrust::device_vector <Float> neuron_locations_y(nnz); //y coordinate locations of neurons
+    thrust::device_vector <Float> neuron_locations_z(nnz); //z coordinate locations of neurons
     thrust::device_vector <Float> neuron_concentrations(nnz); //concentrations at neuron locations
-    thrust::device_vector <Float> grid(grid_size * grid_size * grid_size); //concentrations at grid point locations
-    for (int i = 0; i < grid_size * grid_size * grid_size; i++) {
-        grid[i] = ((Float)rand() / (Float)RAND_MAX) * 2;
-    }
+    thrust::device_vector <Float> grid(grid_size * grid_size * grid_size,0.0); //concentrations at grid point locations
+    grid[grid_size * grid_size * grid_size / 2 + grid_size * grid_size / 2 + grid_size / 2] = 1/(dx*dx*dx);
 
+   // for (int i = 0; i < grid_size * grid_size * grid_size; i++) {
+   //     grid[i] = ((Float)rand() / (Float)RAND_MAX) * 2;
+   // }
 
-    //Neuron Initialization
-    //Note: The location of gridpoints and neurons is on a scale from 0 to 31
-    //Neuron at location (0.5, 0.5, 0.5) is at PHYSICAL location (0.5 * dx, 0.5 * dx, 0.5 * dx) 
-    //where dx is the distance between gridpoints
-    //For this code, it simplifies calculations and programming to have locations in the code be from 0 to 31)
-    for (int i = 0; i < nnz; i++) {
-        //Create random neuron locations
-        neuron_locations_x[i] = ((Float)rand() / (Float)RAND_MAX) * 31;
-        neuron_locations_y[i] = ((Float)rand() / (Float)RAND_MAX) * 31;
-        neuron_locations_z[i] = ((Float)rand() / (Float)RAND_MAX) * 31;
+    MouseCortex mouse_cortex(N);
+    auto const& positions = mouse_cortex.morphology->GetPositions();
+    int render_N = N;
+    std::vector<int> electrode_inds(render_N);
+    int const render_stride = N / render_N;
+    int electrodeK = N;
+    // Generate electrodes by sampling render_N neurons uniformly from the N and creating electrodes at every such neuron.
+    for (int i = 0; i < render_N; ++i)
+        electrode_inds[i] = render_stride * i;
+    thrust::host_vector<int> h_regions, h_regions_inds;
+    mouse_cortex.morphology->GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, electrodeK);
 
-        //Create some random concentrations at neuron locations
-        neuron_concentrations[i] = ((Float)rand() / (Float)RAND_MAX); //values between 0 and 1
+    ElectrodeNet electrode_net(h_regions, h_regions_inds);
+    Float const* avg_V_handle = electrode_net.ElectrodeOutputHandle();
+    Float const* V_ptr = mouse_cortex.ephys->SimVarsCpu()[HH::Params::V];
+    
+    float* concentration_handle;
+    Graphics::setup(concentration_handle, mouse_cortex.morphology->GetPositionsRaw(), N, render_N);
+    // Hodgkin-Huxley normalized coloring.
+    //Graphics::set_color_params(5, 0, 0.0);
+    //Copy neuron locations to paracrine. Need to do some scaling and translating.
+
+    for (int i = 0; i < N; i++) {
+        glm::vec3 pos = positions[i];
+
+        // Transform from [-1, 1] to [0, grid_size]
+        // This is done by the sequence of transforms: [-1, 1] -> [0, 2] -> [0, 1] -> [0, grid_size].
+        // Note we also need to transpose coordinates here because of different (x,y,z) convention in morphology vs paracrine.
+        pos = (pos + 1.0f) * 0.5f; //* float(grid_size);
+        neuron_locations_x[i] = pos.x;
+        neuron_locations_y[i] = pos.y;
+        neuron_locations_z[i] = pos.z;
     }
 
     //Create paracrine object
     paracrine p_obj(grid_size, nnz, dx, dt,
-     diffusion, decay, neuron_locations_x,
-     neuron_locations_y, neuron_locations_z, grid, neuron_concentrations);
+     diffusion, decay, growth_rate, 
+     neuron_locations_x, neuron_locations_y, neuron_locations_z, grid, neuron_concentrations);
 
     //Initialize object
     p_obj.initialize();
 
     //Open Document
     std::ofstream output;
-    output.open("paracrinetest.txt");
-
+    output.open("par_test.txt");
+    bool pause = false;
     //How many seconds would you like the simulation to run for?
-    Float time = 100;
+    Float time =20;
     //Get number of diffusion steps
     int total_steps = ceil(time / dt);
+    thrust::device_vector<Float> neuron_growth(nnz);
+    thrust::fill(neuron_growth.begin(),neuron_growth.end(), 0.1/(dx*dx*dx));
 
     for (int timestep = 0; timestep < total_steps; timestep++) {
-        if (timestep % (total_steps / 100) == 0)
-            std::cout << 100 * (Float(timestep) / Float(total_steps)) << "%" << std::endl;
+        if (timestep % 100 == 0){
+            std::cout << 10 * (Float(timestep) / Float(total_steps)) << "%" << std::endl;
+            Float c_max = 0;
+            for (int i = 0; i < nnz; i++) {
 
-        //Spread the neurotransmitter concentration created at neuron locations to the grid
-        //For now, there is a constant amount of neurotransmitter created every timestep
-        //See spread function for more details
-        grid = p_obj.spread(0.001, grid, neuron_concentrations);
+                if (neuron_concentrations[i] > c_max)
+                    c_max = neuron_concentrations[i];
+                concentration_handle[i]=neuron_concentrations[i];
+            }
+            
+            output << std::endl;
+        
+            Graphics::set_color_params(c_max, 0, 0.0);
+            grid = p_obj.spread(grid, neuron_growth);
+            grid = p_obj.update_diffusion(grid);
+            neuron_concentrations = p_obj.interpolate(grid);
 
-        //Step the diffusion equation forward
-        //This includes Crank-Nicolson and conjugate gradient
-        grid = p_obj.update_density(grid);
-
+            Graphics::render(concentration_handle, nullptr, 0, 0 , pause);
+        }
         //Send data to output to analyze
-        output << timestep * dt << "," << grid[grid_size * grid_size * 16 + grid_size * 16 + 16] << std::endl;
-
         //Interpolate the concentrations at the gridpoints back to the neuron location
         //So that we can determine the new amount of spreading in the next iteration
-        neuron_concentrations = p_obj.interpolate(grid);
-
+        
     }
     output.close();
 }
 
 
-//Create test to spread from neuron to grid, then interpolate from grid to neuron
-//we should return back to the same values
-void spread_interp_test() {
-    std::cout << "Testing spreading, then interpolation" << std::endl;
-
-  //Get all variables set so we can create paracrine object
-  int grid_size = 32;
-  int nnz = 1024;
-  //Float dx = 1.0;
-  Float dx = (Float)2/(Float)grid_size; //dx from Ningyuan's code
-  Float dt = 1.0;
-  Float diffusion = 1.0;
-  Float decay = 1.0;
-  thrust::host_vector <Float> neuron_locations_x(nnz);
-  thrust::host_vector <Float> neuron_locations_y(nnz);
-  thrust::host_vector <Float> neuron_locations_z(nnz);
-  thrust::device_vector <Float> neuron_IC(nnz);
-  thrust::device_vector <Float> grid_IC(grid_size * grid_size * grid_size);
-
-  //initialize thrust vector
-  //Set neuron locations very simple first (assume 0.5 in x,y,z directions)
-  //Locations: between 0 and grid_size (e.g. 0 and <32), x=0.5 would be halfway between the first and second gridpoint
-  //the actual location of (0.5,0.5,0.5) is (0.5*dx, 0.5*dx, 0.5*dx) but for ease in computation, we leave as is and 
-  //account for the real distances in the initialization step (paracrine.cu initialization function)
-  for (int i = 0; i < nnz; i++) { //get every neuron away from beginning cube
-    neuron_locations_x[i] = 20;
-    neuron_locations_y[i] = 20;
-    neuron_locations_z[i] = 20;
-  }
-
-  //set 3 test neuron locations to beginning cube
-  //First Neuron
-  neuron_locations_x[0] = 0.1;
-  neuron_locations_y[0] = 0.1;
-  neuron_locations_z[0] = 0.1;
-
-  //Second Neuron
-  neuron_locations_x[1] = 0.5;
-  neuron_locations_y[1] = 0.5;
-  neuron_locations_z[1] = 0.5;
-
-  //Third Neuron
-  neuron_locations_x[2] = 0.5;
-  neuron_locations_y[2] = 0.5;
-  neuron_locations_z[2] = 0.5;
-
-  //declare dummy neuron_concentrations vector (NOT USED RIGHT NOW)
-  // this neuron_concentrations vector is added so that when we want to have 
-  // the concentration at the neuron locations dictate how much neurotransmitter is released, we can easily do it
-  // for now, we are just releasing generation_constant amount of neurotransmitter (a constant)
-  thrust::device_vector <Float> neuron_concentrations(nnz);
-
-  //Set initial conditions on grid and make a dummy vector for neuron_concentrations
-  for (int i = 0; i < grid_size * grid_size * grid_size; i++) {
-    grid_IC[i] = 0;
-  }
-  for (int i = 0; i < nnz; i++) {
-      //neuron_concentrations[i] = 0.0;
-//      neuron_concentrations[i] = ((Float)rand() / (Float)RAND_MAX) * 2;
-      neuron_concentrations[i] =1.0;
-
-  }
-//  neuron_concentrations[1] = 100;
-
-  grid_IC[grid_size * grid_size * 0 + grid_size * 0 + 0] = 0; //grid[0,0,0]
-  grid_IC[grid_size * grid_size * 1 + grid_size * 0 + 0] = 0; //grid[1,0,0]
-  grid_IC[grid_size * grid_size * 0 + grid_size * 1 + 0] = 0; //grid[0,1,0]
-  grid_IC[grid_size * grid_size * 1 + grid_size * 1 + 0] = 0; //grid[1,1,0]
-  grid_IC[grid_size * grid_size * 0 + grid_size * 0 + 1] = 0; //grid[0,0,1]
-  grid_IC[grid_size * grid_size * 1 + grid_size * 0 + 1] = 0; //grid[1,0,1]
-  grid_IC[grid_size * grid_size * 0 + grid_size * 1 + 1] = 0; //grid[0,1,1]
-  grid_IC[grid_size * grid_size * 1 + grid_size * 1 + 1] = 0; //grid[1,1,1]
-
-  //initialize object
-  paracrine test(grid_size, nnz, dx, dt,
-    diffusion, decay, neuron_locations_x,
-    neuron_locations_y, neuron_locations_z, grid_IC, neuron_IC);
-  test.initialize();
-
-  //Generation constant is how much neurotransmitter is being spread from each neuron
-  //It's incorporated as a large vector to have different neurotransmitter creation values
-  //per neuron, see paracrine.cu spread function (particularly where P is created)
-  Float generation_constant = 0;
-
-  thrust::device_vector<Float> testvec(grid_size * grid_size * grid_size,0);
-
-  std::cout << "Before Spreading:" << std::endl;
-  for (int i = 0; i < 2; i++) {
-    for (int j = 0; j < 2; j++) {
-      for (int k = 0; k < 2; k++) {
-        std::cout << "grid[" << i << "," << j << "," << k << "]=" 
-		<< grid_IC[grid_size * grid_size * i + grid_size * j + k] << std::endl;
-      }
-    }
-  }
-  for (int n = 0; n < 4; n++) {
-      //The spreading function takes the amount generated from the neuron location and adds it to the already
-      //existing concentration at the gridpoint location
-      //so this test starts with some initial neuron concentration
-      //spreads it to the grid
-      testvec = test.spread(generation_constant, grid_IC, neuron_concentrations);
-
-      thrust::transform(testvec.begin(), testvec.end(), grid_IC.begin(), grid_IC.begin(), thrust::minus <Float> ());
-//      for (int f = 0; f < grid_size * grid_size * grid_size; f++)
- //         grid_IC[f] = testvec[f];
-      //std::cout << "After Spreading " << generation_constant << " from each of the three neurons" << std::endl;
-      std::cout << "After Spreading the neuron concentration from each of the three neurons" << std::endl;
-      for (int i = 0; i < 3; i++) {
-          std::cout << "Neuron[" << i << "] at location [" << neuron_locations_x[i] << "," << neuron_locations_y[i] <<
-              "," << neuron_locations_z[i] << "] ="<<neuron_concentrations[i]<< std::endl;
-      }
-
-      Float sum = 0;
-      for (int i = 0; i < 2; i++) {
-          for (int j = 0; j < 2; j++) {
-              for (int k = 0; k < 2; k++) {
-                  std::cout << "grid[" << i << "," << j << "," << k << "]="
-                      << grid_IC[grid_size * grid_size * i + grid_size * j + k] << std::endl;
-                  sum = sum + grid_IC[grid_size * grid_size * i + grid_size * j + k];
-              }
-          }
-      }
-      std::cout << "SUM:" << sum << std::endl;
-
-      neuron_concentrations = test.interpolate(grid_IC);
-
-      sum = 0;
-      for (int i = 0; i < 3; i++) {
-          std::cout << "Neuron " << i << " concentration at location [" << neuron_locations_x[i] <<
-              "," << neuron_locations_y[i] << "," << neuron_locations_z[i] << "]=" << neuron_concentrations[i] << std::endl;
-          sum = sum + neuron_concentrations[i];
-      }
-  }
-}
 
 //Diffusion Visualization
 void update_density_test() {
@@ -1040,7 +951,7 @@ void update_density_test() {
 
   //initialize object
   paracrine Diffusiontest(grid_size, nnz, dx, dt,
-    diffusion, decay, neuron_locations_x,
+    diffusion, decay, 1.0,neuron_locations_x,
     neuron_locations_y, neuron_locations_z, grid, neuron_IC);
   Diffusiontest.initialize();
 
@@ -1063,7 +974,7 @@ void update_density_test() {
     thrust::host_vector<float> slice(grid_size * grid_size);
     for (int timestep = 0; timestep < total_steps; timestep++) 
     {
-        grid = Diffusiontest.update_density(grid);
+        grid = Diffusiontest.update_diffusion(grid);
         output << timestep * dt << "," << grid[grid_size * grid_size * 16 + grid_size * 16 + 16] << std::endl;
         if (timestep % (total_steps / 100) == 0)
             std::cout << 100 * (Float(timestep) / Float(total_steps)) << "%" << std::endl;
@@ -1077,76 +988,6 @@ void update_density_test() {
     output.close();
 }
 
-
-//Conjugate Gradient Test
-void CGtest() {
-  //REMEMBER TO ENABLE THE FIRST GUESS KERNEL IN THE CG FUNCTION WHEN WE ARE DOING LARGE COMPUTATION
-  //Get all variables set so we can create paracrine object
-  int grid_size = 4;
-  int nnz = 1;
-  Float dx = (Float)2/(Float)grid_size; //dx from Ningyuan's code
-  Float dt = 1.0;
-  Float diffusion = 1.0;
-  Float decay = 1.0;
-  thrust::host_vector <Float> neuron_locations_x(nnz);
-  thrust::host_vector <Float> neuron_locations_y(nnz);
-  thrust::host_vector <Float> neuron_locations_z(nnz);
-  thrust::host_vector <Float> neuron_IC(nnz);
-  thrust::host_vector <Float> grid_IC(grid_size * grid_size * grid_size);
-
-  //initialize thrust vector
-  //Set neuron locations very simple first (assume 0.5 in x,y,z directions)
-  for (int i = 0; i < nnz; i++) {
-    neuron_locations_x[i] = 0.5;
-    neuron_locations_y[i] = 0.5;
-    neuron_locations_z[i] = 0.5;
-  }
-
-  //Set initial conditions on grid
-  for (int i = 0; i < grid_size * grid_size * grid_size; i++)
-    grid_IC[i] = 1.0;
-
-  //initialize object
-  paracrine CGtest(grid_size, nnz, dx, dt,
-    diffusion, decay, neuron_locations_x,
-    neuron_locations_y, neuron_locations_z, grid_IC, neuron_IC);
-
-  //CG solves Ax=b
-  //thrust::device_vector <Float> A(27, 1.0);
-  thrust::device_vector <Float> A(27,0.0);
-  //If main diagonal
-  A[3 * 3 * 0 + 3 * 0 + 0] = 3.0; //A[0,0,0]=1
-  A[3 * 3 * 1 + 3 * 1 + 1] = 3.0; //A[1,1,1]=2
-  A[3 * 3 * 2 + 3 * 2 + 2] = 3.0; //A[2,2,2]=3
-  //If a vertex, set equal to 1
-  A[3 * 3 * 0 + 3 * 2 + 2] = 1.0; //A[0,2,2]=1
-  A[3 * 3 * 2 + 3 * 0 + 2] = 1.0; //A[2,0,2]=1
-  A[3 * 3 * 2 + 3 * 2 + 0] = 1.0; //A[2,2,0]=1
-  A[3 * 3 * 2 + 3 * 0 + 0] = 1.0; //A[2,0,0]=1
-  A[3 * 3 * 0 + 3 * 0 + 2] = 1.0; //A[0,0,2]=1
-  A[3 * 3 * 0 + 3 * 2 + 0] = 1.0; //A[0,2,0]=1
-  
-  //thrust::device_vector <Float> b(grid_size * grid_size * grid_size, 10);
-  thrust::device_vector <Float> b(grid_size * grid_size * grid_size);
-  for (int i = 0; i < grid_size * grid_size * grid_size; i++) {
-      b[i] = i;
-  }
-
-  //Now the answer to Ax=b should be x such that convolve(x,A)=b;
-  thrust::device_vector <Float> x(grid_size * grid_size * grid_size);
-
-  thrust::device_vector <Float> laplacian_grid = CGtest.convolve(grid_IC, A);
-
-  x = CGtest.CG(A, b);
-
-  //Now we need to test convolve(x,A)=b;
-  thrust::device_vector <Float> b_test(grid_size * grid_size * grid_size);
-  b_test = CGtest.convolve(x, A);
-  for (int i = 0; i < grid_size * grid_size * grid_size; i++) {
-    std::cout << "real b=" << b[i] << "   b_test=" << b_test[i] << std::endl;
-  }
-
-}
 
 //Mask Multiplication Test
 void laplaciantest() {
@@ -1195,7 +1036,7 @@ void laplaciantest() {
 
   //initialize object
   paracrine MaskMulttest(grid_size, nnz, dx, dt,
-    diffusion, decay, neuron_locations_x,
+    diffusion, decay,1.0, neuron_locations_x,
     neuron_locations_y, neuron_locations_z, grid_IC, neuron_IC);
   MaskMulttest.initialize();
 
@@ -1205,26 +1046,6 @@ void laplaciantest() {
   Float dum = 1 / (dx * dx * 30.0);
   thrust::transform(laplace_stencil_divided.begin(), laplace_stencil_divided.end(), laplace_stencil_divided.begin(), dum * _1);
   result = MaskMulttest.convolve(grid_IC, laplace_stencil_divided);
-
-  //For this test, given A (3x3x3) and x (grid_size x grid_size x grid_size), we should be able to compute Ax=b
-  //This is done by sliding A across x and calculating the sum of the element wise multiplications
-//  thrust::device_vector <Float> A(27, 1.0);
-//  thrust::device_vector <Float> x(grid_size * grid_size * grid_size, 1.0);
-//  thrust::device_vector <Float> b(grid_size * grid_size * grid_size);
-//  b = MaskMulttest.convolve(x, A);
-
-  //The following comments were meant for the test case of a grid of 1's
-  //A is a 3x3x3 mask of 1's
-  //x is grid_size x grid_size x grid_size of 1's
-  //We should see when the mask isn't touching the boundary of x (i.e. when i,j, or k are not 0 or grid_size)
-  //we expect the value of b to be 27.
-  //If there is 1 side of the mask touching the boundary (i.e. when i,j, or k are equal to 0 or grid_size)
-  //we expect the value of b to be 18.
-  //If there are 2 sides of the mask touching the boundary (i.e. when i and j, or j and k, or k and i, are 0 or grid_size)
-  //we expect the value of b to be 12.
-  //If there are 3 sides of the mask touching the boundary
-  //we expect the value of b to be 8.
-  //-------------------------------------------------------------------
 
   std::cout << "Testing laplacian of f(x,y,z)=x^2+y^2+z^2+xyz, the result should be laplacian_f = 6 at values not touching the boundary"
       << std::endl;
@@ -1240,213 +1061,95 @@ void laplaciantest() {
 }
 
 //Interpolation Test
-void Interpolationtest() {
+void Interpolationtest(int N) {
   //Get all variables set so we can create paracrine object
-  int grid_size = 32;
-  int nnz = 1024;
-  Float dx = (Float)2/(Float)grid_size; //dx from Ningyuan's code
+  int grid_size = 5;
+  int nnz = N;
+  Float dx = (Float)1/(Float)(grid_size-1); //we are not using periodic BC so it's grid_size-1
   Float dt = 1.0;
   Float diffusion = 1.0;
   Float decay = 1.0;
-  thrust::host_vector <Float> neuron_locations_x(nnz);
-  thrust::host_vector <Float> neuron_locations_y(nnz);
-  thrust::host_vector <Float> neuron_locations_z(nnz);
+  thrust::device_vector <Float> neuron_locations_x(nnz);
+  thrust::device_vector <Float> neuron_locations_y(nnz);
+  thrust::device_vector <Float> neuron_locations_z(nnz);
   thrust::device_vector <Float> neuron_IC(nnz);
-  thrust::device_vector <Float> grid_IC(grid_size * grid_size * grid_size);
+  thrust::device_vector <Float> grid(grid_size * grid_size * grid_size,0);
+  
+  MouseCortex mouse_cortex(N);
+  auto const& positions = mouse_cortex.morphology->GetPositions();
 
-  //initialize thrust vector
-  //Set neuron locations very simple first (assume 0.5 in x,y,z directions)
-  for (int i = 0; i < nnz; i++) {
-    neuron_locations_x[i] = 30;
-    neuron_locations_y[i] = 30;
-    neuron_locations_z[i] = 30;
-  }
+     //Copy neuron locations to paracrine. Need to do some scaling and translating.
+    
+ for (int i = 0; i < N; i++) {
+    glm::vec3 pos = positions[i];
 
-  //set neuron locations
-  //First Neuron
-  neuron_locations_x[0] = 0.1;
-  neuron_locations_y[0] = 0.1;
-  neuron_locations_z[0] = 0.1;
-
-  //Second Neuron
-  neuron_locations_x[1] = 0.5;
-  neuron_locations_y[1] = 0.5;
-  neuron_locations_z[1] = 0.5;
-
-  //Third Neuron
-  neuron_locations_x[2] = 0.5;
-  neuron_locations_y[2] = 0.5;
-  neuron_locations_z[2] = 0.5;
-
-  //Set initial conditions on grid
-  for (int i = 0; i < grid_size * grid_size * grid_size; i++)
-    grid_IC[i] = 10;
-
-  grid_IC[grid_size * grid_size * 0 + grid_size * 0 + 0] = 0.0; //grid[0,0,0]
-  grid_IC[grid_size * grid_size * 1 + grid_size * 0 + 0] = 0.0 ; //grid[1,0,0]
-  grid_IC[grid_size * grid_size * 0 + grid_size * 1 + 0] = 0.0; //grid[0,1,0]
-  grid_IC[grid_size * grid_size * 1 + grid_size * 1 + 0] = 0.0; //grid[1,1,0]
-  grid_IC[grid_size * grid_size * 0 + grid_size * 0 + 1] = 0.0; //grid[0,0,1]
-  grid_IC[grid_size * grid_size * 1 + grid_size * 0 + 1] = 0.2; //grid[1,0,1]
-  grid_IC[grid_size * grid_size * 0 + grid_size * 1 + 1] = 0.0; //grid[0,1,1]
-  grid_IC[grid_size * grid_size * 1 + grid_size * 1 + 1] = 1.0; //grid[1,1,1]
-
+    // Transform from [-1, 1] to [0, grid_size]
+    // This is done by the sequence of transforms: [-1, 1] -> [0, 2] -> [0, 1] -> [0, grid_size].
+    // Note we also need to transpose coordinates here because of different (x,y,z) convention in morphology vs paracrine.
+    pos = (pos + 1.0f) * 0.5f; //* float(grid_size);
+    neuron_locations_x[i] = pos.x;
+    neuron_locations_y[i] = pos.y;
+    neuron_locations_z[i] = pos.z;
+    std::cout << pos.x << "," << pos.y << pos.z <<std::endl;
+ }
+ /*
+ for (int i = 0; i < grid_size; i++) {
+     Float xx = dx * i;
+     for (int j = 0; j < grid_size; j++) {
+         Float yy = dx * j;
+         for (int k = 0; k < grid_size; k++) {
+             Float zz = dx * k;
+             grid[grid_size * grid_size * i + grid_size * j + k] = xx * xx + yy * yy + zz * zz;
+            
+         }
+     }
+ }
+ */
+ 
   //initialize object
   paracrine Interpolationtest(grid_size, nnz, dx, dt,
-    diffusion, decay, neuron_locations_x,
-    neuron_locations_y, neuron_locations_z, grid_IC, neuron_IC);
+    diffusion, decay, 1.0, neuron_locations_x,
+    neuron_locations_y, neuron_locations_z, grid, neuron_IC);
   Interpolationtest.initialize();
-
+  thrust::device_vector <Float> growth(nnz, 10.0);
   //Create Concentration at Neuron Locations vector
   thrust::device_vector <Float> neuron_concentrations(nnz);
-  neuron_concentrations = Interpolationtest.interpolate( grid_IC);
-
-  for (int i = 0; i < 3; i++) {
-    std::cout << "Neuron " << i << " concentration at location [" << neuron_locations_x[i] <<
-      "," << neuron_locations_y[i] << "," << neuron_locations_z[i] << "]=" << neuron_concentrations[i] << std::endl;
+  thrust::host_vector <Float> h_grid(nnz);
+  //neuron_concentrations = Interpolationtest.interpolate( grid);
+  grid = Interpolationtest.spread(grid, growth);
+  std::ofstream fout("spread_test.txt");
+  h_grid = grid;
+  for (int i = 0; i < grid_size*grid_size*grid_size; i++) {
+    //fout << neuron_locations_x[i] << "," << neuron_locations_y[i] << "," << neuron_locations_z[i] << "," << neuron_concentrations[i] << std::endl;
+      fout << (Float)h_grid[i] << "," ;
   }
+  fout.close();
 
-}
-
-//Spreading Test
-void Spreadtest() {
-  //Get all variables set so we can create paracrine object
-  int grid_size = 32;
-  int nnz = 1024;
-  Float dx = (Float)2/(Float)grid_size; //dx from Ningyuan's code
-  Float dt = 1.0;
-  Float diffusion = 1.0;
-  Float decay = 1.0;
-  thrust::host_vector <Float> neuron_locations_x(nnz);
-  thrust::host_vector <Float> neuron_locations_y(nnz);
-  thrust::host_vector <Float> neuron_locations_z(nnz);
-  thrust::host_vector <Float> neuron_IC(nnz);
-  thrust::host_vector <Float> grid_IC(grid_size * grid_size * grid_size);
-
-  //initialize thrust vector
-  //Set neuron locations very simple first (assume 0.5 in x,y,z directions)
-  //Locations: between 0 and grid_size (e.g. 0 and <32), x=0.5 would be halfway between the first and second gridpoint
-  //the actual location of (0.5,0.5,0.5) is (0.5*dx, 0.5*dx, 0.5*dx) but for ease in computation, we leave as is and 
-  //account for the real distances in the initialization step (paracrine.cu initialization function)
-  for (int i = 0; i < nnz; i++) { //get every neuron away from beginning cube
-    neuron_locations_x[i] = 20;
-    neuron_locations_y[i] = 20;
-    neuron_locations_z[i] = 20;
-  }
-
-  //set 3 test neuron locations to beginning cube
-  //First Neuron
-  neuron_locations_x[0] = 0.25;
-  neuron_locations_y[0] = 0.25;
-  neuron_locations_z[0] = 0.25;
-
-  //Second Neuron
-  neuron_locations_x[1] = 0.25;
-  neuron_locations_y[1] = 0.25;
-  neuron_locations_z[1] = 0.25;
-
-  //Third Neuron
-  neuron_locations_x[2] = 0.25;
-  neuron_locations_y[2] = 0.25;
-  neuron_locations_z[2] = 0.25;
-
-  //declare dummy neuron_concentrations vector (NOT USED RIGHT NOW)
-  // this neuron_concentrations vector is added so that when we want to have 
-  // the concentration at the neuron locations dictate how much neurotransmitter is released, we can easily do it
-  // for now, we are just releasing generation_constant amount of neurotransmitter (a constant)
-  thrust::device_vector <Float> neuron_concentrations(nnz);
-
-  //Set initial conditions on grid and make a dummy vector for neuron_concentrations
-  for (int i = 0; i < grid_size * grid_size * grid_size; i++) {
-    grid_IC[i] = 0;
-  }
-  for (int i = 0; i < nnz; i++)
-    neuron_concentrations[i] = 10;
-
-//  neuron_concentrations[1] = 100;
-
-  grid_IC[grid_size * grid_size * 0 + grid_size * 0 + 0] = 0; //grid[0,0,0]
-  grid_IC[grid_size * grid_size * 1 + grid_size * 0 + 0] = 0; //grid[1,0,0]
-  grid_IC[grid_size * grid_size * 0 + grid_size * 1 + 0] = 0; //grid[0,1,0]
-  grid_IC[grid_size * grid_size * 1 + grid_size * 1 + 0] = 0; //grid[1,1,0]
-  grid_IC[grid_size * grid_size * 0 + grid_size * 0 + 1] = 0; //grid[0,0,1]
-  grid_IC[grid_size * grid_size * 1 + grid_size * 0 + 1] = 0; //grid[1,0,1]
-  grid_IC[grid_size * grid_size * 0 + grid_size * 1 + 1] = 0; //grid[0,1,1]
-  grid_IC[grid_size * grid_size * 1 + grid_size * 1 + 1] = 0; //grid[1,1,1]
-
-  //initialize object
-  paracrine Spreadingtest(grid_size, nnz, dx, dt,
-    diffusion, decay, neuron_locations_x,
-    neuron_locations_y, neuron_locations_z, grid_IC, neuron_IC);
-  Spreadingtest.initialize();
-
-  //Generation constant is how much neurotransmitter is being spread from each neuron
-  //It's incorporated as a large vector to have different neurotransmitter creation values
-  //per neuron, see paracrine.cu spread function (particularly where P is created)
-  Float generation_constant = 2;
-
-  std::cout << "Before Spreading:" << std::endl;
-  for (int i = 0; i < 2; i++) {
-    for (int j = 0; j < 2; j++) {
-      for (int k = 0; k < 2; k++) {
-        std::cout << "grid[" << i << "," << j << "," << k << "]=" 
-		<< grid_IC[grid_size * grid_size * i + grid_size * j + k] << std::endl;
-      }
-    }
-  }
-  grid_IC = Spreadingtest.spread(generation_constant, grid_IC, neuron_concentrations);
-  std::cout << "After Spreading " << generation_constant << " from each of the three neurons" << std::endl;
-  for (int i = 0; i < 3; i++) {
-    std::cout << "Neuron[" << i << "] at location [" << neuron_locations_x[i] << "," << neuron_locations_y[i] <<
-      "," << neuron_locations_z[i] << "]" << std::endl;
-  }
-
-  Float sum = 0;
-  for (int i = 0; i < 2; i++) {
-    for (int j = 0; j < 2; j++) {
-      for (int k = 0; k < 2; k++) {
-        std::cout << "grid[" << i << "," << j << "," << k << "]="
-		<< grid_IC[grid_size * grid_size * i + grid_size * j + k] << std::endl;
-        sum = sum + grid_IC[grid_size * grid_size * i + grid_size * j + k];
-      }
-    }
-  }
-  std::cout << "SUM:" << sum << std::endl;
-}
-
-
-
-void update_paracrine(MouseCortex const& mouse_cortex, thrust::device_vector<Float>& grid, paracrine& par)
-{
-    Float const* T_ptr = mouse_cortex.ephys->SimVarsCpu()[HH::Params::EOUTPUT];
-    thrust::device_vector<Float> concentrations(par.nnz);
-    thrust::copy_n(thrust::device_ptr<Float const>(T_ptr), par.nnz, concentrations.begin());
-    grid = par.spread(1, grid, concentrations); // THE FIRST PARAMETER IS THE GENERATION CONSTANT
-    grid = par.update_density(grid);
-    par.interpolate(grid); // NOT USED
 }
 
 // Visualization of 3d paracrine density simulation.
 void DiffusionTest (int N) {
     //Get all variables set so we can create paracrine object
-    int grid_size = 32;
+    //diffusion dimensions in \mu m and ms
+    int grid_size = 64;
     int nnz = N;
-    Float dx = 0.0625; //dx from Ningyuan's code
-    Float dt = 0.02;
-    Float diffusion = 0.0001;
+    Float dx = 1 / (Float)(grid_size-1); 
+    Float dt =  0.0001;
+    Float diffusion = 0.05;
     Float decay = 0;
-    std::ofstream fout("test.txt");
+    std::ofstream fout("diff_test.txt");
     thrust::host_vector<Float> neuron_locations_x(nnz);
     thrust::host_vector<Float> neuron_locations_y(nnz);
     thrust::host_vector<Float> neuron_locations_z(nnz);
     thrust::host_vector<Float> neuron_IC(nnz);
-    thrust::host_vector<Float> grid(grid_size * grid_size * grid_size);
-    thrust::device_vector<Float> grid_gpu(grid_size * grid_size * grid_size);
+    thrust::host_vector<Float> grid(grid_size * grid_size * grid_size,0.0);
+    thrust::device_vector<Float> grid_gpu(grid_size * grid_size * grid_size,0.0);
 
     MouseCortex mouse_cortex(N);
-    auto const& positions = mouse_cortex.morphology->GetPositions();
+    //auto const& positions = mouse_cortex.morphology->GetPositions();
 
     // Copy neuron locations to paracrine. Need to do some scaling and translating.
+    /*
     for (int i = 0; i < N; i++) {
         glm::vec3 pos = positions[i];
 
@@ -1458,61 +1161,83 @@ void DiffusionTest (int N) {
         neuron_locations_y[i] = pos.y;
         neuron_locations_z[i] = pos.z;
     }
-
+    */
     // Set initial conditions on grid.
-    for (int i = 0; i < grid_size * grid_size * grid_size; i++) {
-        grid[i] = 0.001;
+    /*
+    for (int i = 0; i < grid_size; i++) {
+        Float xx = dx * i;
+        for (int j = 0; j < grid_size; j++) {
+            Float yy = dx * j;
+            for (int k = 0; k < grid_size; k++) {
+                Float zz = dx * k;
+                grid[grid_size * grid_size * i + grid_size * j + k] = (sin(zz*2*3.1415926 / grid_size))/(dx*dx*dx);
+                //real_values[grid_size * grid_size * i + grid_size * j + k] = 6 * xx + 4;
+
+            }
+        }
     }
-    grid[grid_size * grid_size * 16 + grid_size * 16 + 16] = 1;
+    */
+    grid[grid_size * grid_size * grid_size/2 + grid_size * grid_size / 2 + grid_size / 2] = 1/(dx*dx*dx);
+    grid_gpu = grid;
+    //for (int i = 0; i < grid_size * grid_size * grid_size; i++) {
+    //    grid[i] = 0.001;
+    //}
+    
 
     // Initialize paracrine object.
     paracrine par(grid_size, nnz, dx, dt,
-        diffusion, decay, neuron_locations_x,
+        diffusion, decay, 1.0, neuron_locations_x,
         neuron_locations_y, neuron_locations_z, grid, neuron_IC);
+    std::cout << "Werid" << std::endl;
     par.initialize();
 
     std::cout << "Paracrine initialization finished" << std::endl;
 
     // How many seconds would you like the simulation to run for?
-    Float time = 100;
+    Float time = 1;
 
     // Get number of diffusion steps.
-    int total_steps = ceil(time / dt);
-
+    int total_steps = (int) time/dt;
+    /*
     float* graphics_voltage_handle;
     Graphics::setup(graphics_voltage_handle, mouse_cortex.morphology->GetPositionsRaw(), N, N);
     Graphics::set_color_params(30, -60, 0.0);
-
+    
     // Set applied current to 6 everywhere.
+    
     thrust::host_vector<Float> appcur(N, 6);
     thrust::device_vector<Float> d_appcur(appcur);
     thrust::copy_n(d_appcur.begin(), N, thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::APPCUR]));
-
-    bool pause = false;
+    
+    
     thrust::host_vector<float> slice(grid_size * grid_size);
     std::cout <<"Initial:" << grid[grid_size * grid_size * 16 + grid_size * 16 + 16] << std::endl;
+    */
+    bool pause = false;
     for (int timestep = 0; timestep < total_steps;)
     {
         if (!pause)
         {
             // Simulate mouse cortex and update paracrine.
-            mouse_cortex.Simulate();
-            update_paracrine(mouse_cortex, grid_gpu, par);
+            //mouse_cortex.Simulate();
+            grid_gpu = par.update_diffusion(grid_gpu);
+            //update_paracrine(mouse_cortex, grid_gpu, par);
             grid = grid_gpu; // Copy device to host.
             timestep += 1;
         }
         //if (timestep % (total_steps / 100) == 0)
            // std::cout << 100 * (Float(timestep) / Float(total_steps)) << "%" << std::endl;
-        std::cout <<"Center Concentration at timestep " << std::to_string(timestep) <<": "<< grid[grid_size * grid_size * 16 + grid_size * 16 + 16] << std::endl;
+        //std::cout <<"Center Concentration at timestep " << std::to_string(timestep) <<": "<< grid[grid_size * grid_size * 16 + grid_size * 16 + 16] << std::endl;
         for (int k = 0; k < grid_size; ++k)
-            fout << grid[grid_size * grid_size * 16 + grid_size * 16 + k] << ',';
+            fout << grid[grid_size * grid_size * grid_size/2 + grid_size * grid_size / 2 + k] << ',';
         fout << std::endl;
+        std::cout << timestep << std::endl;
         // Slice density at index specified by Graphics.
-        int sidx = Graphics::get_slice_index();
-        std::cout << sidx << std::endl;
-        auto it = grid.begin();
-        thrust::copy(grid.begin() + grid_size * grid_size * sidx, grid.begin() + grid_size * grid_size * (sidx + 1), slice.begin());
-        Graphics::render(graphics_voltage_handle, slice.data(), grid_size, grid_size, pause);
+        //int sidx = Graphics::get_slice_index();
+        //std::cout << sidx << std::endl;
+        //auto it = grid.begin();
+        //thrust::copy(grid.begin() + grid_size * grid_size * sidx, grid.begin() + grid_size * grid_size * (sidx + 1), slice.begin());
+        //Graphics::render(graphics_voltage_handle, slice.data(), grid_size, grid_size, pause);
     }
     fout.close();
 }
@@ -1636,6 +1361,11 @@ void UncoupledNeurons(int N, Float n_seconds)
 
 int main(int argc, char* argv[])
 {
+
+    //Interpolationtest(1);
+    paracrine_test(1e3);
+    //DiffusionTest(1e2);
+    /*
     if(argc < 2)
     {
         std::cout << """No case specified in command line arguments.\n Usage: ./executable <case> [parameters...]"""
@@ -1679,5 +1409,6 @@ int main(int argc, char* argv[])
 	    }
         SimulateFixedCouplingThreshold(atof(argv[2]), atof(argv[3]));
     }
+    */
 }
 

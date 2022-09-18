@@ -144,10 +144,9 @@ __global__ void gpu_spread(int nnz, int grid_size, Float dx, Float* grid, Float*
 	for (int x_idx = 0; x_idx < 2; x_idx++) {
 		for (int y_idx = 0; y_idx < 2; y_idx++) {
 			for (int z_idx = 0; z_idx < 2; z_idx++) {
-				//grid[grid_size * grid_size * (x_low_idx + x_idx) + grid_size * (y_low_idx + y_idx) + (z_low_idx + z_idx)]+= growth[i] 
-				//	* abs(x_idx + del_x - 1) * abs(y_idx + del_y - 1) * abs(z_idx + del_z - 1);
-				atomicAdd(&grid[grid_size * grid_size * (x_low_idx + x_idx) + grid_size * (y_low_idx + y_idx) + (z_low_idx + z_idx)], growth[i]
-					* abs(x_idx + del_x - 1) * abs(y_idx + del_y - 1) * abs(z_idx + del_z - 1));				
+
+				atomicAdd(&grid[grid_size * grid_size * (x_low_idx + x_idx) + grid_size * (y_low_idx + y_idx) + (z_low_idx + z_idx)], 
+					growth[i] / (dx*dx*dx) * abs(x_idx + del_x - 1) * abs(y_idx + del_y - 1) * abs(z_idx + del_z - 1));	//factored by dx^3 because we are spreading the concentration		
 			}
 		}
 	}
