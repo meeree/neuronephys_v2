@@ -16,6 +16,25 @@ in VS_OUT
     flat float voltage;
 } fs_in;
 
+vec4 purple_to_yellow(float t)
+{
+    return mix(vec4(1.0, 0.0, 1.0, 1.0), vec4(1.0, 1.0, 0.0, 1.0), t);
+}
+
+vec4 rainbow(float t)
+{
+    vec4 color = mix(vec4(1.0, 0.0, 0.0, 1.0), vec4(0.0, 1.0, 0.0, 1.0), t / 0.2);
+    if(t > 0.2)
+        color = mix(vec4(0.0, 1.0, 0.0, 1.0), vec4(0.0, 0.0, 1.0, 1.0), (t - 0.2) / 0.2);
+    if(t > 0.4)
+        color = mix(vec4(0.0, 0.0, 1.0, 1.0), vec4(1.0, 0.0, 1.0, 1.0), (t - 0.4) / 0.2);
+    if(t > 0.6)
+        color = mix(vec4(1.0, 0.0, 1.0, 1.0), vec4(1.0, 1.0, 1.0, 1.0), (t - 0.6) / 0.2);
+    if(t > 0.8)
+        color = mix(vec4(1.0, 1.0, 1.0, 1.0), vec4(0.0, 1.0, 1.0, 1.0), (t - 0.8) / 0.2);
+    return color;
+}
+
 void main(void)
 {
     if(render_lines == 1)
@@ -37,16 +56,7 @@ void main(void)
     t = clamp(t, 0, 1);
     if(t < color_cutoff)
         discard;
-    color = mix(vec4(1.0, 0.0, 1.0, 1.0), vec4(1.0, 1.0, 0.0, 1.0), (t - color_cutoff) / (1 - color_cutoff));
 
     t = (t - color_cutoff) / (1 - color_cutoff);
-    color = mix(vec4(1.0, 0.0, 0.0, 1.0), vec4(0.0, 1.0, 0.0, 1.0), t / 0.2);
-    if(t > 0.2)
-        color = mix(vec4(0.0, 1.0, 0.0, 1.0), vec4(0.0, 0.0, 1.0, 1.0), (t - 0.2) / 0.2);
-    if(t > 0.4)
-        color = mix(vec4(0.0, 0.0, 1.0, 1.0), vec4(1.0, 0.0, 1.0, 1.0), (t - 0.4) / 0.2);
-    if(t > 0.6)
-        color = mix(vec4(1.0, 0.0, 1.0, 1.0), vec4(1.0, 1.0, 1.0, 1.0), (t - 0.6) / 0.2);
-    if(t > 0.8)
-        color = mix(vec4(1.0, 1.0, 1.0, 1.0), vec4(0.0, 1.0, 1.0, 1.0), (t - 0.8) / 0.2);
+    color = rainbow(t);
 }

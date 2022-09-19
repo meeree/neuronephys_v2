@@ -301,7 +301,7 @@ bool FileMorphology::Generate(int const N)
 bool FileMorphology::GenerateFromHDF(int const N)
 {
     // First read in three individual axes, then put into positions,
-    // finally scale and transform into range [-1, 1].
+    // finally scale and transform into range [0, max].
     std::vector<float> axes[4];
     const char* coord_ids[4]{ "/x", "/y", "/z", "/region_id" };
     int numpnts;
@@ -362,12 +362,7 @@ bool FileMorphology::GenerateFromHDF(int const N)
 
     // Translate so that min is zero.
     Translate(-wmin);
-
-    // Scale so that everything is in the range [0, 2].
-    Scale(glm::vec3(2.0f) / (wmax - wmin));
-
-    // Finally, translate so that min is -1 and everything is in range [-1, 1].
-    Translate(glm::vec3(-1));
+    max_extents = (wmax - wmin);
 
 	return true;
 }

@@ -87,9 +87,9 @@ __global__ void gpu_interpolate(int nnz, int grid_size, Float dx, Float* grid, F
 	{
 		//calculater the adjacent lower indices, the upper indices will just be +1
 		//even we are using kernel with larger support, calculating one index still suffices
-		int x_low_idx = floor(neuron_x[n]/dx); 
-		int y_low_idx = floor(neuron_y[n]/dx);
-		int z_low_idx = floor(neuron_z[n]/dx);
+		int x_low_idx = floorf(neuron_x[n]/dx); 
+		int y_low_idx = floorf(neuron_y[n]/dx);
+		int z_low_idx = floorf(neuron_z[n]/dx);
 		Float del_x = neuron_x[n] / dx - x_low_idx ;
 		Float del_y = neuron_y[n] / dx - y_low_idx;
 		Float del_z = neuron_z[n] / dx - z_low_idx;
@@ -101,7 +101,7 @@ __global__ void gpu_interpolate(int nnz, int grid_size, Float dx, Float* grid, F
 					//neuron_concentrations[n] += grid[grid_size * grid_size * (x_low_idx + x_idx) + grid_size * (y_low_idx + y_idx) + (z_low_idx + z_idx)]
 						//*abs(x_idx+del_x-1)* abs(y_idx + del_y - 1)* abs(z_idx + del_z - 1);
 					atomicAdd(&neuron_concentrations[n], grid[grid_size * grid_size * (x_low_idx + x_idx) + grid_size * (y_low_idx + y_idx) + (z_low_idx + z_idx)]
-						* abs(x_idx + del_x - 1) * abs(y_idx + del_y - 1) * abs(z_idx + del_z - 1));
+						* fabsf(x_idx + del_x - 1) * fabsf(y_idx + del_y - 1) * fabsf(z_idx + del_z - 1));
 				}
 			}
 		}
@@ -132,24 +132,21 @@ __global__ void gpu_spread(int nnz, int grid_size, Float dx, Float* grid, Float*
 	//spread from neuron to grid
 	
 	for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < nnz; i += gridDim.x * blockDim.x) { //neuron loop
-
-
-	int x_low_idx = floor(neuron_x[i] / dx);
-	int y_low_idx = floor(neuron_y[i] / dx);
-	int z_low_idx = floor(neuron_z[i] / dx);
-	Float del_x = neuron_x[i] / dx - x_low_idx;
-	Float del_y = neuron_y[i] / dx - y_low_idx;
-	Float del_z = neuron_z[i] / dx - z_low_idx;
-	//iterate through the three faces
-	for (int x_idx = 0; x_idx < 2; x_idx++) {
-		for (int y_idx = 0; y_idx < 2; y_idx++) {
-			for (int z_idx = 0; z_idx < 2; z_idx++) {
-
-				atomicAdd(&grid[grid_size * grid_size * (x_low_idx + x_idx) + grid_size * (y_low_idx + y_idx) + (z_low_idx + z_idx)], 
-					growth[i] / (dx*dx*dx) * abs(x_idx + del_x - 1) * abs(y_idx + del_y - 1) * abs(z_idx + del_z - 1));	//factored by dx^3 because we are spreading the concentration		
-			}
-		}
-	}
+        int x_low_idx = floorf(neuron_x[i] / dx);
+        int y_low_idx = floorf(neuron_y[i] / dx);
+        int z_low_idx = floorf(neuron_z[i] / dx);
+        Float del_x = neuron_x[i] / dx - x_low_idx;
+        Float del_y = neuron_y[i] / dx - y_low_idx;
+        Float del_z = neuron_z[i] / dx - z_low_idx;
+        //iterate through the three faces
+        for (int x_idx = 0; x_idx < 2; x_idx++) {
+            for (int y_idx = 0; y_idx < 2; y_idx++) {
+                for (int z_idx = 0; z_idx < 2; z_idx++) {
+                    atomicAdd(&grid[grid_size * grid_size * (x_low_idx + x_idx) + grid_size * (y_low_idx + y_idx) + (z_low_idx + z_idx)], 
+                        growth[i] / (dx*dx*dx) * fabsf(x_idx + del_x - 1) * fabsf(y_idx + del_y - 1) * fabsf(z_idx + del_z - 1));	//factored by dx^3 because we are spreading the concentration		
+                }
+            }
+        }
 	}
 	
 }
@@ -164,6 +161,7 @@ thrust::device_vector <Float> paracrine::spread(thrust::device_vector <Float> gr
 	int block_size = 1024; //schedule a block full of threads
 	int cuda_grid_size = nnz / block_size + 1;
 
+//	std::cout << 1 / dx << std::endl;
 	gpu_spread << < cuda_grid_size, block_size >> > (nnz, grid_size, dx, thrust::raw_pointer_cast(grid.data()), thrust::raw_pointer_cast(neuron_x.data()), thrust::raw_pointer_cast(neuron_y.data()),
 		thrust::raw_pointer_cast(neuron_z.data()), thrust::raw_pointer_cast(neuron_growth.data()));
 	gpuErrchk(cudaPeekAtLastError());

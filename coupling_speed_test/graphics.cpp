@@ -338,7 +338,7 @@ bool render (float const* voltages, void const* slice, int const slice_width, in
     // Render texture
     if(slice)
     {
-		g_attrs.slice_index %= slice_width;
+        g_attrs.slice_index = (g_attrs.slice_index + slice_width) % slice_width; // If out of range, wrap slice index around.
         glDisableVertexAttribArray(g_attrs.voltage_loc);
 
         // Disable voltage attribute and enable tex_coords attribute
@@ -355,8 +355,8 @@ bool render (float const* voltages, void const* slice, int const slice_width, in
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glUniform1i(g_attrs.sampler_loc, 0);
 
-        float z_off{ (g_attrs.slice_index / (GLfloat)slice_width) * (g_attrs.world_max.z - g_attrs.world_min.z) };
-        glm::mat4x4 tex_model_mat = g_attrs.model * glm::translate(glm::mat4x4(1.0f), glm::vec3(0.0f, 0.0f, z_off));
+        float x_off{ (g_attrs.slice_index / (GLfloat)slice_width) * (g_attrs.world_max.x - g_attrs.world_min.x) };
+        glm::mat4x4 tex_model_mat = g_attrs.model * glm::translate(glm::mat4x4(1.0f), glm::vec3(x_off, 0.0f, 0.0f));
         glUniformMatrix4fv(g_attrs.p_mat_loc, 1, GL_FALSE, glm::value_ptr(g_attrs.projection));
         glUniformMatrix4fv(g_attrs.m_mat_loc, 1, GL_FALSE, glm::value_ptr(tex_model_mat));
         glUniformMatrix4fv(g_attrs.v_mat_loc, 1, GL_FALSE, glm::value_ptr(g_attrs.view));
@@ -501,8 +501,29 @@ int setup(float*& voltages, float const* positions, size_t N, size_t render_N)
         // setup render points 
         int render_sparsity{ render_N > 0 ? (int)N / (int)render_N : 0 };
         g_attrs.points.resize(render_N);
+
+        // Get max and min position.
+        glm::vec3 min_pos(FLT_MAX), max_pos(-FLT_MAX);
         for (int i = 0; i < render_N; ++i)
-            g_attrs.points[i] = ((glm::vec3*)positions)[i * render_sparsity];
+        {
+            auto p = ((glm::vec3*)positions)[i * render_sparsity];
+            for (int dim = 0; dim < 3; ++dim)
+            {
+                if (p[dim] < min_pos[dim])
+                    min_pos[dim] = p[dim];
+                if (p[dim] > max_pos[dim])
+                    max_pos[dim] = p[dim];
+            }
+        }
+
+        for (int i = 0; i < render_N; ++i)
+        {
+            auto p = ((glm::vec3*)positions)[i * render_sparsity];
+
+            // Scale p to range [-1, 1].
+            p = (p - min_pos) / (max_pos - min_pos) * 2.0f - 1.0f;
+            g_attrs.points[i] = p;
+        }
 
         cout << "Number of points: " << N << endl;
         cout << "Number of points for rendering: " << render_N << endl;

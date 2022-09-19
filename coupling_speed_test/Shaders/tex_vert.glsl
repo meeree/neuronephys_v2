@@ -20,6 +20,6 @@ void main(void)
     case 4: vs_out.tex_coords = vec2(1.0, 1.0); break;
     default: case 5: vs_out.tex_coords = vec2(0.0, 1.0); break;
     }
-    vec3 pos = 2.0*vec3(vs_out.tex_coords, 0.0) - vec3(1.0);
+    vec3 pos = 2.0*vec3(0.0, vs_out.tex_coords.yx) - vec3(1.0);
     gl_Position = pMat*vMat*mMat*vec4(pos, 1.0);
 }

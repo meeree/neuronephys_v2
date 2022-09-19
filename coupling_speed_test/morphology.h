@@ -202,6 +202,8 @@ protected:
 	std::vector<int> unique_regions;
 	std::vector<int> regions;
 	bool read_regions;
+
+	glm::vec3 max_extents;
 public:
 	/*!
 	  \param [in] fl_name_ Name of file to read from.
@@ -225,6 +227,8 @@ public:
 		\param [out] associated_ids Vector of IDs associated with each of the regions. 
 	*/	
 	void GenRegionsFromIDs(thrust::host_vector<int>& h_regions, thrust::host_vector<int>& h_region_inds, thrust::host_vector<int>& associated_ids);
+
+	glm::vec3 GetMaxExtents() const { return max_extents; }
 
 	std::vector<int> const& GetRegions() const { return regions; }
 };
