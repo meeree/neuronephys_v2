@@ -10,9 +10,9 @@ MouseCortex::MouseCortex(int N, std::string neuron_model, bool uniform_random_wh
 	// Create and generate morphology.
 	morphology.reset(new FileMorphology(excitatory_conns_file_name, true));
     morphology->Generate(N);
-	morphology->Rotate(glm::radians(90.0f), glm::vec3(1, 0, 0));
-	morphology->Rotate(glm::radians(-90.0f), glm::vec3(0, 0, 1));
-	morphology->Rotate(glm::radians(90.0f), glm::vec3(0, 1, 0));
+//	morphology->Rotate(glm::radians(90.0f), glm::vec3(1, 0, 0));
+//	morphology->Rotate(glm::radians(-90.0f), glm::vec3(0, 0, 1));
+//	morphology->Rotate(glm::radians(90.0f), glm::vec3(0, 1, 0));
 
     // Create electrophysiology.
     if (neuron_model == "HH")
@@ -23,7 +23,8 @@ MouseCortex::MouseCortex(int N, std::string neuron_model, bool uniform_random_wh
         throw std::runtime_error("Error: invalid neuron model string: " + neuron_model);
 
     // Generate connectivity.
-    NormalNetwork loc_e_net(morphology.get(), 0.045, 0.9), loc_i_net(morphology.get(), 0.045, 0.1);
+    Float stddev = 100.0; // \mu m 
+    NormalNetwork loc_e_net(morphology.get(), stddev, 0.9), loc_i_net(morphology.get(), stddev, 0.1);
     FileNetwork realistic_e_net(excitatory_conns_file_name), realistic_i_net(inhibitory_conns_file_name);
     UniformRandomNetwork uniform_e_net(0.9 * uniform_random_Ncouple), uniform_i_net(0.1 * uniform_random_Ncouple);
     if (uniform_random_white)
