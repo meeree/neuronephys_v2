@@ -162,12 +162,12 @@ bool FileNetwork::GenerateFromHDF(int const N)
 	try
 	{
 		H5File file(fl_name, H5F_ACC_RDONLY);
-		DataSet col_idx_arr = file.openDataSet("/col_idx");
+		DataSet col_idx_arr = file.openDataSet("/indices");
 		numconns = (int)(col_idx_arr.getStorageSize() / sizeof(int));
 		col_idx.resize(numconns);
 		col_idx_arr.read(col_idx.data(), PredType::NATIVE_INT);
 
-		DataSet row_ptr_arr = file.openDataSet("/row_ptr");
+		DataSet row_ptr_arr = file.openDataSet("/offset");
 		numpnts = (int)(row_ptr_arr.getStorageSize() / sizeof(int));
 		row_ptr.resize(numpnts);
 		row_ptr_arr.read(row_ptr.data(), PredType::NATIVE_INT);

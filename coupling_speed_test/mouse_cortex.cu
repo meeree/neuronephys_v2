@@ -1,6 +1,6 @@
 #include "mouse_cortex.cuh"
 
-std::string MouseCortex::excitatory_conns_file_name = "cortex_connectivity_1m_1k_exc.h5";
+std::string MouseCortex::excitatory_conns_file_name = "isocortex_rho_1000.h5";
 std::string MouseCortex::inhibitory_conns_file_name = "cortex_connectivity_1m_1k_inh.h5";
 int MouseCortex::uniform_random_Ncouple = 1000;
 bool MouseCortex::use_weights_network = false;
@@ -24,8 +24,8 @@ MouseCortex::MouseCortex(int N, std::string neuron_model, bool uniform_random_wh
 
     // Generate connectivity.
     Float stddev = 100.0; // \mu m 
-    NormalNetwork loc_e_net(morphology.get(), stddev, 0.9), loc_i_net(morphology.get(), stddev, 0.1);
-    FileNetwork realistic_e_net(excitatory_conns_file_name), realistic_i_net(inhibitory_conns_file_name);
+    KNNNetwork loc_e_net(100, morphology.get());//, loc_i_net(morphology.get(), stddev, 0.1);
+    FileNetwork realistic_e_net(excitatory_conns_file_name); //, realistic_i_net(inhibitory_conns_file_name);
     UniformRandomNetwork uniform_e_net(0.9 * uniform_random_Ncouple), uniform_i_net(0.1 * uniform_random_Ncouple);
     if (uniform_random_white)
     {
@@ -35,13 +35,13 @@ MouseCortex::MouseCortex(int N, std::string neuron_model, bool uniform_random_wh
     else
     {
         realistic_e_net.Generate(N);
-        realistic_i_net.Generate(N);
+        //realistic_i_net.Generate(N);
     }
 
     if (use_gray)
     {
         loc_e_net.Generate(N);
-        loc_i_net.Generate(N);
+        //loc_i_net.Generate(N);
     }
 
     auto sim_vars_cpu = ephys->SimVarsCpu();
@@ -52,19 +52,19 @@ MouseCortex::MouseCortex(int N, std::string neuron_model, bool uniform_random_wh
         if (uniform_random_white)
         {
             e_list = uniform_e_net.ToAdjacencyList(sim_vars_cpu[Params::ECOUNT], use_weights_network);
-            i_list = uniform_i_net.ToAdjacencyList(sim_vars_cpu[Params::ICOUNT], use_weights_network);
+            //i_list = uniform_i_net.ToAdjacencyList(sim_vars_cpu[Params::ICOUNT], use_weights_network);
         }
         else
         {
             e_list = realistic_e_net.ToAdjacencyList(sim_vars_cpu[Params::ECOUNT], use_weights_network);
-            i_list = realistic_i_net.ToAdjacencyList(sim_vars_cpu[Params::ICOUNT], use_weights_network);
+            //i_list = realistic_i_net.ToAdjacencyList(sim_vars_cpu[Params::ICOUNT], use_weights_network);
         }
         white_ampa_connectivity.reset(
             new AtomicCoupling( N, e_list, sim_vars_cpu[Params::EIN], sim_vars_cpu[Params::EOUTPUT] )
         );
-        white_gaba_connectivity.reset(
-            new AtomicCoupling( N, i_list, sim_vars_cpu[Params::IIN], sim_vars_cpu[Params::IOUTPUT] )
-        );
+        //white_gaba_connectivity.reset(
+        //    new AtomicCoupling( N, i_list, sim_vars_cpu[Params::IIN], sim_vars_cpu[Params::IOUTPUT] )
+        //);
         
         if (use_gray)
         {
@@ -73,10 +73,10 @@ MouseCortex::MouseCortex(int N, std::string neuron_model, bool uniform_random_wh
                 new AtomicCoupling( N, loc_e_list, sim_vars_cpu[Params::LOCAL_EIN], sim_vars_cpu[Params::LOCAL_EOUTPUT] )
             );
 
-            AdjacencyList loc_i_list{ loc_i_net.ToAdjacencyList(sim_vars_cpu[Params::LOCAL_ICOUNT], use_weights_network) };
-            gray_gaba_connectivity.reset(
-                new AtomicCoupling( N, loc_i_list, sim_vars_cpu[Params::LOCAL_IIN], sim_vars_cpu[Params::LOCAL_IOUTPUT] )
-            );
+            //AdjacencyList loc_i_list{ loc_i_net.ToAdjacencyList(sim_vars_cpu[Params::LOCAL_ICOUNT], use_weights_network) };
+            //gray_gaba_connectivity.reset(
+            //    new AtomicCoupling( N, loc_i_list, sim_vars_cpu[Params::LOCAL_IIN], sim_vars_cpu[Params::LOCAL_IOUTPUT] )
+            //);
         }
     }
 }
@@ -87,10 +87,10 @@ int MouseCortex::Simulate()
     int n_firing;
     if(gray_ampa_connectivity)
         n_firing = gray_ampa_connectivity->PerformCoupling();
-    if(gray_gaba_connectivity)
-        n_firing = gray_gaba_connectivity->PerformCoupling();
-    if(white_gaba_connectivity)
-        n_firing = white_gaba_connectivity->PerformCoupling();
+   // if(gray_gaba_connectivity)
+   //     n_firing = gray_gaba_connectivity->PerformCoupling();
+   // if(white_gaba_connectivity)
+   //     n_firing = white_gaba_connectivity->PerformCoupling();
     if(white_ampa_connectivity)
         n_firing = white_ampa_connectivity->PerformCoupling();
 

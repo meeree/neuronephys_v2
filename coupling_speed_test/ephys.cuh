@@ -58,7 +58,7 @@ namespace HH
 
     constexpr static const Float appcur = 1;                                                            // Base current to apply when we only apply a constant current. 
     constexpr static const Float white_noise_mean = 0.0f;
-    constexpr static const Float white_noise_intensity = 1.0f; // Controls stddev of white noise.
+    constexpr static const Float white_noise_intensity = 2.0f; // Controls stddev of white noise.
 
     constexpr static const Float g_ampa_white = 0.1; constexpr static const Float e_ampa = 0.0; // Coupling conductance and potential for AMPA in white matter
     constexpr static const Float g_ampa_grey = 0.1; // Coupling conductance and potential for AMPA in grey matter
