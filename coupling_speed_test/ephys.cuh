@@ -56,7 +56,7 @@ namespace HH
     constexpr static const Float gl = 0.003 ; constexpr static const Float el = -70;                        // Leak conductance and potential 
     constexpr static const Float gca = 0.0; constexpr static const Float eca = 120;                      // Calcium conductance and reversal potential
 
-    constexpr static const Float appcur = 1;                                                            // Base current to apply when we only apply a constant current. 
+    constexpr static const Float appcur = 2;                                                            // Base current to apply when we only apply a constant current. 
     constexpr static const Float white_noise_mean = 0.0f;
     constexpr static const Float white_noise_intensity = 2.0f; // Controls stddev of white noise.
 
@@ -73,7 +73,8 @@ namespace HH
         // Main parameters:
         V=0, M, H, N, P, Q, R,
         // Coupling gating variables:
-        LOCAL_EY, LOCAL_IY, EY, IY,
+        LOCAL_EY, LOCAL_IY, 
+        EY, IY,
         // Local excitatory coupling parameters:
         LOCAL_EOUTPUT, LOCAL_EIN, LOCAL_ECOUNT,
         // Local inhibitory coupling parameters:
@@ -85,6 +86,8 @@ namespace HH
         // Applied current:
         APPCUR,
         G_GABA, G_AMPA_WHITE, G_AMPA_GREY,
+        //Boolean sequence to indicate Exc/Inh
+        EI_INFO,
         // Number of parameters:
         PARAM_COUNT 
     };

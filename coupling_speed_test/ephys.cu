@@ -72,6 +72,9 @@ void HHEphys::SetVariablesRandomly()
         val = gating_var_dist(gen);
     cudaMemcpy(sim_vars_cpu[Params::R], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
+    thrust::host_vector<bool> ei_info(N, true);
+    cudaMemcpy(sim_vars_cpu[Params::EI_INFO], ei_info.data(), N * sizeof(bool), cudaMemcpyHostToDevice);
+
     thrust::fill_n(cpu_arr.begin(), N, 0.1);
     cudaMemcpy(sim_vars_cpu[Params::LOCAL_IY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
     cudaMemcpy(sim_vars_cpu[Params::LOCAL_EY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
@@ -152,6 +155,7 @@ void SCNEphys::SetVariablesRandomly()
     for (auto& val : cpu_arr)
         val = 1-gating_var_dist(gen);
     cudaMemcpy(sim_vars_cpu[Params::H], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+
 
     thrust::fill_n(cpu_arr.begin(), N, 0.0);
     cudaMemcpy(sim_vars_cpu[Params::LOCAL_Y], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
@@ -385,8 +389,8 @@ __global__ void Leapfrog_HH(Float** sim_vars, const int N, const Float timestep,
         const Float P = *P_ptr;
         const Float Q = *Q_ptr;
         const Float R = *R_ptr;
-        const Float local_IY = *local_IY_ptr;
-        const Float local_EY = *local_EY_ptr;
+        //const Float local_IY = *local_IY_ptr;
+        //const Float local_EY = *local_EY_ptr;
         const Float IY = *IY_ptr;
         const Float EY = *EY_ptr;
 
@@ -429,16 +433,16 @@ __global__ void Leapfrog_HH(Float** sim_vars, const int N, const Float timestep,
         Float bR = 0.0065 / (exp((-15 - V) / 28) + 1);
         const float new_R = (aR * timestep + (1 - timestep / 2 * (aR + bR)) * R) / (timestep / 2 * (aR + bR) + 1);
 
-        const Float local_ITin_avg = local_Inum_in > 0 ? local_Iin / local_Inum_in : 0;
-        const Float new_local_IY = (ampaR * local_ITin_avg * timestep + (1 - timestep / 2 * (ampaR * local_ITin_avg + ampaD)) * local_IY) / (timestep / 2 * (ampaR * local_ITin_avg + ampaD) + 1);
+        //const Float local_ITin_avg = local_Inum_in > 0 ? local_Iin / local_Inum_in : 0;
+        //const Float new_local_IY = (ampaR * local_ITin_avg * timestep + (1 - timestep / 2 * (ampaR * local_ITin_avg + ampaD)) * local_IY) / (timestep / 2 * (ampaR * local_ITin_avg + ampaD) + 1);
 
-        const Float local_ETin_avg = local_Enum_in > 0 ? local_Ein / local_Enum_in : 0;
-        const Float new_local_EY = (ampaR * local_ETin_avg * timestep + (1 - timestep / 2 * (ampaR * local_ETin_avg + ampaD)) * local_EY) / (timestep / 2 * (ampaR * local_ETin_avg + ampaD) + 1);
+        //const Float local_ETin_avg = local_Enum_in > 0 ? local_Ein / local_Enum_in : 0;
+        //const Float new_local_EY = (ampaR * local_ETin_avg * timestep + (1 - timestep / 2 * (ampaR * local_ETin_avg + ampaD)) * local_EY) / (timestep / 2 * (ampaR * local_ETin_avg + ampaD) + 1);
 
-        const Float Iin_avg = Inum_in > 0 ? Iin / Inum_in : 0;
+        const Float Iin_avg = (Inum_in+ local_Inum_in) > 0 ? (Iin+ local_Iin) / (Inum_in + local_Inum_in) : 0;
         const Float new_IY = (gabaR * Iin_avg * timestep + (1 - timestep / 2 * (gabaR * Iin_avg + gabaD)) * IY) / (timestep / 2 * (gabaR * Iin_avg + gabaD) + 1);
 
-        const Float Ein_avg = Enum_in > 0 ? Ein / Enum_in : 0;
+        const Float Ein_avg = (Enum_in + local_Enum_in) > 0 ? (Ein + local_Ein) / (Enum_in + local_Enum_in) : 0;
         const Float new_EY = (ampaR * Ein_avg * timestep + (1 - timestep / 2 * (ampaR * Ein_avg + ampaD)) * EY) / (timestep / 2 * (ampaR * Ein_avg + ampaD) + 1);
 
         // Use updated gating variables to update voltage.
@@ -448,13 +452,13 @@ __global__ void Leapfrog_HH(Float** sim_vars, const int N, const Float timestep,
         const Float Ks_term = gks * new_P;
         const Float Ca_term = gca * new_Q * new_Q * new_R;
 
-        const Float local_gaba_term = GGABA * new_local_IY;
-        const Float local_ampa_term = GAMPA_GREY * new_local_EY;
+        //const Float local_gaba_term = 0;//GGABA * new_local_IY;
+        //const Float local_ampa_term = 0;// GAMPA_GREY* new_local_EY;
         const Float global_gaba_term = GGABA * new_IY;
         const Float global_ampa_term = GAMPA_WHITE * new_EY;
 
-        const Float G = leak_term + Na_term + Kd_term + Ks_term + Ca_term + local_gaba_term + local_ampa_term + global_gaba_term + global_ampa_term;
-        const Float E = leak_term * el + Na_term * ena + Kd_term * ek + Ks_term * ek + Ca_term * eca + local_gaba_term * e_gaba + local_ampa_term * e_ampa + global_gaba_term * e_gaba + global_ampa_term * e_ampa;
+        const Float G = leak_term + Na_term + Kd_term + Ks_term + Ca_term +  global_gaba_term + global_ampa_term; //local_gaba_term + local_ampa_term +
+        const Float E = leak_term * el + Na_term * ena + Kd_term * ek + Ks_term * ek + Ca_term * eca  + global_gaba_term * e_gaba + global_ampa_term * e_ampa; //+ local_gaba_term * e_gaba + local_ampa_term * e_ampa
 
         // Add random white noise to V.
         Float white_noise = white_noise_intensity * curand_normal(random_states + idx) + white_noise_mean;
@@ -467,8 +471,8 @@ __global__ void Leapfrog_HH(Float** sim_vars, const int N, const Float timestep,
         *P_ptr = new_P;
         *Q_ptr = new_Q;
         *R_ptr = new_R;
-        *local_IY_ptr = new_local_IY;
-        *local_EY_ptr = new_local_EY;
+        //*local_IY_ptr = new_local_IY;
+        //*local_EY_ptr = new_local_EY;
         *IY_ptr = new_IY;
         *EY_ptr = new_EY;
 
