@@ -33,6 +33,44 @@ AdjacencyList Network::ToAdjacencyList(Float*& Tcount, bool use_weights) const
     std::cout << "Converted connectivity to adjacency list" << std::endl;
     return list;
 }
+/*
+int Network::GET_EI_FromHDF(std::string fl_name) {
+	using namespace H5;
+	std::vector<int> e_idx, i_idx;
+
+	try
+	{
+		H5File file(fl_name, H5F_ACC_RDONLY);
+		DataSet e_idx_arr = file.openDataSet("/exc_idx");
+		e_idx_arr.read(e_idx.data(), PredType::NATIVE_INT);
+
+		DataSet i_idx_arr = file.openDataSet("/inh_idx");
+		i_idx_arr.read(i_idx.data(), PredType::NATIVE_INT);
+
+	}
+	catch (...)
+	{
+		std::cerr << "ERROR : Failed to read in EI info" << std::endl;
+		return false;
+	}
+	exc_idx = e_idx;
+	inh_idx = i_idx;
+}
+
+int Network::Extract_Conn(int const N, thrust::host_vector<int> ei_info) {
+	
+	std::vector<int> exc_offset, exc_indices, inh_offset, inh_indices;
+	N_conn = indices.size()
+	exc_offset.resize(N); inh_offset.resize(N);
+	exc_offset.resize(N_conn); inh_offset.resize(N_conn);
+	for (int i = 0; i < N, ++i) {
+		if (ei_info[i] == 1){
+			
+		}
+	}
+	
+}
+*/
 
 bool UniformRandomNetwork::Generate(int const N)
 {

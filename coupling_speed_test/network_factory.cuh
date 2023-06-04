@@ -12,6 +12,7 @@ protected:
 	//! Connections row offsets for adjacency list format.
 	thrust::host_vector<int> offset_in_indices;
 
+
 public:
 	Network() = default;
 
@@ -22,6 +23,7 @@ public:
 	*/
     virtual bool Generate (int const N) = 0;
 
+	//thrust::host_vector<int> exc_idx, inh_idx;
 
 	//! Generates an AdjacencyList on the GPU and returns it.
 	/*!
@@ -29,6 +31,9 @@ public:
 	  \param [in] use_weights If true, weights are allocated for adjacency list and set to 1.
       \return The adjacency list.
 	*/
+
+	//int GET_EI_FromHDF(std::string fl_name);
+
 	AdjacencyList ToAdjacencyList(Float*& Tcount, bool use_weights=false) const;
 
 	//! Getter for indices on cpu.

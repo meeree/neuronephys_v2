@@ -72,12 +72,12 @@ void HHEphys::SetVariablesRandomly()
         val = gating_var_dist(gen);
     cudaMemcpy(sim_vars_cpu[Params::R], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
-    thrust::host_vector<bool> ei_info(N, true);
-    cudaMemcpy(sim_vars_cpu[Params::EI_INFO], ei_info.data(), N * sizeof(bool), cudaMemcpyHostToDevice);
+    //thrust::host_vector<bool> ei_info(N, true);
+    //cudaMemcpy(sim_vars_cpu[Params::EI_INFO], ei_info.data(), N * sizeof(bool), cudaMemcpyHostToDevice);
 
     thrust::fill_n(cpu_arr.begin(), N, 0.1);
-    cudaMemcpy(sim_vars_cpu[Params::LOCAL_IY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-    cudaMemcpy(sim_vars_cpu[Params::LOCAL_EY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    //cudaMemcpy(sim_vars_cpu[Params::LOCAL_IY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
+    //cudaMemcpy(sim_vars_cpu[Params::LOCAL_EY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
     cudaMemcpy(sim_vars_cpu[Params::IY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
     cudaMemcpy(sim_vars_cpu[Params::EY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
@@ -364,11 +364,10 @@ __global__ void Leapfrog_HH(Float** sim_vars, const int N, const Float timestep,
         Float* P_ptr = sim_vars[Params::P] + idx;
         Float* Q_ptr = sim_vars[Params::Q] + idx;
         Float* R_ptr = sim_vars[Params::R] + idx;
-        Float* local_IY_ptr = sim_vars[Params::LOCAL_IY] + idx;
-        Float* local_EY_ptr = sim_vars[Params::LOCAL_EY] + idx;
-        Float* IY_ptr = sim_vars[Params::IY] + idx;
+        //Float* local_IY_ptr = sim_vars[Params::LOCAL_IY] + idx;
+        //Float* local_EY_ptr = sim_vars[Params::LOCAL_EY] + idx;
         Float* EY_ptr = sim_vars[Params::EY] + idx;
-
+        Float* IY_ptr = sim_vars[Params::IY] + idx;
         const Float local_Iin = sim_vars[Params::LOCAL_IIN][idx];
         const Float local_Inum_in = sim_vars[Params::LOCAL_ICOUNT][idx];
         const Float local_Ein = sim_vars[Params::LOCAL_EIN][idx];

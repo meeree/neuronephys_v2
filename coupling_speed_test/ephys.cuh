@@ -73,7 +73,7 @@ namespace HH
         // Main parameters:
         V=0, M, H, N, P, Q, R,
         // Coupling gating variables:
-        LOCAL_EY, LOCAL_IY, 
+        //LOCAL_EY, LOCAL_IY, 
         EY, IY,
         // Local excitatory coupling parameters:
         LOCAL_EOUTPUT, LOCAL_EIN, LOCAL_ECOUNT,
@@ -87,7 +87,7 @@ namespace HH
         APPCUR,
         G_GABA, G_AMPA_WHITE, G_AMPA_GREY,
         //Boolean sequence to indicate Exc/Inh
-        EI_INFO,
+        //EI_INFO,
         // Number of parameters:
         PARAM_COUNT 
     };

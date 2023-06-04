@@ -288,10 +288,9 @@ void VisualizationTest(int N, int render_N=-1, int electrodeK=10)// electrodeK s
         exit(1);
     }
 
-    thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_AMPA_GREY]), N, 0);
-    thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_AMPA_WHITE]), N, 1);
-
-    thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_GABA]), N, 0);
+    //thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_AMPA_GREY]), N, 0);
+    //thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_AMPA_WHITE]), N, 1);
+    //thrust::fill_n(thrust::device_ptr<Float>(mouse_cortex.ephys->SimVarsCpu()[HH::Params::G_GABA]), N, 0);
 
     for (int n = 0; n < 0 * NumIncsSecond(); ++n)
     {
@@ -309,7 +308,7 @@ void VisualizationTest(int N, int render_N=-1, int electrodeK=10)// electrodeK s
     for(int i = 0; i < NumIncsSecond() * 3; ++i)
     {
         mouse_cortex.Simulate();
-
+        //printf("I can simulate");
         electrode_net.DoElectrodeMeasurements(V_ptr, mouse_cortex.white_ampa_connectivity->is_firing);
         for (int j = 0; j < h_regions_inds.size() - 1; ++j)
             graphics_voltage_handle[j] = avg_V_handle[j];
