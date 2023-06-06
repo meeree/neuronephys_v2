@@ -72,8 +72,8 @@ void HHEphys::SetVariablesRandomly()
         val = gating_var_dist(gen);
     cudaMemcpy(sim_vars_cpu[Params::R], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
-    //thrust::host_vector<bool> ei_info(N, true);
-    //cudaMemcpy(sim_vars_cpu[Params::EI_INFO], ei_info.data(), N * sizeof(bool), cudaMemcpyHostToDevice);
+    thrust::host_vector<Float> ei_info(N, 1.0);
+    cudaMemcpy(sim_vars_cpu[Params::EI_INFO], ei_info.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
     thrust::fill_n(cpu_arr.begin(), N, 0.1);
     //cudaMemcpy(sim_vars_cpu[Params::LOCAL_IY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
@@ -133,8 +133,8 @@ void SCNEphys::SetVariablesRandomly()
 
     thrust::fill_n(cpu_arr.begin(), N, g_ampa_grey);
     cudaMemcpy(sim_vars_cpu[Params::G_AMPA_GREY], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
-
-    // Set voltages randomly
+    
+    // Set voltages random
     auto& gen{ Utility::GetRandomEngine() };
     std::normal_distribution<> voltage_dist(-55, 25);
     for (auto& val : cpu_arr)
@@ -380,7 +380,7 @@ __global__ void Leapfrog_HH(Float** sim_vars, const int N, const Float timestep,
         const Float GAMPA_WHITE = sim_vars[Params::G_AMPA_WHITE][idx];
         const Float GAMPA_GREY = sim_vars[Params::G_AMPA_GREY][idx];
         const Float GGABA = sim_vars[Params::G_GABA][idx];
-
+        const int ei_info = sim_vars[Params::EI_INFO][idx];
         const Float V = *V_ptr;
         const Float M = *M_ptr;
         const Float H = *H_ptr;
@@ -476,8 +476,16 @@ __global__ void Leapfrog_HH(Float** sim_vars, const int N, const Float timestep,
         *EY_ptr = new_EY;
 
         // Calculate amount of neurotransmitter outputted AFTER update
-        sim_vars[Params::LOCAL_IOUTPUT][idx] = sim_vars[Params::LOCAL_EOUTPUT][idx] = sim_vars[Params::IOUTPUT][idx] = sim_vars[Params::EOUTPUT][idx] = 
-            1.0 / (1.0 + exp(-(*V_ptr - Vtc) / Kp));
+        if (ei_info == 1) {
+            sim_vars[Params::EOUTPUT][idx] = sim_vars[Params::LOCAL_EOUTPUT][idx] = 1.0 / (1.0 + exp(-(*V_ptr - Vtc) / Kp));
+            sim_vars[Params::IOUTPUT][idx] = sim_vars[Params::LOCAL_IOUTPUT][idx] = 0;
+        }
+        else {
+            sim_vars[Params::IOUTPUT][idx] = sim_vars[Params::LOCAL_IOUTPUT][idx] = 1.0 / (1.0 + exp(-(*V_ptr - Vtc) / Kp));
+            sim_vars[Params::EOUTPUT][idx] = sim_vars[Params::LOCAL_EOUTPUT][idx] = 0;
+
+        }
+
     }
 }
 

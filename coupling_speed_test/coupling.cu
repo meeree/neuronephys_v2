@@ -1,6 +1,6 @@
 #include "coupling.cuh"
 
-Float AtomicCoupling::threshold = 0.1;
+Float AtomicCoupling::threshold = 0.01;
 
 AtomicCoupling::AtomicCoupling(int const N, AdjacencyList& list_, Float* downstream_inputs_, Float* neuron_outputs_)
     : list{}, downstream_inputs{ downstream_inputs_ }, neuron_outputs{ neuron_outputs_ }, is_firing(N, 0), firing_neurons(N, -1)

@@ -86,8 +86,8 @@ namespace HH
         // Applied current:
         APPCUR,
         G_GABA, G_AMPA_WHITE, G_AMPA_GREY,
-        //Boolean sequence to indicate Exc/Inh
-        //EI_INFO,
+        //binary sequence to indicate Exc/Inh
+        EI_INFO,
         // Number of parameters:
         PARAM_COUNT 
     };

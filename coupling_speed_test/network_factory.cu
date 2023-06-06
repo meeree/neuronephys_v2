@@ -2,7 +2,7 @@
 #include "network_factory.cuh"
 #include <unordered_set>
 
-AdjacencyList Network::ToAdjacencyList(Float*& Tcount, bool use_weights) const
+AdjacencyList Network::ToAdjacencyList(Float*& Tcount, Float*& EI_INFO, Float ei_network, bool use_weights) const
 {
     // Generate coupling
     AdjacencyList list;
@@ -11,9 +11,13 @@ AdjacencyList Network::ToAdjacencyList(Float*& Tcount, bool use_weights) const
 
 	if (use_weights)
 		list.weights = thrust::device_vector<Float>(list.indices.size(), (Float)1);
-
-    // Calculate numer of upstream neurons for each neuron based on synaptic coupling
 	int N = offset_in_indices.size() - 1;
+
+	//thrust::host_vector<Float> h_EI_INFO;
+	//thrust::copy_n(thrust::device_ptr<Float const>(EI_INFO), N, h_EI_INFO.begin());
+	std::cout << "here is still fine1";
+    // Calculate numer of upstream neurons for each neuron based on synaptic coupling
+	
 	if (N == -1)
 	{
 		std::cerr << "Connectivity is empty. Returning blank list." << std::endl;
@@ -26,8 +30,18 @@ AdjacencyList Network::ToAdjacencyList(Float*& Tcount, bool use_weights) const
 	std::cout << "Average number of connections: " << avg_num_conns / (offset_in_indices.size() - 1) << std::endl;
 
     thrust::host_vector<Float> Tcount_cpu(N, 0);
-	for (int ind : indices)
-		++Tcount_cpu[ind];
+	std::cout << "here is still fine2";
+	for (int up_idx = 0; up_idx < N; ++up_idx) {
+		int conn_start_idx = offset_in_indices[up_idx];
+		int conn_end_idx = offset_in_indices[up_idx+1];
+		for (int conn_idx = conn_start_idx; conn_idx < conn_end_idx; ++conn_idx) {
+			int down_idx = indices[conn_idx];
+			if (EI_INFO[down_idx] == ei_network)
+				++Tcount_cpu[down_idx];
+		}			
+	}
+
+	std::cout << "here is still fine3";
 	gpuErrchk(cudaMemcpy(Tcount, Tcount_cpu.data(), N * sizeof(Float), cudaMemcpyHostToDevice));
 
     std::cout << "Converted connectivity to adjacency list" << std::endl;
