@@ -2,7 +2,7 @@
 #include "network_factory.cuh"
 #include <unordered_set>
 
-AdjacencyList Network::ToAdjacencyList(Float*& Tcount, Float*& EI_INFO, Float ei_network, bool use_weights) const
+AdjacencyList Network::ToAdjacencyList(Float*& Tcount, Float const* EI_INFO, Float ei_network, bool use_weights) const
 {
     // Generate coupling
     AdjacencyList list;
@@ -12,10 +12,8 @@ AdjacencyList Network::ToAdjacencyList(Float*& Tcount, Float*& EI_INFO, Float ei
 	if (use_weights)
 		list.weights = thrust::device_vector<Float>(list.indices.size(), (Float)1);
 	int N = offset_in_indices.size() - 1;
-
-	//thrust::host_vector<Float> h_EI_INFO;
-	//thrust::copy_n(thrust::device_ptr<Float const>(EI_INFO), N, h_EI_INFO.begin());
-	std::cout << "here is still fine1";
+	thrust::host_vector<Float> h_EI_INFO(N);
+	thrust::copy_n(thrust::device_ptr<Float const>(EI_INFO), N, h_EI_INFO.begin());
     // Calculate numer of upstream neurons for each neuron based on synaptic coupling
 	
 	if (N == -1)
@@ -25,25 +23,23 @@ AdjacencyList Network::ToAdjacencyList(Float*& Tcount, Float*& EI_INFO, Float ei
 	}
 
 	double avg_num_conns = 0;
-	for (int i = 1; i < offset_in_indices.size(); ++i)
-		avg_num_conns += offset_in_indices[i] - offset_in_indices[i - 1];
-	std::cout << "Average number of connections: " << avg_num_conns / (offset_in_indices.size() - 1) << std::endl;
+	//for (int i = 1; i < offset_in_indices.size(); ++i)
+	//	avg_num_conns += offset_in_indices[i] - offset_in_indices[i - 1];
+	std::cout << "Average number of connections: " << indices.size() / (offset_in_indices.size() - 1) << std::endl;
 
     thrust::host_vector<Float> Tcount_cpu(N, 0);
-	std::cout << "here is still fine2";
 	for (int up_idx = 0; up_idx < N; ++up_idx) {
 		int conn_start_idx = offset_in_indices[up_idx];
 		int conn_end_idx = offset_in_indices[up_idx+1];
 		for (int conn_idx = conn_start_idx; conn_idx < conn_end_idx; ++conn_idx) {
 			int down_idx = indices[conn_idx];
-			if (EI_INFO[down_idx] == ei_network)
+			if (h_EI_INFO[down_idx] == ei_network) {
 				++Tcount_cpu[down_idx];
+				++avg_num_conns;
+			}
 		}			
 	}
-
-	std::cout << "here is still fine3";
 	gpuErrchk(cudaMemcpy(Tcount, Tcount_cpu.data(), N * sizeof(Float), cudaMemcpyHostToDevice));
-
     std::cout << "Converted connectivity to adjacency list" << std::endl;
     return list;
 }

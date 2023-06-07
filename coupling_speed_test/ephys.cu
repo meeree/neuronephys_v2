@@ -476,11 +476,12 @@ __global__ void Leapfrog_HH(Float** sim_vars, const int N, const Float timestep,
         *EY_ptr = new_EY;
 
         // Calculate amount of neurotransmitter outputted AFTER update
-        if (ei_info == 1) {
+        if (ei_info == 1.0) {
             sim_vars[Params::EOUTPUT][idx] = sim_vars[Params::LOCAL_EOUTPUT][idx] = 1.0 / (1.0 + exp(-(*V_ptr - Vtc) / Kp));
             sim_vars[Params::IOUTPUT][idx] = sim_vars[Params::LOCAL_IOUTPUT][idx] = 0;
         }
         else {
+            printf( "There should not be any inhibitory neuron here");
             sim_vars[Params::IOUTPUT][idx] = sim_vars[Params::LOCAL_IOUTPUT][idx] = 1.0 / (1.0 + exp(-(*V_ptr - Vtc) / Kp));
             sim_vars[Params::EOUTPUT][idx] = sim_vars[Params::LOCAL_EOUTPUT][idx] = 0;
 

@@ -34,7 +34,7 @@ public:
 
 	//int GET_EI_FromHDF(std::string fl_name);
 
-	AdjacencyList ToAdjacencyList(Float*& Tcount, Float*& EI_INFO, Float ei_network, bool use_weights=false) const;
+	AdjacencyList ToAdjacencyList(Float*& Tcount, Float const* EI_INFO, Float ei_network, bool use_weights=false) const;
 
 	//! Getter for indices on cpu.
 	thrust::host_vector<int> const& GetCpuIndices() const { return indices; }
