@@ -24,24 +24,24 @@ MouseCortex::MouseCortex(int N, std::string neuron_model, bool uniform_random_wh
 
     // Generate connectivity.
     Float stddev = 100.0; // \mu m 
-    KNNNetwork loc_e_net(100, morphology.get());//, loc_i_net(100, morphology.get());
-    FileNetwork realistic_e_net(excitatory_conns_file_name);// , realistic_i_net(excitatory_conns_file_name);
-    UniformRandomNetwork uniform_e_net(1 * uniform_random_Ncouple);//, uniform_i_net(1 * uniform_random_Ncouple);
+    KNNNetwork loc_net(100, morphology.get());//, loc_i_net(100, morphology.get());
+    FileNetwork realistic_net(excitatory_conns_file_name);// , realistic_i_net(excitatory_conns_file_name);
+    UniformRandomNetwork uniform_net(1 * uniform_random_Ncouple);//, uniform_i_net(1 * uniform_random_Ncouple);
     if (uniform_random_white)
     {
-        uniform_e_net.Generate(N);
+        uniform_net.Generate(N);
         //uniform_i_net.Generate(N);
     }
     else
     {
-        realistic_e_net.Generate(N);
+        realistic_net.Generate(N);
         //realistic_i_net.Generate(N);
     }
 
     if (use_gray)
     {
         ;
-        loc_e_net.Generate(N);
+        loc_net.Generate(N);
         //loc_i_net.Generate(N);
     }
     auto sim_vars_cpu = ephys->SimVarsCpu();
@@ -53,32 +53,32 @@ MouseCortex::MouseCortex(int N, std::string neuron_model, bool uniform_random_wh
         if (uniform_random_white)
         {
             
-            e_list = uniform_e_net.ToAdjacencyList(sim_vars_cpu[Params::ECOUNT], sim_vars_cpu[Params::EI_INFO], 1.0, use_weights_network);
-            i_list = uniform_e_net.ToAdjacencyList(sim_vars_cpu[Params::ICOUNT], sim_vars_cpu[Params::EI_INFO], 0.0, use_weights_network);
+            e_list = uniform_net.ToAdjacencyList(sim_vars_cpu[Params::ECOUNT], sim_vars_cpu[Params::EI_INFO], 1.0, use_weights_network);
+            i_list = uniform_net.ToAdjacencyList(sim_vars_cpu[Params::ICOUNT], sim_vars_cpu[Params::EI_INFO], 0.0, use_weights_network);
         }
         else
         {
             
-            e_list = realistic_e_net.ToAdjacencyList(sim_vars_cpu[Params::ECOUNT], sim_vars_cpu[Params::EI_INFO], 1.0, use_weights_network);
-            i_list = realistic_e_net.ToAdjacencyList(sim_vars_cpu[Params::ICOUNT], sim_vars_cpu[Params::EI_INFO], 0.0, use_weights_network);
+            e_list = realistic_net.ToAdjacencyList(sim_vars_cpu[Params::ECOUNT], sim_vars_cpu[Params::EI_INFO], 1.0, use_weights_network);
+            i_list = realistic_net.ToAdjacencyList(sim_vars_cpu[Params::ICOUNT], sim_vars_cpu[Params::EI_INFO], 0.0, use_weights_network);
         }
-        std::cout << "we got here2";
+
         white_ampa_connectivity.reset(
             new AtomicCoupling( N, e_list, sim_vars_cpu[Params::EIN], sim_vars_cpu[Params::EOUTPUT] )
         );
-        std::cout << "we got here3";
+
         white_gaba_connectivity.reset(
             new AtomicCoupling( N, i_list, sim_vars_cpu[Params::IIN], sim_vars_cpu[Params::IOUTPUT] )
         );
         
         if (use_gray)
         {
-            AdjacencyList loc_e_list{ loc_e_net.ToAdjacencyList(sim_vars_cpu[Params::LOCAL_ECOUNT], sim_vars_cpu[Params::EI_INFO], 1.0, use_weights_network) };
+            AdjacencyList loc_e_list{ loc_net.ToAdjacencyList(sim_vars_cpu[Params::LOCAL_ECOUNT], sim_vars_cpu[Params::EI_INFO], 1.0, use_weights_network) };
             gray_ampa_connectivity.reset(
                 new AtomicCoupling( N, loc_e_list, sim_vars_cpu[Params::LOCAL_EIN], sim_vars_cpu[Params::LOCAL_EOUTPUT] )
             );
 
-            AdjacencyList loc_i_list{ loc_e_net.ToAdjacencyList(sim_vars_cpu[Params::LOCAL_ICOUNT], sim_vars_cpu[Params::EI_INFO], 0.0, use_weights_network) };
+            AdjacencyList loc_i_list{ loc_net.ToAdjacencyList(sim_vars_cpu[Params::LOCAL_ICOUNT], sim_vars_cpu[Params::EI_INFO], 0.0, use_weights_network) };
             gray_gaba_connectivity.reset(
                 new AtomicCoupling( N, loc_i_list, sim_vars_cpu[Params::LOCAL_IIN], sim_vars_cpu[Params::LOCAL_IOUTPUT] )
             );

@@ -22,23 +22,35 @@ AdjacencyList Network::ToAdjacencyList(Float*& Tcount, Float const* EI_INFO, Flo
 		return {};
 	}
 
-	double avg_num_conns = 0;
+	int num_conns = 0;
+	int num_conn_max = 0;
 	//for (int i = 1; i < offset_in_indices.size(); ++i)
 	//	avg_num_conns += offset_in_indices[i] - offset_in_indices[i - 1];
 	std::cout << "Average number of connections: " << indices.size() / (offset_in_indices.size() - 1) << std::endl;
+
 
     thrust::host_vector<Float> Tcount_cpu(N, 0);
 	for (int up_idx = 0; up_idx < N; ++up_idx) {
 		int conn_start_idx = offset_in_indices[up_idx];
 		int conn_end_idx = offset_in_indices[up_idx+1];
+		int num_conn = conn_end_idx - conn_start_idx;
+		if (num_conn > num_conn_max) {
+			num_conn_max = num_conn;
+		}
+			
 		for (int conn_idx = conn_start_idx; conn_idx < conn_end_idx; ++conn_idx) {
 			int down_idx = indices[conn_idx];
-			if (h_EI_INFO[down_idx] == ei_network) {
+			if (fabs(h_EI_INFO[up_idx] - ei_network) < 0.001) {
 				++Tcount_cpu[down_idx];
-				++avg_num_conns;
+				++num_conns;
 			}
 		}			
 	}
+	printf("Max number of connection is: %u ", num_conn_max);
+	if (ei_network == 1.0)
+		printf("There are %u excitatory connection in total", num_conns);
+	else
+		printf("There are %u inhibitory connection in total", num_conns);
 	gpuErrchk(cudaMemcpy(Tcount, Tcount_cpu.data(), N * sizeof(Float), cudaMemcpyHostToDevice));
     std::cout << "Converted connectivity to adjacency list" << std::endl;
     return list;
@@ -211,12 +223,16 @@ bool FileNetwork::GenerateFromHDF(int const N)
 	{
 		H5File file(fl_name, H5F_ACC_RDONLY);
 		DataSet col_idx_arr = file.openDataSet("/indices");
-		numconns = (int)(col_idx_arr.getStorageSize() / sizeof(int));
+
+		H5::DataType datatype = col_idx_arr.getDataType();
+		size_t datasize = datatype.getSize();
+
+		numconns = (int)(col_idx_arr.getStorageSize() / datasize);
 		col_idx.resize(numconns);
 		col_idx_arr.read(col_idx.data(), PredType::NATIVE_INT);
 
 		DataSet row_ptr_arr = file.openDataSet("/offset");
-		numpnts = (int)(row_ptr_arr.getStorageSize() / sizeof(int));
+		numpnts = (int)(row_ptr_arr.getStorageSize() / datasize);
 		row_ptr.resize(numpnts);
 		row_ptr_arr.read(row_ptr.data(), PredType::NATIVE_INT);
 	}
@@ -239,7 +255,7 @@ bool FileNetwork::GenerateFromHDF(int const N)
 		int const lookup_idx{ from_idx * sparsity };
 		offset_in_indices[from_idx + 1] = offset_in_indices[from_idx];
 		for (int to_idx = row_ptr[lookup_idx]; to_idx < row_ptr[lookup_idx + 1]; ++to_idx)
-			if (col_idx[to_idx] % sparsity == 0)
+			if (col_idx[to_idx] % sparsity == 0 && col_idx[to_idx] * sparsity < N)
 			{
 				indices.push_back(col_idx[to_idx] / sparsity);
 				offset_in_indices[from_idx + 1] += 1;

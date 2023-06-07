@@ -249,7 +249,6 @@ void VisualizationTest(int N, int render_N=-1, int electrodeK=10)// electrodeK s
         electrode_inds[i] = render_stride * i;
     thrust::host_vector<int> h_regions, h_regions_inds;
     mouse_cortex.morphology->GenSphericalRegions(h_regions, h_regions_inds, electrode_inds, electrodeK);
-    std::cout << "everything before here is good0";
     ElectrodeNet electrode_net(h_regions, h_regions_inds);
     Float const* avg_V_handle = electrode_net.ElectrodeOutputHandle();
     Float const* V_ptr = mouse_cortex.ephys->SimVarsCpu()[HH::Params::V];
@@ -262,7 +261,6 @@ void VisualizationTest(int N, int render_N=-1, int electrodeK=10)// electrodeK s
     // Use super-regions at a specific depth in the regions json tree.
     int visual_region_idx;
     thrust::host_vector<int> h_regions_allen, h_regions_inds_allen, associated_ids;
-    std::cout << "everything before here is good1";
     try
     {
         RegionsTree tree("allen_region_id_lookup.json");
@@ -299,7 +297,7 @@ void VisualizationTest(int N, int render_N=-1, int electrodeK=10)// electrodeK s
 
         mouse_cortex.Simulate();
     }
-    std::cout << "everything before here is good2";
+
 //    int const* connectivity_inds = thrust::raw_pointer_cast(mouse_cortex.white_ampa_connectivity->list.indices.data());
 //    int const* offset_into_inds = thrust::raw_pointer_cast(mouse_cortex.white_ampa_connectivity->list.offset_in_indices.data());
 //    Graphics::load_in_connectivity(connectivity_inds, offset_into_inds, N, N);
@@ -308,7 +306,7 @@ void VisualizationTest(int N, int render_N=-1, int electrodeK=10)// electrodeK s
     for(int i = 0; i < NumIncsSecond() * 3; ++i)
     {
         mouse_cortex.Simulate();
-        //printf("I can simulate");
+
         electrode_net.DoElectrodeMeasurements(V_ptr, mouse_cortex.white_ampa_connectivity->is_firing);
         for (int j = 0; j < h_regions_inds.size() - 1; ++j)
             graphics_voltage_handle[j] = avg_V_handle[j];
