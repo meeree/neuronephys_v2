@@ -73,8 +73,6 @@ void HHEphys::SetVariablesRandomly()
     cudaMemcpy(sim_vars_cpu[Params::R], cpu_arr.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
     thrust::host_vector<Float> ei_info(N, 0.0);
-
-    thrust::fill_n(ei_info.begin(), 10000, 1.0);
     cudaMemcpy(sim_vars_cpu[Params::EI_INFO], ei_info.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
 
     thrust::fill_n(cpu_arr.begin(), N, 0.1);

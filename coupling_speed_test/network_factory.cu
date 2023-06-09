@@ -163,7 +163,7 @@ bool NormalNetwork::Generate(int const N)
     offset_in_indices.resize(N + 1, 0);
     ANNdist const variance = stddev * stddev;
 	ANNdist const normal_dist_scalar = 1.0 / (stddev * sqrt(2.0 * 3.14159265359));
-    std::uniform_real_distribution<ANNdist> unit_dist(0.0, normal_dist_scalar);
+    std::uniform_real_distribution<ANNdist> unit_dist(0.0, 1.0);
     int ball_sz_sum{ 0 };
     for (int from_idx = 0; from_idx < N; ++from_idx)
     {

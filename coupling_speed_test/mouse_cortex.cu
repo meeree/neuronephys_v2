@@ -49,6 +49,14 @@ MouseCortex::MouseCortex(int N, std::string neuron_model, bool uniform_random_wh
     if (neuron_model == "HH")
     {
         using namespace HH;
+        auto const& neuron_type = morphology->GetNeuronType();
+        Float n_sum = 0;
+        for (Float entry : neuron_type)
+        {
+            n_sum += entry;
+        }
+        std::cout << "Exc: " << n_sum << ", Inh: " << N - n_sum << std::endl;
+        cudaMemcpy(sim_vars_cpu[Params::EI_INFO], neuron_type.data(), N * sizeof(Float), cudaMemcpyHostToDevice);
         AdjacencyList e_list, i_list;
         if (uniform_random_white)
         {

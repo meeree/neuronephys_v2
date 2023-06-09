@@ -302,17 +302,19 @@ bool FileMorphology::GenerateFromHDF(int const N)
 {
     // First read in three individual axes, then put into positions,
     // finally scale and transform into range [0, max].
-    std::vector<float> axes[4];
-    const char* coord_ids[4]{ "/x", "/y", "/z", "/region_id" };
+    std::vector<float> axes[5];
+    const char* coord_ids[5]{ "/x", "/y", "/z", "/ei_info", "/region_id"};
     int numpnts;
-    int n_dims = read_regions ? 4 : 3;
+    int n_dims = read_regions ? 5 : 4;
     try
     {
         H5File file(fl_name, H5F_ACC_RDONLY);
         for (int i = 0; i < n_dims; ++i)
         {
             DataSet axis = file.openDataSet(coord_ids[i]);
-            numpnts = (int)(axis.getStorageSize() / sizeof(float));
+            H5::DataType datatype = axis.getDataType();
+            size_t datasize = datatype.getSize();
+            numpnts = (int)(axis.getStorageSize() / datasize);
             axes[i].resize(numpnts);
             axis.read(axes[i].data(), PredType::NATIVE_FLOAT);
         }
@@ -346,6 +348,13 @@ bool FileMorphology::GenerateFromHDF(int const N)
     {
         int const j{ stride * i };
         positions[i] = { axes[0][j], axes[1][j], axes[2][j] };
+    }
+
+    neuron_type.resize(N);
+    for (int i = 0; i < N; ++i)
+    {
+        int const j{ stride * i };
+        neuron_type[i] = axes[3][j];
     }
 
     if (read_regions)

@@ -201,6 +201,7 @@ protected:
 	std::string format;
 	std::vector<int> unique_regions;
 	std::vector<int> regions;
+	std::vector<Float> neuron_type;
 	bool read_regions;
 
 	glm::vec3 max_extents;
@@ -231,6 +232,7 @@ public:
 	glm::vec3 GetMaxExtents() const { return max_extents; }
 
 	std::vector<int> const& GetRegions() const { return regions; }
+	std::vector<Float> const& GetNeuronType() const { return neuron_type; }
 };
 
 //! Point cloud provided by user.
